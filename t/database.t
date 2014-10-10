@@ -131,32 +131,6 @@ $dbh = $mysql->db->dbh;
   isnt $mysql->db->dbh, $dbh, 'different database handles';
 };
 
-# Notifications
-$db = $mysql->db;
-ok !$db->is_listening, 'not listening';
-$db->listen('foo');
-ok $db->is_listening, 'listening';
-Mojo::IOLoop->timer(0 => sub { $mysql->db->query('select mysql_notify(?, ?)', 'foo', 'bar') });
-my @notification;
-$db->once(
-  notification => sub {
-    my ($db, $name, $pid, $payload) = @_;
-    @notification = ($name, $pid, $payload);
-    Mojo::IOLoop->stop;
-  }
-);
-Mojo::IOLoop->start;
-$db->unlisten('foo');
-ok !$db->is_listening, 'not listening';
-is $notification[0], 'foo', 'right channel name';
-ok $notification[1], 'has process id';
-is $notification[2], 'bar', 'right payload';
-
-# Stop listening for all notifications
-ok !$db->is_listening, 'not listening';
-ok $db->listen('foo')->listen('bar')->unlisten('bar')->is_listening, 'listening';
-ok !$db->unlisten('*')->is_listening, 'not listening';
-
 # Blocking error
 eval { $mysql->db->query('does_not_exist') };
 like $@, qr/does_not_exist/, 'right error';

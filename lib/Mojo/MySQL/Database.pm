@@ -28,19 +28,6 @@ sub disconnect {
 
 sub do { shift->_dbh(do => @_) }
 
-sub is_listening { !!keys %{shift->{listen} || {}} }
-
-sub listen {
-  my ($self, $name) = @_;
-
-  my $dbh = $self->dbh;
-  $dbh->do('listen ' . $dbh->quote_identifier($name)) unless $self->{listen}{$name}++;
-  $dbh->commit unless $dbh->{AutoCommit};
-  $self->_watch;
-
-  return $self;
-}
-
 sub ping { shift->dbh->ping }
 
 sub query {
@@ -60,18 +47,6 @@ sub query {
 }
 
 sub rollback { shift->dbh->rollback }
-
-sub unlisten {
-  my ($self, $name) = @_;
-
-  my $dbh = $self->dbh;
-  $dbh->do('unlisten' . $dbh->quote_identifier($name));
-  $name eq '*' ? delete($self->{listen}) : delete($self->{listen}{$name});
-  $dbh->commit unless $dbh->{AutoCommit};
-  $self->_unwatch unless $self->backlog || $self->is_listening;
-
-  return $self;
-}
 
 sub _dbh {
   my ($self, $method) = (shift, shift);
@@ -124,11 +99,6 @@ sub _watch {
     $self->{handle} => sub {
       my $reactor = shift;
 
-      # Notifications
-      while (my $notify = $dbh->pg_notifies) {
-        $self->emit(notification => @$notify);
-      }
-
       return unless (my $waiting = $self->{waiting}) && $dbh->pg_ready;
       my ($sth, $cb) = @{shift @$waiting}{qw(sth cb)};
 
@@ -138,7 +108,7 @@ sub _watch {
 
       $self->$cb($err, Mojo::MySQL::Results->new(db => $self, sth => $sth));
       $self->_next;
-      $self->_unwatch unless $self->backlog || $self->is_listening;
+      $self->_unwatch unless $self->backlog;
     }
   )->watch($self->{handle}, 1, 0);
 }
@@ -160,20 +130,6 @@ Mojo::MySQL::Database - Database
 =head1 DESCRIPTION
 
 L<Mojo::MySQL::Database> is a container for database handles used by L<Mojo::MySQL>.
-
-=head1 EVENTS
-
-L<Mojo::MySQL::Database> inherits all events from L<Mojo::EventEmitter> and can
-emit the following new ones.
-
-=head2 notification
-
-  $db->on(notification => sub {
-    my ($db, $name, $pid, $payload) = @_;
-    ...
-  });
-
-Emitted when a notification has been received.
 
 =head1 ATTRIBUTES
 
@@ -236,19 +192,6 @@ Disconnect database handle and prevent it from getting cached again.
 
 Execute a statement and discard its result.
 
-=head2 is_listening
-
-  my $bool = $db->is_listening;
-
-Check if database handle is listening of notifications.
-
-=head2 listen
-
-  $db = $db->listen('foo');
-
-Start listening for notifications when the L<Mojo::IOLoop> event loop is
-running.
-
 =head2 ping
 
   my $bool = $db->ping;
@@ -276,13 +219,6 @@ also append a callback to perform operation non-blocking.
   $db->rollback;
 
 Rollback transaction.
-
-=head2 unlisten
-
-  $db = $db->unlisten('foo');
-  $db = $db->unlisten('*');
-
-Stop listening for notifications.
 
 =head1 SEE ALSO
 
