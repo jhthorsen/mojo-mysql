@@ -6,9 +6,9 @@ use Test::More;
 
 plan skip_all => 'set TEST_ONLINE to enable this test' unless $ENV{TEST_ONLINE};
 
-use Mojo::MySQL;
+use Mojo::mysql;
 
-my $mysql = Mojo::MySQL->new($ENV{TEST_ONLINE});
+my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 my $db    = $mysql->db->do(
   'create table if not exists results_test (
      id serial primary key,

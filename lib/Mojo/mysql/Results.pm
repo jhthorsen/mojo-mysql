@@ -1,4 +1,4 @@
-package Mojo::MySQL::Results;
+package Mojo::mysql::Results;
 use Mojo::Base -base;
 
 use Mojo::Collection;
@@ -31,29 +31,29 @@ sub text { tablify shift->arrays }
 
 =head1 NAME
 
-Mojo::MySQL::Results - Results
+Mojo::mysql::Results - Results
 
 =head1 SYNOPSIS
 
-  use Mojo::MySQL::Results;
+  use Mojo::mysql::Results;
 
-  my $results = Mojo::MySQL::Results->new(db => $db, sth => $sth);
+  my $results = Mojo::mysql::Results->new(db => $db, sth => $sth);
 
 =head1 DESCRIPTION
 
-L<Mojo::MySQL::Results> is a container for statement handles used by
-L<Mojo::MySQL::Database>.
+L<Mojo::mysql::Results> is a container for statement handles used by
+L<Mojo::mysql::Database>.
 
 =head1 ATTRIBUTES
 
-L<Mojo::MySQL::Results> implements the following attributes.
+L<Mojo::mysql::Results> implements the following attributes.
 
 =head2 db
 
   my $db   = $results->db;
-  $results = $results->db(Mojo::MySQL::Database->new);
+  $results = $results->db(Mojo::mysql::Database->new);
 
-L<Mojo::MySQL::Database> object these results belong to.
+L<Mojo::mysql::Database> object these results belong to.
 
 =head2 sth
 
@@ -64,7 +64,7 @@ Statement handle results are fetched from.
 
 =head1 METHODS
 
-L<Mojo::MySQL::Results> inherits all methods from L<Mojo::Base> and implements
+L<Mojo::mysql::Results> inherits all methods from L<Mojo::Base> and implements
 the following new ones.
 
 =head2 array
@@ -113,6 +113,6 @@ Fetch all rows and turn them into a table with L<Mojo::Util/"tablify">.
 
 =head1 SEE ALSO
 
-L<Mojo::MySQL>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojo::mysql>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
 
 =cut

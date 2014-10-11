@@ -1,9 +1,9 @@
-package Mojo::MySQL;
+package Mojo::mysql;
 use Mojo::Base -base;
 
 use Carp 'croak';
 use DBI;
-use Mojo::MySQL::Database;
+use Mojo::mysql::Database;
 use Mojo::URL;
 
 has dsn             => 'dbi:mysql:dbname=test';
@@ -19,7 +19,7 @@ sub db {
   # Fork safety
   delete @$self{qw(pid queue)} unless ($self->{pid} //= $$) eq $$;
 
-  return Mojo::MySQL::Database->new(dbh => $self->_dequeue, mysql => $self);
+  return Mojo::mysql::Database->new(dbh => $self->_dequeue, mysql => $self);
 }
 
 sub from_string {
@@ -70,14 +70,14 @@ sub _enqueue {
 
 =head1 NAME
 
-Mojo::MySQL - Mojolicious and Async MySQL
+Mojo::mysql - Mojolicious and Async MySQL
 
 =head1 SYNOPSIS
 
-  use Mojo::MySQL;
+  use Mojo::mysql;
 
   # Create a table
-  my $mysql = Mojo::MySQL->new('mysql://username@/test');
+  my $mysql = Mojo::mysql->new('mysql://username@/test');
   $mysql->db->do('create table if not exists names (name varchar(255))');
 
   # Insert a few rows
@@ -103,7 +103,7 @@ Mojo::MySQL - Mojolicious and Async MySQL
 
 =head1 DESCRIPTION
 
-L<Mojo::MySQL> is a tiny wrapper around L<DBD::mysql> that makes
+L<Mojo::mysql> is a tiny wrapper around L<DBD::mysql> that makes
 L<MySQL|http://www.mysql.org> a lot of fun to use with the
 L<Mojolicious|http://mojolicio.us> real-time web framework.
 
@@ -115,7 +115,7 @@ database connections usually have a very low latency, this often results in
 very good performance.
 
 All cached database handles will be reset automatically if a new process has
-been forked, this allows multiple processes to share the same L<Mojo::MySQL>
+been forked, this allows multiple processes to share the same L<Mojo::mysql>
 object safely.
 
 Note that this whole distribution is EXPERIMENTAL and will change without
@@ -123,7 +123,7 @@ warning!
 
 =head1 ATTRIBUTES
 
-L<Mojo::MySQL> implements the following attributes.
+L<Mojo::mysql> implements the following attributes.
 
 =head2 dsn
 
@@ -164,14 +164,14 @@ Database username, defaults to an empty string.
 
 =head1 METHODS
 
-L<Mojo::MySQL> inherits all methods from L<Mojo::Base> and implements the
+L<Mojo::mysql> inherits all methods from L<Mojo::Base> and implements the
 following new ones.
 
 =head2 db
 
   my $db = $mysql->db;
 
-Get L<Mojo::MySQL::Database> object for a cached or newly created database
+Get L<Mojo::mysql::Database> object for a cached or newly created database
 handle. The database handle will be automatically cached again when that
 object is destroyed, so you can handle connection timeouts gracefully by
 holding on to it only for short amounts of time.
@@ -199,10 +199,10 @@ Parse configuration from connection string.
 
 =head2 new
 
-  my $mysql = Mojo::MySQL->new;
-  my $mysql = Mojo::MySQL->new('mysql://user@/test');
+  my $mysql = Mojo::mysql->new;
+  my $mysql = Mojo::mysql->new('mysql://user@/test');
 
-Construct a new L<Mojo::MySQL> object and parse connection string with
+Construct a new L<Mojo::mysql> object and parse connection string with
 L</"from_string"> if necessary.
 
 =head1 AUTHOR

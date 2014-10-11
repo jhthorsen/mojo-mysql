@@ -1,10 +1,10 @@
-package Mojo::MySQL::Database;
+package Mojo::mysql::Database;
 use Mojo::Base 'Mojo::EventEmitter';
 
 use DBD::mysql;
 use IO::Handle;
 use Mojo::IOLoop;
-use Mojo::MySQL::Results;
+use Mojo::mysql::Results;
 
 has [qw(dbh mysql)];
 has max_statements => 10;
@@ -38,7 +38,7 @@ sub query {
   unless ($cb) {
     my $sth = $self->_dequeue(0, $query);
     $sth->execute(@_);
-    return Mojo::MySQL::Results->new(db => $self, sth => $sth);
+    return Mojo::mysql::Results->new(db => $self, sth => $sth);
   }
 
   # Non-blocking
@@ -110,7 +110,7 @@ sub _watch {
       my $result = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
       my $err = defined $result ? undef : $dbh->errstr;
 
-      $self->$cb($err, Mojo::MySQL::Results->new(db => $self, sth => $sth));
+      $self->$cb($err, Mojo::mysql::Results->new(db => $self, sth => $sth));
       $self->_next;
       $self->_unwatch unless $self->backlog;
     }
@@ -123,21 +123,21 @@ sub _watch {
 
 =head1 NAME
 
-Mojo::MySQL::Database - Database
+Mojo::mysql::Database - Database
 
 =head1 SYNOPSIS
 
-  use Mojo::MySQL::Database;
+  use Mojo::mysql::Database;
 
-  my $db = Mojo::MySQL::Database->new(mysql => $mysql, dbh => $dbh);
+  my $db = Mojo::mysql::Database->new(mysql => $mysql, dbh => $dbh);
 
 =head1 DESCRIPTION
 
-L<Mojo::MySQL::Database> is a container for database handles used by L<Mojo::MySQL>.
+L<Mojo::mysql::Database> is a container for database handles used by L<Mojo::MySQL>.
 
 =head1 ATTRIBUTES
 
-L<Mojo::MySQL::Database> implements the following attributes.
+L<Mojo::mysql::Database> implements the following attributes.
 
 =head2 dbh
 
@@ -149,9 +149,9 @@ Database handle used for all queries.
 =head2 mysql
 
   my $mysql = $db->mysql;
-  $db       = $db->mysql(Mojo::MySQL->new);
+  $db       = $db->mysql(Mojo::mysql->new);
 
-L<Mojo::MySQL> object this database belongs to.
+L<Mojo::mysql> object this database belongs to.
 
 =head2 max_statements
 
@@ -163,7 +163,7 @@ C<10>.
 
 =head1 METHODS
 
-L<Mojo::MySQL::Database> inherits all methods from L<Mojo::EventEmitter> and
+L<Mojo::mysql::Database> inherits all methods from L<Mojo::EventEmitter> and
 implements the following new ones.
 
 =head2 backlog
@@ -207,7 +207,7 @@ Check database connection.
   my $results = $db->query('select * from foo');
   my $results = $db->query('insert into foo values (?, ?, ?)', @values);
 
-Execute a statement and return a L<Mojo::MySQL::Results> object with the results.
+Execute a statement and return a L<Mojo::mysql::Results> object with the results.
 The statement handle will be automatically cached again when that object is
 destroyed, so future queries can reuse it to increase performance. You can
 also append a callback to perform operation non-blocking.
@@ -226,6 +226,6 @@ Rollback transaction.
 
 =head1 SEE ALSO
 
-L<Mojo::MySQL>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojo::mysql>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
 
 =cut

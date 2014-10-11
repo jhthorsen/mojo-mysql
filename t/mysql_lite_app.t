@@ -6,13 +6,13 @@ use Test::More;
 
 plan skip_all => 'set TEST_ONLINE to enable this test' unless $ENV{TEST_ONLINE};
 
-use Mojo::MySQL;
+use Mojo::mysql;
 use Mojolicious::Lite;
 use Test::Mojo;
 
 helper mysql => sub {
   state $mysql = do {
-    my $c = Mojo::MySQL->new($ENV{TEST_ONLINE});
+    my $c = Mojo::mysql->new($ENV{TEST_ONLINE});
     $c->options->{mysql_enable_utf8} = 1;
     $c;
   };
