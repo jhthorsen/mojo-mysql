@@ -10,9 +10,15 @@ use Mojo::MySQL;
 use Mojolicious::Lite;
 use Test::Mojo;
 
-helper mysql => sub { state $mysql = Mojo::MySQL->new($ENV{TEST_ONLINE}) };
+helper mysql => sub {
+  state $mysql = do {
+    my $c = Mojo::MySQL->new($ENV{TEST_ONLINE});
+    $c->options->{mysql_enable_utf8} = 1;
+    $c;
+  };
+};
 
-app->mysql->db->do('create table if not exists app_test (stuff varchar(255))')
+app->mysql->db->do('create table if not exists app_test (stuff varchar(255)) COLLATE = utf8_bin')
   ->do("insert into app_test values ('I ♥ Mojolicious!')");
 
 get '/blocking' => sub {
