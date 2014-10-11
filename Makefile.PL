@@ -4,8 +4,8 @@ WriteMakefile(
   NAME          => 'Mojo::mysql',
   AUTHOR        => 'Jan Henning Thorsen <jhthorsen@cpan.org>',
   LICENSE       => 'artistic_2',
-  ABSTRACT_FROM => 'lib/Mojo/MySQL.pm',
-  VERSION_FROM  => 'lib/Mojo/MySQL.pm',
+  ABSTRACT_FROM => 'lib/Mojo/mysql.pm',
+  VERSION_FROM  => 'lib/Mojo/mysql.pm',
   EXE_FILES     => [qw(  )],
   META_MERGE    => {
     resources => {
