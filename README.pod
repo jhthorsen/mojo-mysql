@@ -1,1 +1,1 @@
-lib/Mojo/MySQL.pm
+lib/Mojo/mysql.pm
