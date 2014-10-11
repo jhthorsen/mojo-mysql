@@ -4,76 +4,67 @@ BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
 
 use Test::More;
 
-plan skip_all => 'set TEST_ONLINE to enable this test'
-  unless $ENV{TEST_ONLINE};
+plan skip_all => 'set TEST_ONLINE to enable this test' unless $ENV{TEST_ONLINE};
 
 use Mojo::IOLoop;
-use Mojo::Pg;
+use Mojo::MySQL;
 
 # Defaults
-my $pg = Mojo::Pg->new;
-is $pg->dsn,      'dbi:Pg:dbname=test', 'right data source';
-is $pg->username, '',                   'no username';
-is $pg->password, '',                   'no password';
-is_deeply $pg->options, {AutoCommit => 1, PrintError => 0, RaiseError => 1},
-  'right options';
+my $mysql = Mojo::MySQL->new;
+is $mysql->dsn,      'dbi:mysql:dbname=test', 'right data source';
+is $mysql->username, '',                      'no username';
+is $mysql->password, '',                      'no password';
+is_deeply $mysql->options, {AutoCommit => 1, PrintError => 0, RaiseError => 1}, 'right options';
 
 # Minimal connection string
-$pg = Mojo::Pg->new('postgresql:///test1');
-is $pg->dsn,      'dbi:Pg:dbname=test1', 'right data source';
-is $pg->username, '',                    'no username';
-is $pg->password, '',                    'no password';
-is_deeply $pg->options, {AutoCommit => 1, PrintError => 0, RaiseError => 1},
-  'right options';
+$mysql = Mojo::MySQL->new('mysql:///test1');
+is $mysql->dsn,      'dbi:mysql:dbname=test1', 'right data source';
+is $mysql->username, '',                       'no username';
+is $mysql->password, '',                       'no password';
+is_deeply $mysql->options, {AutoCommit => 1, PrintError => 0, RaiseError => 1}, 'right options';
 
 # Connection string with host and port
-$pg = Mojo::Pg->new('postgresql://127.0.0.1:8080/test2');
-is $pg->dsn, 'dbi:Pg:dbname=test2;host=127.0.0.1;port=8080',
-  'right data source';
-is $pg->username, '', 'no username';
-is $pg->password, '', 'no password';
-is_deeply $pg->options, {AutoCommit => 1, PrintError => 0, RaiseError => 1},
-  'right options';
+$mysql = Mojo::MySQL->new('mysql://127.0.0.1:8080/test2');
+is $mysql->dsn,      'dbi:mysql:dbname=test2;host=127.0.0.1;port=8080', 'right data source';
+is $mysql->username, '',                                                'no username';
+is $mysql->password, '',                                                'no password';
+is_deeply $mysql->options, {AutoCommit => 1, PrintError => 0, RaiseError => 1}, 'right options';
 
 # Connection string username but without host
-$pg = Mojo::Pg->new('postgresql://postgres@/test3');
-is $pg->dsn,      'dbi:Pg:dbname=test3', 'right data source';
-is $pg->username, 'postgres',            'right username';
-is $pg->password, '',                    'no password';
-is_deeply $pg->options, {AutoCommit => 1, PrintError => 0, RaiseError => 1},
-  'right options';
+$mysql = Mojo::MySQL->new('mysql://root@/test3');
+is $mysql->dsn,      'dbi:mysql:dbname=test3', 'right data source';
+is $mysql->username, 'root',                   'right username';
+is $mysql->password, '',                       'no password';
+is_deeply $mysql->options, {AutoCommit => 1, PrintError => 0, RaiseError => 1}, 'right options';
 
 # Connection string with unix domain socket and options
-$pg = Mojo::Pg->new(
-  'postgresql://x1:y2@%2ftmp%2fpg.sock/test4?PrintError=1&RaiseError=0');
-is $pg->dsn,      'dbi:Pg:dbname=test4;host=/tmp/pg.sock', 'right data source';
-is $pg->username, 'x1',                                    'right username';
-is $pg->password, 'y2',                                    'right password';
-is_deeply $pg->options, {AutoCommit => 1, PrintError => 1, RaiseError => 0},
-  'right options';
+$mysql = Mojo::MySQL->new('mysql://x1:y2@%2ftmp%2fmysql.sock/test4?PrintError=1&RaiseError=0');
+is $mysql->dsn,      'dbi:mysql:dbname=test4;host=/tmp/mysql.sock', 'right data source';
+is $mysql->username, 'x1',                                          'right username';
+is $mysql->password, 'y2',                                          'right password';
+is_deeply $mysql->options, {AutoCommit => 1, PrintError => 1, RaiseError => 0}, 'right options';
 
 # Connection string with lots of zeros
-$pg = Mojo::Pg->new('postgresql://0:0@/0?RaiseError=0');
-is $pg->dsn,      'dbi:Pg:dbname=0', 'right data source';
-is $pg->username, '0',               'right username';
-is $pg->password, '0',               'right password';
-is_deeply $pg->options, {AutoCommit => 1, PrintError => 0, RaiseError => 0},
-  'right options';
+$mysql = Mojo::MySQL->new('mysql://0:0@/0?RaiseError=0');
+is $mysql->dsn,      'dbi:mysql:dbname=0', 'right data source';
+is $mysql->username, '0',                  'right username';
+is $mysql->password, '0',                  'right password';
+is_deeply $mysql->options, {AutoCommit => 1, PrintError => 0, RaiseError => 0}, 'right options';
 
 # Invalid connection string
-eval { Mojo::Pg->new('http://localhost:3000/test') };
-like $@, qr/Invalid PostgreSQL connection string/, 'right error';
+eval { Mojo::MySQL->new('http://localhost:3000/test') };
+like $@, qr/Invalid MySQL connection string/, 'right error';
 
-$pg = Mojo::Pg->new($ENV{TEST_ONLINE});
-ok $pg->db->ping, 'connected';
+$mysql = Mojo::MySQL->new($ENV{TEST_ONLINE});
+ok $mysql->db->ping, 'connected';
 
 # Blocking select
-is_deeply $pg->db->query('select 1 as one, 2 as two, 3 as three')->hash,
-  {one => 1, two => 2, three => 3}, 'right structure';
+is_deeply $mysql->db->query('select 1 as one, 2 as two, 3 as three')->hash, {one => 1, two => 2, three => 3},
+  'right structure';
 
 # Non-blocking select
 my ($fail, $result);
-my $db = $pg->db;
+my $db = $mysql->db;
 is $db->backlog, 0, 'no operations waiting';
 $db->query(
   'select 1 as one, 2 as two, 3 as three' => sub {
@@ -94,7 +85,7 @@ is_deeply $result, {one => 1, two => 2, three => 3}, 'right structure';
 Mojo::IOLoop->delay(
   sub {
     my $delay = shift;
-    my $db    = $pg->db;
+    my $db    = $mysql->db;
     $db->query('select 1 as one' => $delay->begin);
     $db->query('select 2 as two' => $delay->begin);
     $db->query('select 2 as two' => $delay->begin);
@@ -102,31 +93,28 @@ Mojo::IOLoop->delay(
   sub {
     my ($delay, $err_one, $one, $err_two, $two, $err_again, $again) = @_;
     $fail = $err_one || $err_two || $err_again;
-    $result
-      = [$one->hashes->first, $two->hashes->first, $again->hashes->first];
+    $result = [$one->hashes->first, $two->hashes->first, $again->hashes->first];
   }
 )->wait;
 ok !$fail, 'no error';
 is_deeply $result, [{one => 1}, {two => 2}, {two => 2}], 'right structure';
 
 # Connection cache
-is $pg->max_connections, 5, 'right default';
-my @dbhs = map { $_->dbh } $pg->db, $pg->db, $pg->db, $pg->db, $pg->db;
-is_deeply \@dbhs,
-  [map { $_->dbh } $pg->db, $pg->db, $pg->db, $pg->db, $pg->db],
-  'same database handles';
+is $mysql->max_connections, 5, 'right default';
+my @dbhs = map { $_->dbh } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db;
+is_deeply \@dbhs, [map { $_->dbh } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db], 'same database handles';
 @dbhs = ();
-my $dbh = $pg->max_connections(1)->db->dbh;
-is $pg->db->dbh, $dbh, 'same database handle';
-isnt $pg->db->dbh, $pg->db->dbh, 'different database handles';
-is $pg->db->dbh, $dbh, 'different database handles';
-$dbh = $pg->db->dbh;
-is $pg->db->dbh, $dbh, 'same database handle';
-$pg->db->disconnect;
-isnt $pg->db->dbh, $dbh, 'different database handles';
+my $dbh = $mysql->max_connections(1)->db->dbh;
+is $mysql->db->dbh, $dbh, 'same database handle';
+isnt $mysql->db->dbh, $mysql->db->dbh, 'different database handles';
+is $mysql->db->dbh, $dbh, 'different database handles';
+$dbh = $mysql->db->dbh;
+is $mysql->db->dbh, $dbh, 'same database handle';
+$mysql->db->disconnect;
+isnt $mysql->db->dbh, $dbh, 'different database handles';
 
 # Statement cache
-$db = $pg->db;
+$db = $mysql->db;
 is $db->max_statements, 10, 'right default';
 my $sth = $db->max_statements(2)->query('select 3 as three')->sth;
 is $db->query('select 3 as three')->sth,   $sth, 'same statement handle';
@@ -137,19 +125,18 @@ isnt $db->query('select 6 as six')->sth,   $sth, 'different statement handles';
 isnt $db->query('select 3 as three')->sth, $sth, 'different statement handles';
 
 # Fork safety
-$dbh = $pg->db->dbh;
+$dbh = $mysql->db->dbh;
 {
   local $$ = -23;
-  isnt $pg->db->dbh, $dbh, 'different database handles';
+  isnt $mysql->db->dbh, $dbh, 'different database handles';
 };
 
 # Notifications
-$db = $pg->db;
+$db = $mysql->db;
 ok !$db->is_listening, 'not listening';
 $db->listen('foo');
 ok $db->is_listening, 'listening';
-Mojo::IOLoop->timer(
-  0 => sub { $pg->db->query('select pg_notify(?, ?)', 'foo', 'bar') });
+Mojo::IOLoop->timer(0 => sub { $mysql->db->query('select mysql_notify(?, ?)', 'foo', 'bar') });
 my @notification;
 $db->once(
   notification => sub {
@@ -167,17 +154,16 @@ is $notification[2], 'bar', 'right payload';
 
 # Stop listening for all notifications
 ok !$db->is_listening, 'not listening';
-ok $db->listen('foo')->listen('bar')->unlisten('bar')->is_listening,
-  'listening';
+ok $db->listen('foo')->listen('bar')->unlisten('bar')->is_listening, 'listening';
 ok !$db->unlisten('*')->is_listening, 'not listening';
 
 # Blocking error
-eval { $pg->db->query('does_not_exist') };
+eval { $mysql->db->query('does_not_exist') };
 like $@, qr/does_not_exist/, 'right error';
 
 # Non-blocking error
 ($fail, $result) = ();
-$pg->db->query(
+$mysql->db->query(
   'does_not_exist' => sub {
     my ($db, $err, $results) = @_;
     $fail   = $err;
