@@ -1,0 +1,139 @@
+NAME
+    Mojo::MySQL - Mojolicious and Async MySQL
+
+SYNOPSIS
+      use Mojo::MySQL;
+
+      # Create a table
+      my $mysql = Mojo::MySQL->new('mysql://username@/test');
+      $mysql->db->do('create table if not exists names (name varchar(255))');
+
+      # Insert a few rows
+      my $db = $mysql->db;
+      $db->query('insert into names values (?)', 'Sara');
+      $db->query('insert into names values (?)', 'Daniel');
+
+      # Select all rows blocking
+      say for $db->query('select * from names')
+        ->hashes->map(sub { $_->{name} })->each;
+
+      # Select all rows non-blocking
+      Mojo::IOLoop->delay(
+        sub {
+          my $delay = shift;
+          $db->query('select * from names' => $delay->begin);
+        },
+        sub {
+          my ($delay, $err, $results) = @_;
+          say for $results->hashes->map(sub { $_->{name} })->each;
+        }
+      )->wait;
+
+DESCRIPTION
+    Mojo::MySQL is a tiny wrapper around DBD::mysql that makes MySQL
+    <http://www.mysql.org> a lot of fun to use with the Mojolicious
+    <http://mojolicio.us> real-time web framework.
+
+    Database and statement handles are cached automatically, so they can be
+    reused transparently to increase performance. While all I/O operations
+    are performed blocking, you can wait for long running queries
+    asynchronously, allowing the Mojo::IOLoop event loop to perform other
+    tasks in the meantime. Since database connections usually have a very
+    low latency, this often results in very good performance.
+
+    All cached database handles will be reset automatically if a new process
+    has been forked, this allows multiple processes to share the same
+    Mojo::MySQL object safely.
+
+    Note that this whole distribution is EXPERIMENTAL and will change
+    without warning!
+
+ATTRIBUTES
+    Mojo::MySQL implements the following attributes.
+
+  dsn
+      my $dsn = $mysql->dsn;
+      $mysql  = $mysql->dsn('dbi:mysql:dbname=foo');
+
+    Data Source Name, defaults to "dbi:mysql:dbname=test".
+
+  max_connections
+      my $max = $mysql->max_connections;
+      $mysql  = $mysql->max_connections(3);
+
+    Maximum number of idle database handles to cache for future use,
+    defaults to 5.
+
+  options
+      my $options = $mysql->options;
+      $mysql      = $mysql->options({AutoCommit => 1});
+
+    Options for database handles, defaults to activating "AutoCommit" as
+    well as "RaiseError" and deactivating "PrintError".
+
+  password
+      my $password = $mysql->password;
+      $mysql       = $mysql->password('s3cret');
+
+    Database password, defaults to an empty string.
+
+  username
+      my $username = $mysql->username;
+      $mysql       = $mysql->username('batman');
+
+    Database username, defaults to an empty string.
+
+METHODS
+    Mojo::MySQL inherits all methods from Mojo::Base and implements the
+    following new ones.
+
+  db
+      my $db = $mysql->db;
+
+    Get Mojo::MySQL::Database object for a cached or newly created database
+    handle. The database handle will be automatically cached again when that
+    object is destroyed, so you can handle connection timeouts gracefully by
+    holding on to it only for short amounts of time.
+
+  from_string
+      $mysql = $mysql->from_string('mysql://user@/test');
+
+    Parse configuration from connection string.
+
+      # Just a database
+      $mysql->from_string('mysql:///db1');
+
+      # Username and database
+      $mysql->from_string('mysql://batman@/db2');
+
+      # Username, password, host and database
+      $mysql->from_string('mysql://batman:s3cret@localhost/db3');
+
+      # Username, domain socket and database
+      $mysql->from_string('mysql://batman@%2ftmp%2fmysql.sock/db4');
+
+      # Username, database and additional options
+      $mysql->from_string('mysql://batman@/db5?PrintError=1&RaiseError=0');
+
+  new
+      my $mysql = Mojo::MySQL->new;
+      my $mysql = Mojo::MySQL->new('mysql://user@/test');
+
+    Construct a new Mojo::MySQL object and parse connection string with
+    "from_string" if necessary.
+
+AUTHOR
+    Jan Henning Thorsen, "jhthorsen@cpan.org".
+
+    This code is mostly a rip-off from Sebastian Riedel's Mojo::Pg.
+
+COPYRIGHT AND LICENSE
+    Copyright (C) 2014, Jan Henning Thorsen.
+
+    This program is free software, you can redistribute it and/or modify it
+    under the terms of the Artistic License version 2.0.
+
+SEE ALSO
+    Mojo::Pg, <https://github.com/jhthorsen/mojo-mysql>,
+    Mojolicious::Guides, <http://mojolicio.us>.
+
