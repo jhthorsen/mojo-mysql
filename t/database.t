@@ -77,7 +77,7 @@ $db->query(
 is $db->backlog, 1, 'one operation waiting';
 Mojo::IOLoop->start;
 is $db->backlog, 0, 'no operations waiting';
-ok !$fail, 'no error';
+ok !$fail, 'no error' or diag "err=$fail";
 is_deeply $result, {one => 1, two => 2, three => 3}, 'right structure';
 
 # Concurrent non-blocking selects
@@ -96,7 +96,7 @@ Mojo::IOLoop->delay(
     $result = [$one->hashes->first, $two->hashes->first, $again->hashes->first];
   }
 )->wait;
-ok !$fail, 'no error';
+ok !$fail, 'no error' or diag "err=$fail";
 is_deeply $result, [{one => 1}, {two => 2}, {two => 2}], 'right structure';
 
 # Connection cache

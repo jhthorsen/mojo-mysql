@@ -60,10 +60,10 @@ sub _dequeue {
   my $queue = $self->{queue} ||= [];
   for (my $i = 0; $i <= $#$queue; $i++) {
     my $sth = $queue->[$i];
-    return splice @$queue, $i, 1 if !(!$sth->{pg_async} ^ !$async) && $sth->{Statement} eq $query;
+    return splice @$queue, $i, 1 if !(!$sth->{async} ^ !$async) && $sth->{Statement} eq $query;
   }
 
-  return $self->dbh->prepare($query, $async ? {pg_async => 'PG_ASYNC'} : ());
+  return $self->dbh->prepare($query, $async ? {async => 1} : ());
 }
 
 sub _enqueue {
@@ -94,16 +94,20 @@ sub _watch {
   return if $self->{watching} || $self->{watching}++;
 
   my $dbh = $self->dbh;
-  $self->{handle} ||= IO::Handle->new_from_fd($dbh->{pg_socket}, 'r');
+  $self->{handle} ||= do {
+    open my $FH, '<&', $dbh->mysql_fd or die "Dup mysql_fd: $!";
+    $FH;
+  };
   Mojo::IOLoop->singleton->reactor->io(
     $self->{handle} => sub {
       my $reactor = shift;
 
-      return unless (my $waiting = $self->{waiting}) && $dbh->pg_ready;
+      return unless my $waiting = $self->{waiting};
+      return unless @$waiting and $waiting->[0]{sth} and $waiting->[0]{sth}->mysql_async_ready;
       my ($sth, $cb) = @{shift @$waiting}{qw(sth cb)};
 
       # Do not raise exceptions inside the event loop
-      my $result = do { local $dbh->{RaiseError} = 0; $dbh->pg_result };
+      my $result = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
       my $err = defined $result ? undef : $dbh->errstr;
 
       $self->$cb($err, Mojo::MySQL::Results->new(db => $self, sth => $sth));
