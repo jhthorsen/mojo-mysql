@@ -128,14 +128,14 @@ L<Mojo::MySQL> implements the following attributes.
 =head2 dsn
 
   my $dsn = $mysql->dsn;
-  $mysql     = $mysql->dsn('dbi:mysql:dbname=foo');
+  $mysql  = $mysql->dsn('dbi:mysql:dbname=foo');
 
 Data Source Name, defaults to C<dbi:mysql:dbname=test>.
 
 =head2 max_connections
 
   my $max = $mysql->max_connections;
-  $mysql     = $mysql->max_connections(3);
+  $mysql  = $mysql->max_connections(3);
 
 Maximum number of idle database handles to cache for future use, defaults to
 C<5>.
@@ -143,7 +143,7 @@ C<5>.
 =head2 options
 
   my $options = $mysql->options;
-  $mysql         = $mysql->options({AutoCommit => 1});
+  $mysql      = $mysql->options({AutoCommit => 1});
 
 Options for database handles, defaults to activating C<AutoCommit> as well as
 C<RaiseError> and deactivating C<PrintError>.
@@ -151,14 +151,14 @@ C<RaiseError> and deactivating C<PrintError>.
 =head2 password
 
   my $password = $mysql->password;
-  $mysql          = $mysql->password('s3cret');
+  $mysql       = $mysql->password('s3cret');
 
 Database password, defaults to an empty string.
 
 =head2 username
 
   my $username = $mysql->username;
-  $mysql          = $mysql->username('sri');
+  $mysql       = $mysql->username('batman');
 
 Database username, defaults to an empty string.
 
@@ -186,16 +186,16 @@ Parse configuration from connection string.
   $mysql->from_string('mysql:///db1');
 
   # Username and database
-  $mysql->from_string('mysql://sri@/db2');
+  $mysql->from_string('mysql://batman@/db2');
 
   # Username, password, host and database
-  $mysql->from_string('mysql://sri:s3cret@localhost/db3');
+  $mysql->from_string('mysql://batman:s3cret@localhost/db3');
 
   # Username, domain socket and database
-  $mysql->from_string('mysql://sri@%2ftmp%2fmysql.sock/db4');
+  $mysql->from_string('mysql://batman@%2ftmp%2fmysql.sock/db4');
 
   # Username, database and additional options
-  $mysql->from_string('mysql://sri@/db5?PrintError=1&RaiseError=0');
+  $mysql->from_string('mysql://batman@/db5?PrintError=1&RaiseError=0');
 
 =head2 new
 
