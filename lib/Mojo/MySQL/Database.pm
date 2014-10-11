@@ -1,17 +1,17 @@
-package Mojo::Pg::Database;
+package Mojo::MySQL::Database;
 use Mojo::Base 'Mojo::EventEmitter';
 
-use DBD::Pg ':async';
+use DBD::mysql;
 use IO::Handle;
 use Mojo::IOLoop;
-use Mojo::Pg::Results;
+use Mojo::MySQL::Results;
 
-has [qw(dbh pg)];
+has [qw(dbh mysql)];
 has max_statements => 10;
 
 sub DESTROY {
   my $self = shift;
-  if ((my $dbh = $self->dbh) && (my $pg = $self->pg)) { $pg->_enqueue($dbh) }
+  if ((my $dbh = $self->dbh) && (my $mysql = $self->mysql)) { $mysql->_enqueue($dbh) }
 }
 
 sub backlog { scalar @{shift->{waiting} || []} }
@@ -34,8 +34,7 @@ sub listen {
   my ($self, $name) = @_;
 
   my $dbh = $self->dbh;
-  $dbh->do('listen ' . $dbh->quote_identifier($name))
-    unless $self->{listen}{$name}++;
+  $dbh->do('listen ' . $dbh->quote_identifier($name)) unless $self->{listen}{$name}++;
   $dbh->commit unless $dbh->{AutoCommit};
   $self->_watch;
 
@@ -52,7 +51,7 @@ sub query {
   unless ($cb) {
     my $sth = $self->_dequeue(0, $query);
     $sth->execute(@_);
-    return Mojo::Pg::Results->new(db => $self, sth => $sth);
+    return Mojo::MySQL::Results->new(db => $self, sth => $sth);
   }
 
   # Non-blocking
@@ -86,11 +85,10 @@ sub _dequeue {
   my $queue = $self->{queue} ||= [];
   for (my $i = 0; $i <= $#$queue; $i++) {
     my $sth = $queue->[$i];
-    return splice @$queue, $i, 1
-      if !(!$sth->{pg_async} ^ !$async) && $sth->{Statement} eq $query;
+    return splice @$queue, $i, 1 if !(!$sth->{pg_async} ^ !$async) && $sth->{Statement} eq $query;
   }
 
-  return $self->dbh->prepare($query, $async ? {pg_async => PG_ASYNC} : ());
+  return $self->dbh->prepare($query, $async ? {pg_async => 'PG_ASYNC'} : ());
 }
 
 sub _enqueue {
@@ -138,7 +136,7 @@ sub _watch {
       my $result = do { local $dbh->{RaiseError} = 0; $dbh->pg_result };
       my $err = defined $result ? undef : $dbh->errstr;
 
-      $self->$cb($err, Mojo::Pg::Results->new(db => $self, sth => $sth));
+      $self->$cb($err, Mojo::MySQL::Results->new(db => $self, sth => $sth));
       $self->_next;
       $self->_unwatch unless $self->backlog || $self->is_listening;
     }
@@ -151,21 +149,21 @@ sub _watch {
 
 =head1 NAME
 
-Mojo::Pg::Database - Database
+Mojo::MySQL::Database - Database
 
 =head1 SYNOPSIS
 
-  use Mojo::Pg::Database;
+  use Mojo::MySQL::Database;
 
-  my $db = Mojo::Pg::Database->new(pg => $pg, dbh => $dbh);
+  my $db = Mojo::MySQL::Database->new(mysql => $mysql, dbh => $dbh);
 
 =head1 DESCRIPTION
 
-L<Mojo::Pg::Database> is a container for database handles used by L<Mojo::Pg>.
+L<Mojo::MySQL::Database> is a container for database handles used by L<Mojo::MySQL>.
 
 =head1 EVENTS
 
-L<Mojo::Pg::Database> inherits all events from L<Mojo::EventEmitter> and can
+L<Mojo::MySQL::Database> inherits all events from L<Mojo::EventEmitter> and can
 emit the following new ones.
 
 =head2 notification
@@ -179,7 +177,7 @@ Emitted when a notification has been received.
 
 =head1 ATTRIBUTES
 
-L<Mojo::Pg::Database> implements the following attributes.
+L<Mojo::MySQL::Database> implements the following attributes.
 
 =head2 dbh
 
@@ -188,12 +186,12 @@ L<Mojo::Pg::Database> implements the following attributes.
 
 Database handle used for all queries.
 
-=head2 pg
+=head2 mysql
 
-  my $pg = $db->pg;
-  $db    = $db->pg(Mojo::Pg->new);
+  my $mysql = $db->mysql;
+  $db       = $db->mysql(Mojo::MySQL->new);
 
-L<Mojo::Pg> object this database belongs to.
+L<Mojo::MySQL> object this database belongs to.
 
 =head2 max_statements
 
@@ -205,7 +203,7 @@ C<10>.
 
 =head1 METHODS
 
-L<Mojo::Pg::Database> inherits all methods from L<Mojo::EventEmitter> and
+L<Mojo::MySQL::Database> inherits all methods from L<Mojo::EventEmitter> and
 implements the following new ones.
 
 =head2 backlog
@@ -262,7 +260,7 @@ Check database connection.
   my $results = $db->query('select * from foo');
   my $results = $db->query('insert into foo values (?, ?, ?)', @values);
 
-Execute a statement and return a L<Mojo::Pg::Results> object with the results.
+Execute a statement and return a L<Mojo::MySQL::Results> object with the results.
 The statement handle will be automatically cached again when that object is
 destroyed, so future queries can reuse it to increase performance. You can
 also append a callback to perform operation non-blocking.
@@ -288,6 +286,6 @@ Stop listening for notifications.
 
 =head1 SEE ALSO
 
-L<Mojo::Pg>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojo::MySQL>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
 
 =cut

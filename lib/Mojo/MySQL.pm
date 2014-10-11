@@ -1,14 +1,14 @@
-package Mojo::Pg;
+package Mojo::MySQL;
 use Mojo::Base -base;
 
 use Carp 'croak';
 use DBI;
-use Mojo::Pg::Database;
+use Mojo::MySQL::Database;
 use Mojo::URL;
 
-has dsn             => 'dbi:Pg:dbname=test';
+has dsn             => 'dbi:mysql:dbname=test';
 has max_connections => 5;
-has options => sub { {AutoCommit => 1, PrintError => 0, RaiseError => 1} };
+has options         => sub { {AutoCommit => 1, PrintError => 0, RaiseError => 1} };
 has [qw(password username)] => '';
 
 our $VERSION = '0.03';
@@ -19,7 +19,7 @@ sub db {
   # Fork safety
   delete @$self{qw(pid queue)} unless ($self->{pid} //= $$) eq $$;
 
-  return Mojo::Pg::Database->new(dbh => $self->_dequeue, pg => $self);
+  return Mojo::MySQL::Database->new(dbh => $self->_dequeue, mysql => $self);
 }
 
 sub from_string {
@@ -28,11 +28,10 @@ sub from_string {
   # Protocol
   return $self unless $str;
   my $url = Mojo::URL->new($str);
-  croak qq{Invalid PostgreSQL connection string "$str"}
-    unless $url->protocol eq 'postgresql';
+  croak qq{Invalid MySQL connection string "$str"} unless $url->protocol eq 'mysql';
 
   # Database
-  my $dsn = 'dbi:Pg:dbname=' . $url->path->parts->[0];
+  my $dsn = 'dbi:mysql:dbname=' . $url->path->parts->[0];
 
   # Host and port
   if (my $host = $url->host) { $dsn .= ";host=$host" }
@@ -71,18 +70,18 @@ sub _enqueue {
 
 =head1 NAME
 
-Mojo::Pg - Mojolicious ♥ PostgreSQL
+Mojo::MySQL - Mojolicious and Async MySQL
 
 =head1 SYNOPSIS
 
-  use Mojo::Pg;
+  use Mojo::MySQL;
 
   # Create a table
-  my $pg = Mojo::Pg->new('postgresql://postgres@/test');
-  $pg->db->do('create table if not exists names (name varchar(255))');
+  my $mysql = Mojo::MySQL->new('mysql://username@/test');
+  $mysql->db->do('create table if not exists names (name varchar(255))');
 
   # Insert a few rows
-  my $db = $pg->db;
+  my $db = $mysql->db;
   $db->query('insert into names values (?)', 'Sara');
   $db->query('insert into names values (?)', 'Daniel');
 
@@ -104,8 +103,8 @@ Mojo::Pg - Mojolicious ♥ PostgreSQL
 
 =head1 DESCRIPTION
 
-L<Mojo::Pg> is a tiny wrapper around L<DBD::Pg> that makes
-L<PostgreSQL|http://www.postgresql.org> a lot of fun to use with the
+L<Mojo::MySQL> is a tiny wrapper around L<DBD::mysql> that makes
+L<MySQL|http://www.mysql.org> a lot of fun to use with the
 L<Mojolicious|http://mojolicio.us> real-time web framework.
 
 Database and statement handles are cached automatically, so they can be reused
@@ -116,7 +115,7 @@ database connections usually have a very low latency, this often results in
 very good performance.
 
 All cached database handles will be reset automatically if a new process has
-been forked, this allows multiple processes to share the same L<Mojo::Pg>
+been forked, this allows multiple processes to share the same L<Mojo::MySQL>
 object safely.
 
 Note that this whole distribution is EXPERIMENTAL and will change without
@@ -124,105 +123,104 @@ warning!
 
 =head1 ATTRIBUTES
 
-L<Mojo::Pg> implements the following attributes.
+L<Mojo::MySQL> implements the following attributes.
 
 =head2 dsn
 
-  my $dsn = $pg->dsn;
-  $pg     = $pg->dsn('dbi:Pg:dbname=foo');
+  my $dsn = $mysql->dsn;
+  $mysql     = $mysql->dsn('dbi:mysql:dbname=foo');
 
-Data Source Name, defaults to C<dbi:Pg:dbname=test>.
+Data Source Name, defaults to C<dbi:mysql:dbname=test>.
 
 =head2 max_connections
 
-  my $max = $pg->max_connections;
-  $pg     = $pg->max_connections(3);
+  my $max = $mysql->max_connections;
+  $mysql     = $mysql->max_connections(3);
 
 Maximum number of idle database handles to cache for future use, defaults to
 C<5>.
 
 =head2 options
 
-  my $options = $pg->options;
-  $pg         = $pg->options({AutoCommit => 1});
+  my $options = $mysql->options;
+  $mysql         = $mysql->options({AutoCommit => 1});
 
 Options for database handles, defaults to activating C<AutoCommit> as well as
 C<RaiseError> and deactivating C<PrintError>.
 
 =head2 password
 
-  my $password = $pg->password;
-  $pg          = $pg->password('s3cret');
+  my $password = $mysql->password;
+  $mysql          = $mysql->password('s3cret');
 
 Database password, defaults to an empty string.
 
 =head2 username
 
-  my $username = $pg->username;
-  $pg          = $pg->username('sri');
+  my $username = $mysql->username;
+  $mysql          = $mysql->username('sri');
 
 Database username, defaults to an empty string.
 
 =head1 METHODS
 
-L<Mojo::Pg> inherits all methods from L<Mojo::Base> and implements the
+L<Mojo::MySQL> inherits all methods from L<Mojo::Base> and implements the
 following new ones.
 
 =head2 db
 
-  my $db = $pg->db;
+  my $db = $mysql->db;
 
-Get L<Mojo::Pg::Database> object for a cached or newly created database
+Get L<Mojo::MySQL::Database> object for a cached or newly created database
 handle. The database handle will be automatically cached again when that
 object is destroyed, so you can handle connection timeouts gracefully by
 holding on to it only for short amounts of time.
 
 =head2 from_string
 
-  $pg = $pg->from_string('postgresql://postgres@/test');
+  $mysql = $mysql->from_string('mysql://user@/test');
 
 Parse configuration from connection string.
 
   # Just a database
-  $pg->from_string('postgresql:///db1');
+  $mysql->from_string('mysql:///db1');
 
   # Username and database
-  $pg->from_string('postgresql://sri@/db2');
+  $mysql->from_string('mysql://sri@/db2');
 
   # Username, password, host and database
-  $pg->from_string('postgresql://sri:s3cret@localhost/db3');
+  $mysql->from_string('mysql://sri:s3cret@localhost/db3');
 
   # Username, domain socket and database
-  $pg->from_string('postgresql://sri@%2ftmp%2fpg.sock/db4');
+  $mysql->from_string('mysql://sri@%2ftmp%2fmysql.sock/db4');
 
   # Username, database and additional options
-  $pg->from_string('postgresql://sri@/db5?PrintError=1&RaiseError=0');
+  $mysql->from_string('mysql://sri@/db5?PrintError=1&RaiseError=0');
 
 =head2 new
 
-  my $pg = Mojo::Pg->new;
-  my $pg = Mojo::Pg->new('postgresql://postgres@/test');
+  my $mysql = Mojo::MySQL->new;
+  my $mysql = Mojo::MySQL->new('mysql://user@/test');
 
-Construct a new L<Mojo::Pg> object and parse connection string with
+Construct a new L<Mojo::MySQL> object and parse connection string with
 L</"from_string"> if necessary.
-
-  # Customize configuration further
-  my $pg = Mojo::Pg->new->dsn('dbi:Pg:service=foo');
 
 =head1 AUTHOR
 
-Sebastian Riedel, C<sri@cpan.org>.
+Jan Henning Thorsen, C<jhthorsen@cpan.org>.
+
+This code is mostly a rip-off from Sebastian Riedel's L<Mojo::Pg>.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2014, Sebastian Riedel.
+Copyright (C) 2014, Jan Henning Thorsen.
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.
 
 =head1 SEE ALSO
 
-L<https://github.com/kraih/mojo-pg>, L<Mojolicious::Guides>,
+L<https://github.com/jhthorsen/mojo-mysql>, L<Mojolicious::Guides>,
 L<http://mojolicio.us>.
 
 =cut
