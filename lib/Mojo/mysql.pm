@@ -54,8 +54,17 @@ sub new { @_ > 1 ? shift->SUPER::new->from_string(@_) : shift->SUPER::new }
 
 sub _dequeue {
   my $self = shift;
-  while (my $dbh = shift @{$self->{queue} || []}) { return $dbh if $dbh->ping }
-  return DBI->connect(map { $self->$_ } qw(dsn username password options));
+  my $dbh;
+
+  while ($dbh = shift @{$self->{queue} || []}) { return $dbh if $dbh->ping }
+  $dbh = DBI->connect(map { $self->$_ } qw(dsn username password options));
+
+  # <mst> batman's probably going to have more "fun" than you have ...
+  # especially once he discovers that DBD::mysql randomly reconnects under
+  # you, silently, but only if certain env vars are set
+  # hint: force-set mysql_auto_reconnect or whatever it's called to 0
+  $dbh->{mysql_auto_reconnect} = 0;
+  $dbh;
 }
 
 sub _enqueue {
