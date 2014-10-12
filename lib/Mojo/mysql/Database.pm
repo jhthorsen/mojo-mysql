@@ -5,6 +5,7 @@ use DBD::mysql;
 use IO::Handle;
 use Mojo::IOLoop;
 use Mojo::mysql::Results;
+use Mojo::mysql::Transaction;
 
 has [qw(dbh mysql)];
 has max_statements => 10;
@@ -16,9 +17,12 @@ sub DESTROY {
 
 sub backlog { scalar @{shift->{waiting} || []} }
 
-sub begin { shift->_dbh(begin_work => @_) }
-
-sub commit { shift->dbh->commit }
+sub begin {
+  my $self = shift;
+  my $dbh  = $self->dbh;
+  $dbh->begin_work;
+  return Mojo::mysql::Transaction->new(dbh => $dbh);
+}
 
 sub disconnect {
   my $self = shift;
@@ -26,7 +30,11 @@ sub disconnect {
   $self->dbh->disconnect;
 }
 
-sub do { shift->_dbh(do => @_) }
+sub do {
+  my $self = shift;
+  $self->dbh->do(@_);
+  return $self;
+}
 
 sub ping { shift->dbh->ping }
 
@@ -44,14 +52,6 @@ sub query {
   # Non-blocking
   push @{$self->{waiting}}, {args => [@_], cb => $cb, query => $query};
   $self->$_ for qw(_next _watch);
-}
-
-sub rollback { shift->dbh->rollback }
-
-sub _dbh {
-  my ($self, $method) = (shift, shift);
-  $self->dbh->$method(@_);
-  return $self;
 }
 
 sub _dequeue {
@@ -174,15 +174,16 @@ Number of waiting non-blocking queries.
 
 =head2 begin
 
-  $db = $db->begin;
+  my $tx = $db->begin;
 
-Begin transaction.
+Begin transaction and return L<Mojo::mysql::Transaction> object, which will
+automatically roll back the transaction unless
+L<Mojo::mysql::Transaction/"commit"> bas been called before it is destroyed.
 
-=head2 commit
-
-  $db->commit;
-
-Commit transaction.
+  my $tx = $db->begin;
+  $db->query('insert into names values (?)', 'Baerbel');
+  $db->query('insert into names values (?)', 'Wolfgangl');
+  $tx->commit;
 
 =head2 disconnect
 
@@ -217,12 +218,6 @@ also append a callback to perform operation non-blocking.
     ...
   });
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
-
-=head2 rollback
-
-  $db->rollback;
-
-Rollback transaction.
 
 =head1 SEE ALSO
 
