@@ -1,9 +1,7 @@
 
 0.03
-       - Removed commit and rollback methods from Mojo::Pg::Database.
-         From https://github.com/kraih/mojo-pg/commit/494c2d554cdc4cc1e9515a0ff56f3ee8fd188e74
-       - Added Mojo::Pg::Transaction.
-         From https://github.com/kraih/mojo-pg/commit/494c2d554cdc4cc1e9515a0ff56f3ee8fd188e74
+       - Removed commit and rollback methods from Mojo::mysql::Database.
+       - Added Mojo::mysql::Transaction.
 
 0.02     Sun Oct 12 18:14:33 2014
        - Force mysql_auto_reconnect = 0 to avoid nasty reconnect bugs under
@@ -12,4 +10,3 @@
 
 0.01     Sat Oct 11 17:34:05 2014
        - First release.
-         Credits https://github.com/kraih/mojo-pg
