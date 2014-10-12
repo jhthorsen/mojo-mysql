@@ -1,5 +1,5 @@
 
-0.02
+0.02     Sun Oct 12 18:14:33 2014
        - Force mysql_auto_reconnect = 0 to avoid nasty reconnect bugs under
          some environments.
          https://metacpan.org/pod/DBD::mysql#mysql_auto_reconnect
