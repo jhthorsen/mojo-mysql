@@ -1,5 +1,6 @@
+Revision history for Mojo-mysql
 
-0.03
+0.03     Mon Oct 13 13:39:59 2014
        - Removed commit and rollback methods from Mojo::mysql::Database.
        - Added Mojo::mysql::Transaction.
 
