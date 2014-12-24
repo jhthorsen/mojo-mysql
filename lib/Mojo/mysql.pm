@@ -1,5 +1,5 @@
 package Mojo::mysql;
-use Mojo::Base -base;
+use Mojo::Base 'Mojo::EventEmitter';
 
 use Carp 'croak';
 use DBI;
@@ -155,6 +155,19 @@ Data Source Name, defaults to C<dbi:mysql:dbname=test>.
 
 Maximum number of idle database handles to cache for future use, defaults to
 C<5>.
+
+=head2 migrations
+
+MySQL does not support DDL transactions. B<Therefore, migrations should be used with extreme caution. Backup your database. You've been warned.> 
+
+  my $migrations = $mysql->migrations;
+  $mysql         = $mysql->migrations(Mojo::Pg::Migrations->new);
+
+L<Mojo::mysql::Migrations> object you can use to change your database schema more
+easily.
+
+  # Load migrations from file and migrate to latest version
+  $mysql->migrations->from_file('/Users/sri/migrations.sql')->migrate;
 
 =head2 options
 
