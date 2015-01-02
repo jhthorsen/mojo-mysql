@@ -26,7 +26,8 @@ sub db {
   # Fork safety
   delete @$self{qw(pid queue)} unless ($self->{pid} //= $$) eq $$;
 
-  return Mojo::mysql::Database->new(dbh => $self->_dequeue, mysql => $self);
+  my ($dbh, $handle) = @{$self->_dequeue};
+  return Mojo::mysql::Database->new(dbh => $dbh, handle => $handle, mysql => $self);
 }
 
 sub from_string {
@@ -63,7 +64,7 @@ sub _dequeue {
   my $self = shift;
   my $dbh;
 
-  while ($dbh = shift @{$self->{queue} || []}) { return $dbh if $dbh->ping }
+  while (my $c = shift @{$self->{queue} || []}) { return $c if $c->[0]->ping }
   $dbh = DBI->connect(map { $self->$_ } qw(dsn username password options));
 
   # <mst> batman's probably going to have more "fun" than you have ...
@@ -71,12 +72,13 @@ sub _dequeue {
   # you, silently, but only if certain env vars are set
   # hint: force-set mysql_auto_reconnect or whatever it's called to 0
   $dbh->{mysql_auto_reconnect} = 0;
-  $dbh;
+  [$dbh];
 }
 
 sub _enqueue {
-  my ($self, $dbh) = @_;
-  push @{$self->{queue}}, $dbh if $dbh->{Active};
+  my ($self, $dbh, $handle) = @_;
+  my $queue = $self->{queue} ||= [];
+  push @$queue, [$dbh, $handle] if $dbh->{Active};
   shift @{$self->{queue}} while @{$self->{queue}} > $self->max_connections;
 }
 

@@ -13,7 +13,9 @@ has max_statements => 10;
 
 sub DESTROY {
   my $self = shift;
-  if ((my $dbh = $self->dbh) && (my $mysql = $self->mysql)) { $mysql->_enqueue($dbh) }
+  return unless my $dbh   = $self->dbh;
+  return unless my $mysql = $self->mysql;
+  $mysql->_enqueue($dbh, $self->{handle});
 }
 
 sub backlog { scalar @{shift->{waiting} || []} }

@@ -36,9 +36,12 @@ get '/non-blocking' => sub {
   );
 };
 
+# Make sure database connections are idle for a bit
 my $t = Test::Mojo->new;
+$t->ua->max_connections(0);
 
-# Blocking select
+# Blocking select (twice to allow connection reuse)
+$t->get_ok('/blocking')->status_is(200)->content_is('I ♥ Mojolicious!');
 $t->get_ok('/blocking')->status_is(200)->content_is('I ♥ Mojolicious!');
 
 # Non-blocking select
