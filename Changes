@@ -5,6 +5,8 @@ Revision history for Mojo-mysql
          Contributor: Curt Hochwender
        * Add Mojo::mysql::Migrations.
        * Add migrations attribute to Mojo::Pg.
+       * Updated Mojolicious requirement to 5.49 to ensure migrations in the DATA
+         section are not served as static files.
 
 0.03     Mon Oct 13 13:39:59 2014
        * Removed commit and rollback methods from Mojo::mysql::Database.
