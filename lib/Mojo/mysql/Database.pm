@@ -6,6 +6,7 @@ use IO::Handle;
 use Mojo::IOLoop;
 use Mojo::mysql::Results;
 use Mojo::mysql::Transaction;
+use Scalar::Util 'weaken';
 
 has [qw(dbh mysql)];
 has max_statements => 10;
@@ -19,9 +20,10 @@ sub backlog { scalar @{shift->{waiting} || []} }
 
 sub begin {
   my $self = shift;
-  my $dbh  = $self->dbh;
-  $dbh->begin_work;
-  return Mojo::mysql::Transaction->new(dbh => $dbh);
+  $self->dbh->begin_work;
+  my $tx = Mojo::mysql::Transaction->new(db => $self);
+  weaken $tx->{db};
+  return $tx;
 }
 
 sub disconnect {

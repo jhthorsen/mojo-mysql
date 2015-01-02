@@ -161,7 +161,7 @@ C<5>.
 MySQL does not support DDL transactions. B<Therefore, migrations should be used with extreme caution. Backup your database. You've been warned.> 
 
   my $migrations = $mysql->migrations;
-  $mysql         = $mysql->migrations(Mojo::Pg::Migrations->new);
+  $mysql         = $mysql->migrations(Mojo::mysql::Migrations->new);
 
 L<Mojo::mysql::Migrations> object you can use to change your database schema more
 easily.

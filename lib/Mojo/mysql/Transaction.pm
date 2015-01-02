@@ -1,21 +1,23 @@
 package Mojo::mysql::Transaction;
 use Mojo::Base -base;
 
-has 'dbh';
+has 'db';
 
 sub DESTROY {
   my $self = shift;
-  if ($self->{rollback} && (my $dbh = $self->dbh)) { $dbh->rollback }
+  if ($self->{rollback} && (my $dbh = $self->{dbh})) { $dbh->rollback }
 }
 
 sub commit {
   my $self = shift;
-  $self->dbh->commit;
-  $self->{rollback} = undef;
-  return $self;
+  $self->{dbh}->commit if delete $self->{rollback};
 }
 
-sub new { shift->SUPER::new(@_, rollback => 1) }
+sub new {
+  my $self = shift->SUPER::new(@_, rollback => 1);
+  $self->{dbh} = $self->db->dbh;
+  return $self;
+}
 
 1;
 
@@ -29,7 +31,7 @@ Mojo::mysql::Transaction - Transaction
 
   use Mojo::mysql::Transaction;
 
-  my $tx = Mojo::mysql::Transaction->new(dbh => $dbh);
+  my $tx = Mojo::mysql::Transaction->new(db => $db);
   $tx->commit;
 
 =head1 DESCRIPTION
@@ -41,12 +43,12 @@ L<Mojo::mysql::Database>.
 
 L<Mojo::mysql::Transaction> implements the following attributes.
 
-=head2 dbh
+=head2 db
 
-  my $dbh = $tx->dbh;
-  $tx     = $tx->dbh($dbh);
+  my $db = $tx->db;
+  $tx    = $tx->db(Mojo::mysql::Database->new);
 
-L<DBD::mysql> database handle this transaction belongs to.
+L<Mojo::mysql::Database> object this transaction belongs to.
 
 =head1 METHODS
 
