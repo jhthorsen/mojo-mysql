@@ -15,7 +15,7 @@ has migrations      => sub {
   weaken $migrations->{mysql};
   return $migrations;
 };
-has options         => sub { {AutoCommit => 1, PrintError => 0, RaiseError => 1} };
+has options => sub { {AutoCommit => 1, PrintError => 0, RaiseError => 1} };
 has [qw(password username)] => '';
 
 our $VERSION = '0.03';
@@ -235,6 +235,8 @@ Construct a new L<Mojo::mysql> object and parse connection string with
 L</"from_string"> if necessary.
 
 =head1 AUTHOR
+
+Curt Hochwender, C<hochwender@centurytel.net>.
 
 Jan Henning Thorsen, C<jhthorsen@cpan.org>.
 
