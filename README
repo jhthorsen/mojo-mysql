@@ -6,7 +6,7 @@ SYNOPSIS
 
       # Create a table
       my $mysql = Mojo::mysql->new('mysql://username@/test');
-      $mysql->db->do('create table if not exists names (name varchar(255))');
+      $mysql->db->do('create table if not exists names (name text)');
 
       # Insert a few rows
       my $db = $mysql->db;
@@ -63,6 +63,19 @@ ATTRIBUTES
 
     Maximum number of idle database handles to cache for future use,
     defaults to 5.
+
+  migrations
+    MySQL does not support DDL transactions. Therefore, migrations should be
+    used with extreme caution. Backup your database. You've been warned.
+
+      my $migrations = $mysql->migrations;
+      $mysql         = $mysql->migrations(Mojo::mysql::Migrations->new);
+
+    Mojo::mysql::Migrations object you can use to change your database
+    schema more easily.
+
+      # Load migrations from file and migrate to latest version
+      $mysql->migrations->from_file('/Users/sri/migrations.sql')->migrate;
 
   options
       my $options = $mysql->options;
@@ -123,6 +136,8 @@ METHODS
     "from_string" if necessary.
 
 AUTHOR
+    Curt Hochwender, "hochwender@centurytel.net".
+
     Jan Henning Thorsen, "jhthorsen@cpan.org".
 
     This code is mostly a rip-off from Sebastian Riedel's Mojo::Pg.

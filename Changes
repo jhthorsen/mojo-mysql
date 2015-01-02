@@ -1,6 +1,6 @@
 Revision history for Mojo-mysql
 
-0.04
+0.04     Fri Jan  2 12:15:26 2015
        * Add support for migrations #3
          Contributor: Curt Hochwender
        * Add Mojo::mysql::Migrations.

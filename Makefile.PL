@@ -15,6 +15,6 @@ WriteMakefile(
     },
   },
   BUILD_REQUIRES => {'Test::More' => '0.90'},
-  PREREQ_PM      => {'DBD::mysql' => '0', 'Mojolicious' => '5.47'},
+  PREREQ_PM      => {'DBD::mysql' => '0', 'Mojolicious' => '5.49'},
   test           => {TESTS        => 't/*.t'},
 );
