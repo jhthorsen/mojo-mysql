@@ -197,7 +197,7 @@ Disconnect database handle and prevent it from getting cached again.
 
 =head2 do
 
-  $db = $db->do('create table foo (bar varchar(255))');
+  $db = $db->do('create table foo (bar text)');
 
 Execute a statement and discard its result.
 

@@ -96,7 +96,7 @@ Mojo::mysql - Mojolicious and Async MySQL
 
   # Create a table
   my $mysql = Mojo::mysql->new('mysql://username@/test');
-  $mysql->db->do('create table if not exists names (name varchar(255))');
+  $mysql->db->do('create table if not exists names (name text)');
 
   # Insert a few rows
   my $db = $mysql->db;

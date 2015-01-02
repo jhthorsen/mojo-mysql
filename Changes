@@ -8,9 +8,9 @@ Revision history for Mojo-mysql
        * Add db attribute to Mojo::mysql::Transaction.
        * Fix bug where Perl would close the DBD::mysql file descriptor after it had
          been used with the event loop.
-       * Remove dbh attribute from Mojo::mysql::Transaction.
+       * Remove dbh attribute from Mojo::mysql::Transaction
        * Updated Mojolicious requirement to 5.49 to ensure migrations in the DATA
-         section are not served as static files.
+         section are not served as static files
 
 0.03     Mon Oct 13 13:39:59 2014
        * Removed commit and rollback methods from Mojo::mysql::Database.

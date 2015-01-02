@@ -14,8 +14,7 @@ sub active { $_[0]->_active($_[0]->mysql->db) }
 
 sub from_data {
   my ($self, $class, $name) = @_;
-  return $self->from_string(
-    Mojo::Loader->new->data($class //= caller, $name // $self->name));
+  return $self->from_string(Mojo::Loader->new->data($class //= caller, $name // $self->name));
 }
 
 sub from_file { shift->from_string(slurp pop) }
@@ -55,21 +54,19 @@ sub migrate {
   # Up
   my $sql;
   if ($active < $target) {
-    $sql = join '',
-      map { $up->{$_} } grep { $_ <= $target && $_ > $active } sort keys %$up;
+    my @up = grep { $_ <= $target && $_ > $active } sort keys %$up;
+    $sql = join '', map { $up->{$_} } @up;
   }
 
   # Down
   else {
-    $sql = join '',
-      map { $down->{$_} }
-      grep { $_ > $target && $_ <= $active } reverse sort keys %$down;
+    my @down = grep { $_ > $target && $_ <= $active } reverse sort keys %$down;
+    $sql = join '', map { $down->{$_} } @down;
   }
 
   warn "-- Migrate ($active -> $target)\n$sql\n" if DEBUG;
-
   chop($sql);
-  $db->query($_) for split(';', $sql); 
+  $db->query($_) for split(';', $sql);
   $sql = "update mojo_migrations set version = ? where name = ?;";
   $db->query($sql, $target, $self->name) and $tx->commit;
   return $self;
@@ -81,15 +78,14 @@ sub _active {
   my $dbh  = $db->dbh;
   my $name = $self->name;
   local @$dbh{qw(AutoCommit RaiseError)} = (1, 0);
-  my $results
-    = $db->query('select version from mojo_migrations where name = ?', $name);
+  my $results = $db->query('select version from mojo_migrations where name = ?', $name);
   if (my $next = $results->array) { return $next->[0] }
 
   local @$dbh{qw(AutoCommit RaiseError)} = (1, 1);
   $db->query(
     'create table if not exists mojo_migrations (
-       name    varchar(255) unique,
-       version varchar(255)
+       name    varchar(255) unique not null,
+       version bigint not null
      )'
   ) if $results->sth->err;
   $db->query('insert into mojo_migrations values (?, ?)', $name, 0);
@@ -120,7 +116,7 @@ with one or more statements, separated by comments of the form
 C<-- VERSION UP/DOWN>.
 
   -- 1 up
-  create table messages (message varchar(255));
+  create table messages (message text);
   insert into messages values ('I â™¥ Mojolicious!');
   -- 1 down
   drop table messages;
@@ -177,7 +173,7 @@ L<Mojo::Loader>, defaults to using the caller class and L</"name">.
   __DATA__
   @@ migrations
   -- 1 up
-  create table messages (message varchar(255));
+  create table messages (message text);
   insert into messages values ('I â™¥ Mojolicious!');
   -- 1 down
   drop table messages;
