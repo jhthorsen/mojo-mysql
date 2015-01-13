@@ -4,12 +4,7 @@ use Mojo::Base -base;
 use Mojo::Collection;
 use Mojo::Util 'tablify';
 
-has [qw(db sth)];
-
-sub DESTROY {
-  my $self = shift;
-  if ((my $db = $self->db) && (my $sth = $self->sth)) { $db->_enqueue($sth) }
-}
+has 'sth';
 
 sub array { shift->sth->fetchrow_arrayref }
 
@@ -47,13 +42,6 @@ L<Mojo::mysql::Database>.
 =head1 ATTRIBUTES
 
 L<Mojo::mysql::Results> implements the following attributes.
-
-=head2 db
-
-  my $db   = $results->db;
-  $results = $results->db(Mojo::mysql::Database->new);
-
-L<Mojo::mysql::Database> object these results belong to.
 
 =head2 sth
 

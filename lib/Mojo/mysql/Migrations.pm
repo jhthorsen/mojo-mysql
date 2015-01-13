@@ -46,7 +46,7 @@ sub migrate {
   return $self if $self->_active($db) == $target;
 
   # Lock migrations table and check version again
-  local @{$db->dbh}{qw(AutoCommit RaiseError)} = (1, 1);
+  local $db->dbh->{RaiseError} = 1;
   my $tx = $db->begin;
 
   return $self if (my $active = $self->_active($db)) == $target;
@@ -77,11 +77,12 @@ sub _active {
 
   my $dbh  = $db->dbh;
   my $name = $self->name;
-  local @$dbh{qw(AutoCommit RaiseError)} = (1, 0);
+  local $dbh->{RaiseError} = 0;
   my $results = $db->query('select version from mojo_migrations where name = ?', $name);
   if (my $next = $results->array) { return $next->[0] }
 
-  local @$dbh{qw(AutoCommit RaiseError)} = (1, 1);
+  local $dbh->{RaiseError} = 1;
+
   $db->query(
     'create table if not exists mojo_migrations (
        name    varchar(255) unique not null,

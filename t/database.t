@@ -113,17 +113,6 @@ is $mysql->db->dbh, $dbh, 'same database handle';
 $mysql->db->disconnect;
 isnt $mysql->db->dbh, $dbh, 'different database handles';
 
-# Statement cache
-$db = $mysql->db;
-is $db->max_statements, 10, 'right default';
-my $sth = $db->max_statements(2)->query('select 3 as three')->sth;
-is $db->query('select 3 as three')->sth,   $sth, 'same statement handle';
-isnt $db->query('select 4 as four')->sth,  $sth, 'different statement handles';
-is $db->query('select 3 as three')->sth,   $sth, 'same statement handle';
-isnt $db->query('select 5 as five')->sth,  $sth, 'different statement handles';
-isnt $db->query('select 6 as six')->sth,   $sth, 'different statement handles';
-isnt $db->query('select 3 as three')->sth, $sth, 'different statement handles';
-
 # Fork safety
 $dbh = $mysql->db->dbh;
 {

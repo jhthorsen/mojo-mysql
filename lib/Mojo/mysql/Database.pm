@@ -2,14 +2,12 @@ package Mojo::mysql::Database;
 use Mojo::Base 'Mojo::EventEmitter';
 
 use DBD::mysql;
-use IO::Handle;
 use Mojo::IOLoop;
 use Mojo::mysql::Results;
 use Mojo::mysql::Transaction;
 use Scalar::Util 'weaken';
 
 has [qw(dbh mysql)];
-has max_statements => 10;
 
 sub DESTROY {
   my $self = shift;
@@ -40,6 +38,8 @@ sub do {
   return $self;
 }
 
+sub pid { shift->dbh->{mysql_thread_id} }
+
 sub ping { shift->dbh->ping }
 
 sub query {
@@ -48,32 +48,14 @@ sub query {
 
   # Blocking
   unless ($cb) {
-    my $sth = $self->_dequeue(0, $query);
+    my $sth = $self->dbh->prepare($query);
     $sth->execute(@_);
-    return Mojo::mysql::Results->new(db => $self, sth => $sth);
+    return Mojo::mysql::Results->new(sth => $sth);
   }
 
   # Non-blocking
   push @{$self->{waiting}}, {args => [@_], cb => $cb, query => $query};
   $self->$_ for qw(_next _watch);
-}
-
-sub _dequeue {
-  my ($self, $async, $query) = @_;
-
-  my $queue = $self->{queue} ||= [];
-  for (my $i = 0; $i <= $#$queue; $i++) {
-    my $sth = $queue->[$i];
-    return splice @$queue, $i, 1 if !(!$sth->{async} ^ !$async) && $sth->{Statement} eq $query;
-  }
-
-  return $self->dbh->prepare($query, $async ? {async => 1} : ());
-}
-
-sub _enqueue {
-  my ($self, $sth) = @_;
-  push @{$self->{queue}}, $sth;
-  shift @{$self->{queue}} while @{$self->{queue}} > $self->max_statements;
 }
 
 sub _next {
@@ -82,7 +64,7 @@ sub _next {
   return unless my $next = $self->{waiting}[0];
   return if $next->{sth};
 
-  my $sth = $next->{sth} = $self->_dequeue(1, $next->{query});
+  my $sth = $next->{sth} = $self->dbh->prepare($next->{query}, {async => 1});
   $sth->execute(@{$next->{args}});
 }
 
@@ -114,7 +96,7 @@ sub _watch {
       my $result = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
       my $err = defined $result ? undef : $dbh->errstr;
 
-      $self->$cb($err, Mojo::mysql::Results->new(db => $self, sth => $sth));
+      $self->$cb($err, Mojo::mysql::Results->new(sth => $sth));
       $self->_next;
       $self->_unwatch unless $self->backlog;
     }
@@ -157,14 +139,6 @@ Database handle used for all queries.
 
 L<Mojo::mysql> object this database belongs to.
 
-=head2 max_statements
-
-  my $max = $db->max_statements;
-  $db     = $db->max_statements(5);
-
-Maximum number of statement handles to cache for future queries, defaults to
-C<10>.
-
 =head1 METHODS
 
 L<Mojo::mysql::Database> inherits all methods from L<Mojo::EventEmitter> and
@@ -186,7 +160,7 @@ L<Mojo::mysql::Transaction/"commit"> bas been called before it is destroyed.
 
   my $tx = $db->begin;
   $db->query('insert into names values (?)', 'Baerbel');
-  $db->query('insert into names values (?)', 'Wolfgangl');
+  $db->query('insert into names values (?)', 'Wolfgang');
   $tx->commit;
 
 =head2 disconnect
@@ -212,10 +186,8 @@ Check database connection.
   my $results = $db->query('select * from foo');
   my $results = $db->query('insert into foo values (?, ?, ?)', @values);
 
-Execute a statement and return a L<Mojo::mysql::Results> object with the results.
-The statement handle will be automatically cached again when that object is
-destroyed, so future queries can reuse it to increase performance. You can
-also append a callback to perform operation non-blocking.
+Execute a blocking statement and return a L<Mojo::mysql::Results> object with the
+results. You can also append a callback to perform operation non-blocking.
 
   $db->query('select * from foo' => sub {
     my ($db, $err, $results) = @_;
