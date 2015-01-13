@@ -175,6 +175,12 @@ Disconnect database handle and prevent it from getting cached again.
 
 Execute a statement and discard its result.
 
+=head2 pid
+
+  my $pid = $db->pid;
+
+Return the connection id of the backend server process.
+
 =head2 ping
 
   my $bool = $db->ping;
