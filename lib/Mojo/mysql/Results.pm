@@ -4,7 +4,13 @@ use Mojo::Base -base;
 use Mojo::Collection;
 use Mojo::Util 'tablify';
 
+has dbh => undef;
 has 'sth';
+
+sub DESTROY {
+  my $self = shift;
+  $self->dbh ? $self->dbh->_destroy($self->sth) : $self->sth->finish;
+}
 
 sub array { shift->sth->fetchrow_arrayref }
 

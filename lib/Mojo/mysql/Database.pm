@@ -72,6 +72,9 @@ sub _unwatch {
   my $self = shift;
   return unless delete $self->{watching};
   Mojo::IOLoop->singleton->reactor->remove($self->{handle});
+
+  $_->finish for @{$self->{dead} || []};
+  $self->{dead} = [];
 }
 
 sub _watch {
@@ -96,11 +99,15 @@ sub _watch {
       my $result = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
       my $err = defined $result ? undef : $dbh->errstr;
 
-      $self->$cb($err, Mojo::mysql::Results->new(sth => $sth));
+      $self->$cb($err, Mojo::mysql::Results->new(dbh => $self, sth => $sth));
       $self->_next;
       $self->_unwatch unless $self->backlog;
     }
   )->watch($self->{handle}, 1, 0);
+}
+
+sub _destroy {
+  unshift @{shift->{dead} ||= []}, shift;
 }
 
 1;
