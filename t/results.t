@@ -15,6 +15,7 @@ my $db    = $mysql->db->do(
      name varchar(255)
    )'
 );
+$db->do('truncate table results_test');
 $db->query('insert into results_test (name) values (?)', $_) for qw(foo bar);
 
 # Result methods

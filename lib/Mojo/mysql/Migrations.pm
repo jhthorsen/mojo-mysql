@@ -118,7 +118,7 @@ C<-- VERSION UP/DOWN>.
 
   -- 1 up
   create table messages (message text);
-  insert into messages values ('I â™¥ Mojolicious!');
+  insert into messages values ('I ♥ Mojolicious!');
   -- 1 down
   drop table messages;
   -- 2 up (...you can comment freely here...)
@@ -175,7 +175,7 @@ L<Mojo::Loader>, defaults to using the caller class and L</"name">.
   @@ migrations
   -- 1 up
   create table messages (message text);
-  insert into messages values ('I â™¥ Mojolicious!');
+  insert into messages values ('I ♥ Mojolicious!');
   -- 1 down
   drop table messages;
 

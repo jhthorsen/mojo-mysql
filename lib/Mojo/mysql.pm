@@ -15,7 +15,7 @@ has migrations      => sub {
   weaken $migrations->{mysql};
   return $migrations;
 };
-has options => sub { {AutoCommit => 1, PrintError => 0, RaiseError => 1} };
+has options => sub { {mysql_enable_utf8 => 1, AutoCommit => 1, PrintError => 0, RaiseError => 1} };
 has [qw(password username)] => '';
 
 our $VERSION = '0.04';
@@ -153,7 +153,7 @@ following new ones.
     my ($pg, $dbh) = @_;
     ...
   });
-  
+
 Emitted when a new database connection has been established.
 
 =head1 ATTRIBUTES
@@ -191,10 +191,16 @@ easily.
 =head2 options
 
   my $options = $mysql->options;
-  $mysql      = $mysql->options({AutoCommit => 1});
+  $mysql      = $mysql->options({mysql_use_result => 1});
 
-Options for database handles, defaults to activating C<AutoCommit> as well as
+Options for database handles, defaults to activating C<mysql_enable_utf8>, C<AutoCommit> as well as
 C<RaiseError> and deactivating C<PrintError>.
+
+C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead connections.
+
+C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/begin> to manage transactions.
+
+C<RaiseError> is disabled event loop for asyncronous queries.
 
 =head2 password
 
