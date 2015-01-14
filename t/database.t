@@ -115,6 +115,7 @@ Mojo::IOLoop->delay(
   },
   sub {
     my ($delay, $err_two, $two, $err_again, $again) = @_;
+    push @$result, $db->query('select 1 as one')->hashes->first;
     $fail ||= $err_two || $err_again;
     push @$result, $two->hashes->first, $again->hashes->first;
     $db->query('select 3 as three' => $delay->begin);
@@ -126,7 +127,7 @@ Mojo::IOLoop->delay(
   }
 )->wait;
 ok !$fail, 'no error' or diag "err=$fail";
-is_deeply $result, [{one => 1}, {two => 2}, {two => 2}, {three => 3}], 'right structure';
+is_deeply $result, [{one => 1}, {one => 1}, {two => 2}, {two => 2}, {three => 3}], 'right structure';
 
 # Connection cache
 is $mysql->max_connections, 5, 'right default';
