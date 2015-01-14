@@ -99,7 +99,7 @@ sub _watch {
       my $result = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
       my $err = defined $result ? undef : $dbh->errstr;
 
-      $self->$cb($err, Mojo::mysql::Results->new(dbh => $self, sth => $sth));
+      $self->$cb($err, Mojo::mysql::Results->new(db => $self, sth => $sth));
       $self->_next;
       $self->_unwatch unless $self->backlog;
     }
