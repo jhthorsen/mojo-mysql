@@ -4,12 +4,12 @@ use Mojo::Base -base;
 use Mojo::Collection;
 use Mojo::Util 'tablify';
 
-has dbh => undef;
+has db => undef;
 has 'sth';
 
 sub DESTROY {
   my $self = shift;
-  $self->dbh ? $self->dbh->_destroy($self->sth) : $self->sth->finish;
+  $self->db ? $self->db->_destroy($self->sth) : $self->sth->finish;
 }
 
 sub array { shift->sth->fetchrow_arrayref }
@@ -48,6 +48,13 @@ L<Mojo::mysql::Database>.
 =head1 ATTRIBUTES
 
 L<Mojo::mysql::Results> implements the following attributes.
+
+=head2 db
+
+  my $db   = $results->db;
+  $results = $results->db(Mojo::mysql::Database->new);
+
+L<Mojo::mysql::Database> object these results belong to.
 
 =head2 sth
 

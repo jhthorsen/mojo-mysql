@@ -99,6 +99,35 @@ Mojo::IOLoop->delay(
 ok !$fail, 'no error' or diag "err=$fail";
 is_deeply $result, [{one => 1}, {two => 2}, {two => 2}], 'right structure';
 
+# Sequential and Concurrent non-blocking selects
+($fail, $result) = ();
+Mojo::IOLoop->delay(
+  sub {
+    my $delay = shift;
+    $db->query('select 1 as one' => $delay->begin);
+  },
+  sub {
+    my ($delay, $err, $res) = @_;
+    $fail = $err;
+    $result = [ $res->hashes->first ];
+    $db->query('select 2 as two' => $delay->begin);
+    $db->query('select 2 as two' => $delay->begin);
+  },
+  sub {
+    my ($delay, $err_two, $two, $err_again, $again) = @_;
+    $fail ||= $err_two || $err_again;
+    push @$result, $two->hashes->first, $again->hashes->first;
+    $db->query('select 3 as three' => $delay->begin);
+  },
+  sub {
+    my ($delay, $err_three, $three) = @_;
+    $fail ||= $err_three;
+    push @$result, $three->hashes->first;
+  }
+)->wait;
+ok !$fail, 'no error' or diag "err=$fail";
+is_deeply $result, [{one => 1}, {two => 2}, {two => 2}, {three => 3}], 'right structure';
+
 # Connection cache
 is $mysql->max_connections, 5, 'right default';
 my @dbhs = map { $_->dbh } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db;
