@@ -149,8 +149,8 @@ L<Mojo::mysql> inherits all events from L<Mojo::EventEmitter> and can emit the
 following new ones.
 
 =head2 connection
-  $pg->on(connection => sub {
-    my ($pg, $dbh) = @_;
+  $mysql->on(connection => sub {
+    my ($mysql, $dbh) = @_;
     ...
   });
 
@@ -200,7 +200,7 @@ C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead conn
 
 C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/begin> to manage transactions.
 
-C<RaiseError> is disabled event loop for asyncronous queries.
+C<RaiseError> is disabled in event loop for asyncronous queries.
 
 =head2 password
 
