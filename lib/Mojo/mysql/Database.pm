@@ -66,6 +66,9 @@ sub _next {
 
   my $sth = $next->{sth} = $self->dbh->prepare($next->{query}, {async => 1});
   $sth->execute(@{$next->{args}});
+
+  # keep reference to async handles to prevent being finished on result destroy while whatching fd
+  push @{$self->{async_sth} ||= []}, $sth;
 }
 
 sub _unwatch {
@@ -73,8 +76,7 @@ sub _unwatch {
   return unless delete $self->{watching};
   Mojo::IOLoop->singleton->reactor->remove($self->{handle});
 
-  $_->finish for @{$self->{dead} || []};
-  $self->{dead} = [];
+  $self->{async_sth} = [];
 }
 
 sub _watch {
@@ -99,15 +101,11 @@ sub _watch {
       my $result = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
       my $err = defined $result ? undef : $dbh->errstr;
 
-      $self->$cb($err, Mojo::mysql::Results->new(db => $self, sth => $sth));
+      $self->$cb($err, Mojo::mysql::Results->new(sth => $sth));
       $self->_next;
       $self->_unwatch unless $self->backlog;
     }
   )->watch($self->{handle}, 1, 0);
-}
-
-sub _destroy {
-  unshift @{shift->{dead} ||= []}, shift;
 }
 
 1;
