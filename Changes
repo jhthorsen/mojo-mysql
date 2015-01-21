@@ -1,5 +1,10 @@
 Revision history for Mojo-mysql
 
+0.05     Thu Jan 22 00:14:11 2015
+       * Do not cache statement handles in Mojo::mysql::Database.
+       * Synced changes from Mojo::Pg
+       * utf8 enabled by default
+
 0.04     Fri Jan  2 12:15:26 2015
        * Add support for migrations #3
          Contributor: Curt Hochwender

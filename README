@@ -34,9 +34,9 @@ DESCRIPTION
     <http://www.mysql.org> a lot of fun to use with the Mojolicious
     <http://mojolicio.us> real-time web framework.
 
-    Database and statement handles are cached automatically, so they can be
-    reused transparently to increase performance. While all I/O operations
-    are performed blocking, you can wait for long running queries
+    Database handles are cached automatically, so they can be reused
+    transparently to increase performance. While all I/O operations are
+    performed blocking, you can wait for long running queries
     asynchronously, allowing the Mojo::IOLoop event loop to perform other
     tasks in the meantime. Since database connections usually have a very
     low latency, this often results in very good performance.
@@ -47,6 +47,17 @@ DESCRIPTION
 
     Note that this whole distribution is EXPERIMENTAL and will change
     without warning!
+
+EVENTS
+    Mojo::mysql inherits all events from Mojo::EventEmitter and can emit the
+    following new ones.
+
+  connection
+  $mysql->on(connection => sub {
+    my ($mysql, $dbh) = @_;
+    ...
+  });
+    Emitted when a new database connection has been established.
 
 ATTRIBUTES
     Mojo::mysql implements the following attributes.
@@ -79,10 +90,19 @@ ATTRIBUTES
 
   options
       my $options = $mysql->options;
-      $mysql      = $mysql->options({AutoCommit => 1});
+      $mysql      = $mysql->options({mysql_use_result => 1});
 
-    Options for database handles, defaults to activating "AutoCommit" as
-    well as "RaiseError" and deactivating "PrintError".
+    Options for database handles, defaults to activating
+    "mysql_enable_utf8", "AutoCommit" as well as "RaiseError" and
+    deactivating "PrintError".
+
+    "mysql_auto_reconnect" is never enabled, Mojo::mysql takes care of dead
+    connections.
+
+    "AutoCommit" cannot not be disabled, use $db->begin to manage
+    transactions.
+
+    "RaiseError" is disabled in event loop for asyncronous queries.
 
   password
       my $password = $mysql->password;
@@ -97,8 +117,8 @@ ATTRIBUTES
     Database username, defaults to an empty string.
 
 METHODS
-    Mojo::mysql inherits all methods from Mojo::Base and implements the
-    following new ones.
+    Mojo::mysql inherits all methods from Mojo::EventEmitter and implements
+    the following new ones.
 
   db
       my $db = $mysql->db;
