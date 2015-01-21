@@ -15,7 +15,7 @@ has migrations      => sub {
   weaken $migrations->{mysql};
   return $migrations;
 };
-has options => sub { {AutoCommit => 1, PrintError => 0, RaiseError => 1} };
+has options => sub { {mysql_enable_utf8 => 1, AutoCommit => 1, PrintError => 0, RaiseError => 1} };
 has [qw(password username)] => '';
 
 our $VERSION = '0.04';
@@ -72,6 +72,10 @@ sub _dequeue {
   # you, silently, but only if certain env vars are set
   # hint: force-set mysql_auto_reconnect or whatever it's called to 0
   $dbh->{mysql_auto_reconnect} = 0;
+  # Maintain Commits with Mojo::mysql::Transaction
+  $dbh->{AutoCommit} = 1;
+
+  $self->emit(connection => $dbh);
   [$dbh];
 }
 
@@ -125,7 +129,7 @@ L<Mojo::mysql> is a tiny wrapper around L<DBD::mysql> that makes
 L<MySQL|http://www.mysql.org> a lot of fun to use with the
 L<Mojolicious|http://mojolicio.us> real-time web framework.
 
-Database and statement handles are cached automatically, so they can be reused
+Database handles are cached automatically, so they can be reused
 transparently to increase performance. While all I/O operations are performed
 blocking, you can wait for long running queries asynchronously, allowing the
 L<Mojo::IOLoop> event loop to perform other tasks in the meantime. Since
@@ -138,6 +142,19 @@ object safely.
 
 Note that this whole distribution is EXPERIMENTAL and will change without
 warning!
+
+=head1 EVENTS
+
+L<Mojo::mysql> inherits all events from L<Mojo::EventEmitter> and can emit the
+following new ones.
+
+=head2 connection
+  $mysql->on(connection => sub {
+    my ($mysql, $dbh) = @_;
+    ...
+  });
+
+Emitted when a new database connection has been established.
 
 =head1 ATTRIBUTES
 
@@ -174,10 +191,16 @@ easily.
 =head2 options
 
   my $options = $mysql->options;
-  $mysql      = $mysql->options({AutoCommit => 1});
+  $mysql      = $mysql->options({mysql_use_result => 1});
 
-Options for database handles, defaults to activating C<AutoCommit> as well as
+Options for database handles, defaults to activating C<mysql_enable_utf8>, C<AutoCommit> as well as
 C<RaiseError> and deactivating C<PrintError>.
+
+C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead connections.
+
+C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/begin> to manage transactions.
+
+C<RaiseError> is disabled in event loop for asyncronous queries.
 
 =head2 password
 
@@ -195,7 +218,7 @@ Database username, defaults to an empty string.
 
 =head1 METHODS
 
-L<Mojo::mysql> inherits all methods from L<Mojo::Base> and implements the
+L<Mojo::mysql> inherits all methods from L<Mojo::EventEmitter> and implements the
 following new ones.
 
 =head2 db
