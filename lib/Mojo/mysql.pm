@@ -149,6 +149,7 @@ L<Mojo::mysql> inherits all events from L<Mojo::EventEmitter> and can emit the
 following new ones.
 
 =head2 connection
+
   $mysql->on(connection => sub {
     my ($mysql, $dbh) = @_;
     ...
