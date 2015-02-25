@@ -2,7 +2,7 @@ package Mojo::mysql::Migrations;
 use Mojo::Base -base;
 
 use Carp 'croak';
-use Mojo::Loader;
+use Mojo::Loader 'data_section';
 use Mojo::Util 'slurp';
 
 use constant DEBUG => $ENV{MOJO_MIGRATIONS_DEBUG} || 0;
@@ -14,7 +14,7 @@ sub active { $_[0]->_active($_[0]->mysql->db) }
 
 sub from_data {
   my ($self, $class, $name) = @_;
-  return $self->from_string(Mojo::Loader->new->data($class //= caller, $name // $self->name));
+  return $self->from_string(data_section($class //= caller, $name // $self->name));
 }
 
 sub from_file { shift->from_string(slurp pop) }

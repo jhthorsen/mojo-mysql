@@ -20,7 +20,7 @@ WriteMakefile(
 ,
   PREREQ_PM => {
   'DBD::mysql' => '4.019',
-  'Mojolicious' => '5.49'
+  'Mojolicious' => '5.81'
 }
 ,
   test => { TESTS => 't/*.t' },
