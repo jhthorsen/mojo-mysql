@@ -53,10 +53,11 @@ EVENTS
     following new ones.
 
   connection
-  $mysql->on(connection => sub {
-    my ($mysql, $dbh) = @_;
-    ...
-  });
+      $mysql->on(connection => sub {
+        my ($mysql, $dbh) = @_;
+        ...
+      });
+
     Emitted when a new database connection has been established.
 
 ATTRIBUTES

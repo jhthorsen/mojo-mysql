@@ -1,5 +1,8 @@
 Revision history for Mojo-mysql
 
+0.06     Wed Feb 25 17:31:24 2015
+       * OO Mojo::Loader API is deprecated in Mojolicious 5.81
+
 0.05     Thu Jan 22 00:14:11 2015
        * Do not cache statement handles in Mojo::mysql::Database.
        * Synced changes from Mojo::Pg
