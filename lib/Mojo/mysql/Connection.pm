@@ -254,7 +254,7 @@ sub _recv_error {
         ' message:', $self->{error_str}, "\n" if DEBUG;
 
     $self->_state($self->_state eq 'query' ? 'idle' : 'error');
-    $self->emit(error => $self->{error_str});
+    $self->emit(errors => $self->{error_str});
 }
 
 sub _recv_ok {
@@ -557,7 +557,7 @@ sub ping {
 sub DESTROY {
     my $self = shift;
     $self->unsubscribe($_) for qw(connect fields result error);
-    $self->disconnect if $self->_state eq 'idle';
+    $self->disconnect if $self->_state eq 'idle' and ${^GLOBAL_PHASE} ne 'DESTRUCT';
 }
 
 1;

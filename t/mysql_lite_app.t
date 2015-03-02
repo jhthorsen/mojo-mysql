@@ -12,9 +12,7 @@ use Test::Mojo;
 
 helper mysql => sub {
   state $mysql = do {
-    my $c = Mojo::mysql->new($ENV{TEST_ONLINE});
-    $c->options->{mysql_enable_utf8} = 1;
-    $c;
+    Mojo::mysql->new($ENV{TEST_ONLINE});
   };
 };
 

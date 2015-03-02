@@ -1,111 +1,171 @@
 package Mojo::mysql::Database;
 use Mojo::Base 'Mojo::EventEmitter';
 
-use DBD::mysql;
-use Mojo::IOLoop;
 use Mojo::mysql::Results;
 use Mojo::mysql::Transaction;
 use Scalar::Util 'weaken';
+use Carp 'croak';
 
-has [qw(dbh mysql)];
+has [qw(connection mysql)];
 
 sub DESTROY {
   my $self = shift;
-  return unless my $dbh   = $self->dbh;
+  return unless my $c = $self->connection;
   return unless my $mysql = $self->mysql;
-  $mysql->_enqueue($dbh, $self->{handle});
+  $mysql->_enqueue($c);
 }
 
 sub backlog { scalar @{shift->{waiting} || []} }
 
 sub begin {
   my $self = shift;
-  $self->dbh->begin_work;
+  $self->do('START TRANSACTION');
   my $tx = Mojo::mysql::Transaction->new(db => $self);
   weaken $tx->{db};
   return $tx;
 }
 
-sub disconnect {
-  my $self = shift;
-  $self->_unwatch;
-  $self->dbh->disconnect;
-}
+sub disconnect { shift->connection->disconnect }
+
+sub pid { shift->connection->{connection_id} }
+
+sub ping { shift->connection->ping }
 
 sub do {
-  my $self = shift;
-  $self->dbh->do(@_);
-  return $self;
+    my $self = shift;
+    my $cb = ref $_[-1] eq 'CODE' ? pop : undef;
+    my $sql = _expand_sql(@_);
+
+    croak 'async query in flight' if $self->backlog and !$cb;
+    $self->_subscribe unless $self->backlog;
+
+    push @{$self->{waiting}}, { cb => $cb, sql => $sql, started => 0};
+
+    # Blocking
+    unless ($cb) {
+        $self->connection->query($sql);
+        $self->_unsubscribe;
+        my $current = shift @{$self->{waiting}};
+        croak $self->connection->{error_str} if $self->connection->{error};
+        return $self;
+    }
+
+    # Non-blocking
+    $self->_next;
+    return $self;
 }
 
-sub pid { shift->dbh->{mysql_thread_id} }
-
-sub ping { shift->dbh->ping }
-
 sub query {
-  my ($self, $query) = (shift, shift);
+  my $self = shift;
   my $cb = ref $_[-1] eq 'CODE' ? pop : undef;
+  my $sql = _expand_sql(@_);
+
+  croak 'async query in flight' if $self->backlog and !$cb;
+  $self->_subscribe unless $self->backlog;
+
+  push @{$self->{waiting}}, { cb => $cb, sql => $sql, results => Mojo::mysql::Results->new, count => 0, started => 0};
 
   # Blocking
   unless ($cb) {
-    my $sth = $self->dbh->prepare($query);
-    $sth->execute(@_);
-    return Mojo::mysql::Results->new(sth => $sth);
+    $self->connection->query($sql);
+    $self->_unsubscribe;
+    my $current = shift @{$self->{waiting}};
+    croak $self->connection->{error_str} if $self->connection->{error};
+    return $current->{results};
   }
 
   # Non-blocking
-  push @{$self->{waiting}}, {args => [@_], cb => $cb, query => $query};
-  $self->$_ for qw(_next _watch);
+  $self->_next;
 }
 
 sub _next {
   my $self = shift;
 
   return unless my $next = $self->{waiting}[0];
-  return if $next->{sth};
+  return if $next->{started}++;
 
-  my $sth = $next->{sth} = $self->dbh->prepare($next->{query}, {async => 1});
-  $sth->execute(@{$next->{args}});
+  $self->connection->query($next->{sql}, sub { 
+    my $c = shift;
+    my $current = shift @{$self->{waiting}};
+    my $error = $c->{error_str};
 
-  # keep reference to async handles to prevent being finished on result destroy while whatching fd
-  push @{$self->{async_sth} ||= []}, $sth;
+    $self->backlog ? $self->_next : $self->_unsubscribe;
+
+    my $cb = $current->{cb};
+    $self->$cb($error, $current->{results});
+  });
+
 }
 
-sub _unwatch {
+sub _subscribe {
   my $self = shift;
-  return unless delete $self->{watching};
-  Mojo::IOLoop->singleton->reactor->remove($self->{handle});
 
-  $self->{async_sth} = [];
+  $self->connection->on(fields => sub {
+    my ($c, $fields) = @_;
+    return unless exists $self->{waiting}->[0]->{results};
+    push @{ $self->{waiting}->[0]->{results}->{_columns} }, $fields;
+    $self->{waiting}->[0]->{count}++;
+  });
+
+  $self->connection->on(result => sub {
+    my ($c, $row) = @_;
+    return unless exists $self->{waiting}->[0]->{results};
+    my $i = $self->{waiting}->[0]->{count} - 1;
+    push @{ $self->{waiting}->[0]->{results}->{_results}->[$i] //= [] }, $row;
+  });
 }
 
-sub _watch {
+sub _unsubscribe {
   my $self = shift;
+  $self->connection->unsubscribe($_) for qw(fields result);
+}
 
-  return if $self->{watching} || $self->{watching}++;
+sub _quote {
+  my $string = shift;
+  return 'NULL' unless defined $string;
 
-  my $dbh = $self->dbh;
-  $self->{handle} ||= do {
-    open my $FH, '<&', $dbh->mysql_fd or die "Dup mysql_fd: $!";
-    $FH;
-  };
-  Mojo::IOLoop->singleton->reactor->io(
-    $self->{handle} => sub {
-      my $reactor = shift;
+  for ($string) {
+    s/\\/\\\\/g;
+    s/\0/\\0/g;
+    s/\n/\\n/g;
+    s/\r/\\r/g;
+    s/'/\\'/g;
+  # s/"/\\"/g;
+    s/\x1a/\\Z/g;
+  }
 
-      return unless my $waiting = $self->{waiting};
-      return unless @$waiting and $waiting->[0]{sth} and $waiting->[0]{sth}->mysql_async_ready;
-      my ($sth, $cb) = @{shift @$waiting}{qw(sth cb)};
+  return "'$string'";
+}
 
-      # Do not raise exceptions inside the event loop
-      my $result = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
-      my $err = defined $result ? undef : $dbh->errstr;
+# from Net::Wire10
+my $split_sql = qr/
+  # capture each part, which is either:
+  (
+    # small comment in double-dash or
+    --[[:cntrl:]\ ].*(?:\n|\z) |
+    # small comment in hash or
+    \#.*(?:\n|\z) |
+    # big comment in C-style or version-conditional code or
+    \/\*(?:[^\*]|\*[^\/])*(?:\*\/|\*\z|\z) |
+    # whitespace
+    [\ \r\n\013\t\f]+ |
+    # single-quoted literal text or
+    '(?:[^'\\]*|\\(?:.|\n)|'')*(?:'|\z) |
+    # double-quoted literal text or
+    "(?:[^"\\]*|\\(?:.|\n)|"")*(?:"|\z) |
+    # schema-quoted literal text or
+    `(?:[^`]*|``)*(?:`|\z) |
+    # else it is either sql speak or
+    (?:[^'"`\?\ \r\n\013\t\f\#\-\/]|\/[^\*]|-[^-]|--(?=[^[:cntrl:]\ ]))+ |
+    # bingo: a ? placeholder
+    \?
+  )
+/x;
 
-      $self->$cb($err, Mojo::mysql::Results->new(sth => $sth));
-      $self->_next;
-      $self->_unwatch unless $self->backlog;
-    }
-  )->watch($self->{handle}, 1, 0);
+sub _expand_sql {
+  my ($sql, @args) = @_;
+  my @sql = $sql =~ m/$split_sql/g;
+  return join('', map { $_ eq '?' ? _quote(shift @args) : $_ } @sql);
 }
 
 1;
@@ -130,12 +190,12 @@ L<Mojo::mysql::Database> is a container for database handles used by L<Mojo::MyS
 
 L<Mojo::mysql::Database> implements the following attributes.
 
-=head2 dbh
+=head2 connection
 
-  my $dbh = $db->dbh;
-  $db     = $db->dbh(DBI->new);
+  my $c = $db->connection;
+  $db   = $db->connection(Mojo::mysql::Connection->new);
 
-Database handle used for all queries.
+L<Mojo::mysql::Connection> object used for all queries.
 
 =head2 mysql
 

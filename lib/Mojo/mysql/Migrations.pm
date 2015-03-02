@@ -46,7 +46,7 @@ sub migrate {
   return $self if $self->_active($db) == $target;
 
   # Lock migrations table and check version again
-  local $db->dbh->{RaiseError} = 1;
+  #local $db->dbh->{RaiseError} = 1;
   my $tx = $db->begin;
 
   return $self if (my $active = $self->_active($db)) == $target;
@@ -67,7 +67,7 @@ sub migrate {
   warn "-- Migrate ($active -> $target)\n$sql\n" if DEBUG;
   chop($sql);
   $db->query($_) for split(';', $sql);
-  $sql = "update mojo_migrations set version = ? where name = ?;";
+  $sql = "update mojo_migrations set version = ? where name = ?";
   $db->query($sql, $target, $self->name) and $tx->commit;
   return $self;
 }
@@ -75,20 +75,16 @@ sub migrate {
 sub _active {
   my ($self, $db) = @_;
 
-  my $dbh  = $db->dbh;
   my $name = $self->name;
-  local $dbh->{RaiseError} = 0;
-  my $results = $db->query('select version from mojo_migrations where name = ?', $name);
-  if (my $next = $results->array) { return $next->[0] }
-
-  local $dbh->{RaiseError} = 1;
+  my $results = eval { $db->query('select version from mojo_migrations where name = ?', $name) };
+  if ($results and my $next = $results->array) { return $next->[0] }
 
   $db->query(
     'create table if not exists mojo_migrations (
        name    varchar(255) unique not null,
        version bigint not null
      )'
-  ) if $results->sth->err;
+  ) if $db->connection->{error};
   $db->query('insert into mojo_migrations values (?, ?)', $name, 0);
 
   return 0;

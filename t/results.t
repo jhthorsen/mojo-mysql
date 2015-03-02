@@ -19,8 +19,7 @@ $db->do('truncate table results_test');
 $db->query('insert into results_test (name) values (?)', $_) for qw(foo bar);
 
 # Result methods
-my $rows = $db->dbh->{mysql_use_result} ? 0 : 2;
-is_deeply $db->query('select * from results_test')->rows, $rows, 'two rows';
+is_deeply $db->query('select * from results_test')->rows, 2, 'two rows';
 is_deeply $db->query('select * from results_test')->columns, ['id', 'name'], 'right structure';
 is_deeply $db->query('select * from results_test')->array,   [1,    'foo'],  'right structure';
 is_deeply [$db->query('select * from results_test')->arrays->each], [[1, 'foo'], [2, 'bar']], 'right structure';

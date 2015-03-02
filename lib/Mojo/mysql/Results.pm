@@ -4,19 +4,67 @@ use Mojo::Base -base;
 use Mojo::Collection;
 use Mojo::Util 'tablify';
 
-has 'sth';
+has _columns => sub { [] };
+has _results => sub { [] };
+has _result => 0;
+has _pos => 0;
 
-sub array { shift->sth->fetchrow_arrayref }
+sub _current_columns { $_[0]->_columns->[$_[0]->_result] }
 
-sub arrays { Mojo::Collection->new(@{shift->sth->fetchall_arrayref}) }
+sub _current_results { $_[0]->_results->[$_[0]->_result] // [] }
 
-sub columns { shift->sth->{NAME} }
+sub _hash {
+  my ($self, $pos) = @_;
+  return {
+    map { $self->_current_columns->[$_]->{name} => $self->_current_results->[$pos]->[$_] }
+    (0 .. scalar @{ $self->_current_columns } - 1)
+  };
+}
 
-sub hash { shift->sth->fetchrow_hashref }
 
-sub hashes { Mojo::Collection->new(@{shift->sth->fetchall_arrayref({})}) }
+sub more_results {
+  my $self = shift;
+  return undef unless $self->_pos >= $self->rows;
+  $self->{_pos} = 0;
+  $self->{_result} ++;
+  return $self->_result < scalar @{ $self->_results };
+}
 
-sub rows { shift->sth->rows }
+sub array {
+  my $self = shift;
+  return undef if $self->_pos >= $self->rows;
+  my $array = $self->_current_results->[$self->_pos];
+  $self->{_pos}++;
+  return $array;
+}
+
+sub arrays {
+  my $self = shift;
+  my $arrays = Mojo::Collection->new(
+    map { $self->_current_results->[$_] } ($self->_pos .. $self->rows - 1) );
+  $self->{_pos} = $self->rows;
+  return $arrays;
+}
+
+sub columns { [ map { $_->{name} } @{ shift->_current_columns } ] }
+
+sub hash {
+  my $self = shift;
+  return undef if $self->_pos >= $self->rows;
+  my $hash = $self->_hash($self->_pos);
+  $self->{_pos}++;
+  return $hash;
+}
+
+sub hashes {
+  my $self = shift;
+  my $hashes = Mojo::Collection->new(
+    map { $self->_hash($_) } ($self->_pos .. $self->rows - 1) );
+  $self->{_pos} = $self->rows;
+  return $hashes;
+}
+
+sub rows { scalar @{ shift->_current_results } }
 
 sub text { tablify shift->arrays }
 
@@ -98,6 +146,15 @@ Number of rows.
   my $text = $results->text;
 
 Fetch all rows and turn them into a table with L<Mojo::Util/"tablify">.
+
+=head2 more_results
+
+  do {
+    my $columns = $results->columns;
+    my $arrays = $results->arrays;
+  } while ($results->more_results);
+
+Handle multiple results.
 
 =head1 SEE ALSO
 
