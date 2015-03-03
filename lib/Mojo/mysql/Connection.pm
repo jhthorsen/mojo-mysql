@@ -193,7 +193,7 @@ sub _send_auth {
     push @flags, 'MULTI_RESULTS' if $self->options->{multi_results};
     push @flags, 'MULTI_STATEMENTS' if $self->options->{multi_statements};
     push @flags, 'FOUND_ROWS' if $self->options->{found_rows};
-    my $flags = _flag_set CLIENT_CAPABILITY, @flags;
+    my $flags = _flag_set(CLIENT_CAPABILITY, @flags);
 
     warn '>>> AUTH #', $self->{seq}, ' state:', $self->_state, "\n",
         ' user:', $self->username, ' database:', $self->database,
