@@ -4,8 +4,8 @@ use Mojo::Base 'Mojo::EventEmitter';
 use utf8;
 use Encode qw(_utf8_off _utf8_on);
 use Digest::SHA qw(sha1);
-use Mojo::IOLoop;
 use Scalar::Util 'weaken';
+use Mojo::IOLoop;
 
 has host => 'localhost';
 has port => 3306,

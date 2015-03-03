@@ -8,7 +8,6 @@ use Mojo::mysql::Migrations;
 use Mojo::URL;
 use Scalar::Util 'weaken';
 
-has dsn             => 'dbi:mysql:dbname=test';
 has max_connections => 5;
 has migrations      => sub {
   my $migrations = Mojo::mysql::Migrations->new(mysql => shift);

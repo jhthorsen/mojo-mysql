@@ -1,8 +1,9 @@
 package Mojo::mysql::Database;
-use Mojo::Base 'Mojo::EventEmitter';
+use Mojo::Base -base;
 
 use Mojo::mysql::Results;
 use Mojo::mysql::Transaction;
+use Mojo::mysql::Util 'expand_sql';
 use Scalar::Util 'weaken';
 use Carp 'croak';
 
@@ -34,7 +35,7 @@ sub ping { shift->connection->ping }
 sub do {
     my $self = shift;
     my $cb = ref $_[-1] eq 'CODE' ? pop : undef;
-    my $sql = _expand_sql(@_);
+    my $sql = expand_sql(@_);
 
     croak 'async query in flight' if $self->backlog and !$cb;
     $self->_subscribe unless $self->backlog;
@@ -58,7 +59,7 @@ sub do {
 sub query {
   my $self = shift;
   my $cb = ref $_[-1] eq 'CODE' ? pop : undef;
-  my $sql = _expand_sql(@_);
+  my $sql = expand_sql(@_);
 
   croak 'async query in flight' if $self->backlog and !$cb;
   $self->_subscribe unless $self->backlog;
@@ -118,54 +119,6 @@ sub _subscribe {
 sub _unsubscribe {
   my $self = shift;
   $self->connection->unsubscribe($_) for qw(fields result);
-}
-
-sub _quote {
-  my $string = shift;
-  return 'NULL' unless defined $string;
-
-  for ($string) {
-    s/\\/\\\\/g;
-    s/\0/\\0/g;
-    s/\n/\\n/g;
-    s/\r/\\r/g;
-    s/'/\\'/g;
-  # s/"/\\"/g;
-    s/\x1a/\\Z/g;
-  }
-
-  return "'$string'";
-}
-
-# from Net::Wire10
-my $split_sql = qr/
-  # capture each part, which is either:
-  (
-    # small comment in double-dash or
-    --[[:cntrl:]\ ].*(?:\n|\z) |
-    # small comment in hash or
-    \#.*(?:\n|\z) |
-    # big comment in C-style or version-conditional code or
-    \/\*(?:[^\*]|\*[^\/])*(?:\*\/|\*\z|\z) |
-    # whitespace
-    [\ \r\n\013\t\f]+ |
-    # single-quoted literal text or
-    '(?:[^'\\]*|\\(?:.|\n)|'')*(?:'|\z) |
-    # double-quoted literal text or
-    "(?:[^"\\]*|\\(?:.|\n)|"")*(?:"|\z) |
-    # schema-quoted literal text or
-    `(?:[^`]*|``)*(?:`|\z) |
-    # else it is either sql speak or
-    (?:[^'"`\?\ \r\n\013\t\f\#\-\/]|\/[^\*]|-[^-]|--(?=[^[:cntrl:]\ ]))+ |
-    # bingo: a ? placeholder
-    \?
-  )
-/x;
-
-sub _expand_sql {
-  my ($sql, @args) = @_;
-  my @sql = $sql =~ m/$split_sql/g;
-  return join('', map { $_ eq '?' ? _quote(shift @args) : $_ } @sql);
 }
 
 1;
