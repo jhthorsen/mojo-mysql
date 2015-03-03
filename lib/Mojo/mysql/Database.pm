@@ -103,22 +103,33 @@ sub _subscribe {
 
   $self->connection->on(fields => sub {
     my ($c, $fields) = @_;
-    return unless exists $self->{waiting}->[0]->{results};
-    push @{ $self->{waiting}->[0]->{results}->{_columns} }, $fields;
+    return unless my $res = $self->{waiting}->[0]->{results};
+    push @{ $res->{_columns} }, $fields;
     $self->{waiting}->[0]->{count}++;
   });
 
   $self->connection->on(result => sub {
     my ($c, $row) = @_;
-    return unless exists $self->{waiting}->[0]->{results};
-    my $i = $self->{waiting}->[0]->{count} - 1;
-    push @{ $self->{waiting}->[0]->{results}->{_results}->[$i] //= [] }, $row;
+    return unless my $res = $self->{waiting}->[0]->{results};
+    push @{ $res->{_results}->[$self->{waiting}->[0]->{count} - 1] //= [] }, $row;
+  });
+
+  $self->connection->on(end => sub {
+    my $c = shift;
+    return unless my $res = $self->{waiting}->[0]->{results};
+    $res->{$_} = $c->{$_} for qw(affected_rows last_insert_id warnings_count);
+  });
+
+  $self->connection->on(errors => sub {
+    my $c = shift;
+    return unless my $res = $self->{waiting}->[0]->{results};
+    $res->{$_} = $c->{$_} for qw(error error_state error_str);
   });
 }
 
 sub _unsubscribe {
   my $self = shift;
-  $self->connection->unsubscribe($_) for qw(fields result);
+  $self->connection->unsubscribe($_) for qw(fields result end errors);
 }
 
 1;

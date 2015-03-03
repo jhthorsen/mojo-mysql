@@ -278,7 +278,8 @@ sub _recv_ok {
         '(', sprintf('%04X', $self->{status_flags}), ')',
         ' warnings:', $self->{warnings_count}, "\n" if DEBUG;
 
-    $self->emit(connect => undef) if $self->_state eq 'auth';
+    $self->emit('connect') if $self->_state eq 'auth';
+    $self->emit('end') if $self->_state eq 'query';
     $self->_state('idle');
 }
 
@@ -317,8 +318,14 @@ sub _recv_eof {
     }
     elsif ($self->_state eq 'result') {
         $self->{column_info} = [];
-        # MORE_RESULTS
-        $self->_state($self->{status_flags} & 0x0008 ? 'query' : 'idle');
+        if ($self->{status_flags} & 0x0008) {
+            # MORE_RESULTS
+            $self->_state('query');
+        }
+        else {
+            $self->emit(end => undef);
+            $self->_state('idle');
+        }
     }
 }
 
@@ -559,7 +566,7 @@ sub ping {
 
 sub DESTROY {
     my $self = shift;
-    $self->unsubscribe($_) for qw(connect fields result error);
+    $self->unsubscribe($_) for qw(connect fields result end errors);
     $self->disconnect if $self->_state eq 'idle';
 }
 
@@ -621,11 +628,20 @@ Emitted after posting query and fields definition is received.
         ...
     });
 
-Emited when a result row is received
+Emited when a result row is received.
 
-=head2 error
+=head2 end
 
-    $c->on(error => sub {
+    $c->on(end => sub {
+        my $c = shift;
+        ...
+    });
+
+Emited when query ended successfully.
+
+=head2 errors
+
+    $c->on(errors => sub {
         my ($c, $error) = @_;
         ...
     });
