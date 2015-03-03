@@ -5,6 +5,7 @@ use utf8;
 use Encode qw(_utf8_off _utf8_on);
 use Digest::SHA qw(sha1);
 use Mojo::IOLoop;
+use Scalar::Util 'weaken';
 
 has host => 'localhost';
 has port => 3306,
@@ -463,6 +464,7 @@ sub _seq {
     $self->{iostream} = Mojo::IOLoop::Stream->new($self->{socket});
     $self->{iostream}->reactor($self->_ioloop(0)->reactor) unless $cb;
     $self->{iostream}->timeout($self->options->{query_timeout});
+    weaken $self;
 
     $self->{iostream}->on(read => sub {
         my ($stream, $bytes) = @_;
@@ -517,6 +519,7 @@ sub connect {
 
     $self->{client} = Mojo::IOLoop::Client->new;
     $self->{client}->reactor($self->_ioloop(0)->reactor) unless $cb;
+    weaken $self;
 
     $self->{client}->on(connect => sub {
         my ($client, $handle) = @_;
@@ -557,7 +560,7 @@ sub ping {
 sub DESTROY {
     my $self = shift;
     $self->unsubscribe($_) for qw(connect fields result error);
-    $self->disconnect if $self->_state eq 'idle' and ${^GLOBAL_PHASE} ne 'DESTRUCT';
+    $self->disconnect if $self->_state eq 'idle';
 }
 
 1;
