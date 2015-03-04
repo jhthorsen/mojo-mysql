@@ -33,30 +33,6 @@ sub pid { shift->connection->{connection_id} }
 
 sub ping { shift->connection->ping }
 
-sub do {
-    my $self = shift;
-    my $cb = ref $_[-1] eq 'CODE' ? pop : undef;
-    my $sql = expand_sql(@_);
-
-    croak 'async query in flight' if $self->backlog and !$cb;
-    $self->_subscribe unless $self->backlog;
-
-    push @{$self->{waiting}}, { cb => $cb, sql => $sql, started => 0};
-
-    # Blocking
-    unless ($cb) {
-        $self->connection->query($sql);
-        $self->_unsubscribe;
-        my $current = shift @{$self->{waiting}};
-        croak $self->connection->{error_message} if $self->connection->{error_code};
-        return $self;
-    }
-
-    # Non-blocking
-    $self->_next;
-    return $self;
-}
-
 sub query {
   my $self = shift;
   my $cb = ref $_[-1] eq 'CODE' ? pop : undef;
@@ -198,12 +174,6 @@ L<Mojo::mysql::Transaction/"commit"> bas been called before it is destroyed.
   $db->disconnect;
 
 Disconnect database handle and prevent it from getting cached again.
-
-=head2 do
-
-  $db = $db->do('create table foo (bar text)');
-
-Execute a statement and discard its result.
 
 =head2 pid
 

@@ -13,7 +13,9 @@ sub DESTROY {
 
 sub commit {
   my $self = shift;
-  $self->db->query('COMMIT') and $self->db->query('SET autocommit=1') if delete $self->{rollback};
+  return unless delete $self->{rollback};
+  $self->db->query('COMMIT');
+  $self->db->query('SET autocommit=1');
 }
 
 sub new {

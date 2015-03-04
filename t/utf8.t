@@ -9,7 +9,8 @@ plan skip_all => 'set TEST_ONLINE to enable this test' unless $ENV{TEST_ONLINE};
 use Mojo::mysql;
 
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
-my $db    = $mysql->db->do(
+my $db    = $mysql->db;
+$db->query(
   'create table if not exists results_test (
      id serial primary key,
      name varchar(255) charset utf8
@@ -28,6 +29,6 @@ is_deeply [$db->query('select * from results_test')->hashes->each],
   [{id => 1, name => '☺'}, {id => 2, name => '☻'}], 'right structure';
 is $mysql->db->query('select * from results_test')->text, "1  ☺\n2  ☻\n", 'right text';
 
-$db->do('drop table results_test');
+$db->query('drop table results_test');
 
 done_testing();
