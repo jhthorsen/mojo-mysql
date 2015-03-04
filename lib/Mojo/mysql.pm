@@ -2,32 +2,53 @@ package Mojo::mysql;
 use Mojo::Base 'Mojo::EventEmitter';
 
 use Carp 'croak';
-use DBI;
+use Mojo::mysql::Connection;
 use Mojo::mysql::Database;
 use Mojo::mysql::Migrations;
 use Mojo::URL;
 use Scalar::Util 'weaken';
 
-has dsn             => 'dbi:mysql:dbname=test';
 has max_connections => 5;
 has migrations      => sub {
   my $migrations = Mojo::mysql::Migrations->new(mysql => shift);
   weaken $migrations->{mysql};
   return $migrations;
 };
-has options => sub { {mysql_enable_utf8 => 1, AutoCommit => 1, PrintError => 0, RaiseError => 1} };
-has [qw(password username)] => '';
+has host => 'localhost';
+has port => 3306,
+has [qw(password username database)] => '';
+has options => sub { {
+  multi_statements => 0, multi_results => 1,
+  utf8 => 1, found_rows => 0,
+  connect_timeout => 10, query_timeout => 30 } };
 
 our $VERSION = '0.06';
 
 sub db {
-  my $self = shift;
+  my ($self, $cb) = @_;
 
   # Fork safety
   delete @$self{qw(pid queue)} unless ($self->{pid} //= $$) eq $$;
 
-  my ($dbh, $handle) = @{$self->_dequeue};
-  return Mojo::mysql::Database->new(dbh => $dbh, handle => $handle, mysql => $self);
+  if (my $c = $self->_dequeue) {
+    my $db = Mojo::mysql::Database->new(mysql => $self, connection => $c);
+    return $cb ? $self->$cb(undef, $db) : $db;
+  }
+
+  my $c = Mojo::mysql::Connection->new(
+    host => $self->host, port => $self->port,
+    username => $self->username, password => $self->password,
+    database => $self->database, options => $self->options);
+
+  if (!$cb) {
+    $c->connect;
+    return Mojo::mysql::Database->new(mysql => $self, connection => $c);
+  }
+
+  $c->connect(sub {
+    $c->{error} ? $self->$cb($c->{error_message} , undef)
+      : $self->$cb(undef, Mojo::mysql::Database->new(mysql => $self, connection => $c));
+  });
 }
 
 sub from_string {
@@ -39,11 +60,11 @@ sub from_string {
   croak qq{Invalid MySQL connection string "$str"} unless $url->protocol eq 'mysql';
 
   # Database
-  my $dsn = 'dbi:mysql:dbname=' . $url->path->parts->[0];
+  $self->database($url->path->parts->[0]);
 
   # Host and port
-  if (my $host = $url->host) { $dsn .= ";host=$host" }
-  if (my $port = $url->port) { $dsn .= ";port=$port" }
+  if (my $host = $url->host) { $self->host($host) }
+  if (my $port = $url->port) { $self->port($port) }
 
   # Username and password
   if (($url->userinfo // '') =~ /^([^:]+)(?::([^:]+))?$/) {
@@ -54,35 +75,22 @@ sub from_string {
   # Options
   my $hash = $url->query->to_hash;
   @{$self->options}{keys %$hash} = values %$hash;
-
-  return $self->dsn($dsn);
+  return $self;
 }
 
 sub new { @_ > 1 ? shift->SUPER::new->from_string(@_) : shift->SUPER::new }
 
 sub _dequeue {
   my $self = shift;
-  my $dbh;
 
-  while (my $c = shift @{$self->{queue} || []}) { return $c if $c->[0]->ping }
-  $dbh = DBI->connect(map { $self->$_ } qw(dsn username password options));
-
-  # <mst> batman's probably going to have more "fun" than you have ...
-  # especially once he discovers that DBD::mysql randomly reconnects under
-  # you, silently, but only if certain env vars are set
-  # hint: force-set mysql_auto_reconnect or whatever it's called to 0
-  $dbh->{mysql_auto_reconnect} = 0;
-  # Maintain Commits with Mojo::mysql::Transaction
-  $dbh->{AutoCommit} = 1;
-
-  $self->emit(connection => $dbh);
-  [$dbh];
+  while (my $c = shift @{$self->{queue} || []}) { return $c if $c->ping }
+  return undef;
 }
 
 sub _enqueue {
-  my ($self, $dbh, $handle) = @_;
+  my ($self, $c) = @_;
   my $queue = $self->{queue} ||= [];
-  push @$queue, [$dbh, $handle] if $dbh->{Active};
+  push @$queue, $c;
   shift @{$self->{queue}} while @{$self->{queue}} > $self->max_connections;
 }
 
@@ -216,6 +224,27 @@ Database password, defaults to an empty string.
   $mysql       = $mysql->username('batman');
 
 Database username, defaults to an empty string.
+
+=head2 database
+
+  my $database = $mysql->database;
+  $mysql       = $mysql->database('test');
+
+Database name, defaults to an empty string.
+
+=head2 host
+
+  my $host = $mysql->host;
+  $mysql   = $mysql->host('localhost');
+
+MySQL Server host, defaults to 'localhost'.
+
+=head2 port
+
+  my $port = $mysql->port;
+  $mysql   = $mysql->port(3386);
+
+MySQL server TCP port, defaults to 3306.
 
 =head1 METHODS
 

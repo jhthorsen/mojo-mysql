@@ -11,7 +11,7 @@ WriteMakefile(
     resources => {
       bugtracker => 'https://github.com/jhthorsen/mojo-mysql/issues',
       homepage => 'https://github.com/jhthorsen/mojo-mysql',
-      repository => 'https://github.com///github.com/jhthorsen/mojo-mysql.git',
+      repository => 'https://github.com/jhthorsen/mojo-mysql.git',
     },
   },
   BUILD_REQUIRES => {
@@ -19,7 +19,6 @@ WriteMakefile(
 }
 ,
   PREREQ_PM => {
-  'DBD::mysql' => '4.019',
   'Mojolicious' => '5.81'
 }
 ,

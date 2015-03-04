@@ -87,7 +87,7 @@ is $mysql2->migrations->migrate(0)->active, 0, 'active version is 0';
 eval { $mysql->migrations->migrate(23) };
 like $@, qr/Version 23 has no migration/, 'right error';
 
-$mysql->db->do('drop table mojo_migrations');
+$mysql->db->query('drop table mojo_migrations');
 
 done_testing();
 
