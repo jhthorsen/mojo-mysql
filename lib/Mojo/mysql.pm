@@ -46,7 +46,7 @@ sub db {
   }
 
   $c->connect(sub {
-    $c->{error} ? $self->$cb($c->{error_str} , undef)
+    $c->{error} ? $self->$cb($c->{error_message} , undef)
       : $self->$cb(undef, Mojo::mysql::Database->new(mysql => $self, connection => $c));
   });
 }

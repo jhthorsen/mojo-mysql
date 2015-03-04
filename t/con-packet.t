@@ -105,9 +105,9 @@ $c->on(result => sub {
 $c->{incoming} = pack('Cva6Z*', 255, 100, '#S0000', 'stupid error');
 $c->_recv_ok;
 is $c->{incoming}, '', 'empty after recv';
-is $c->{error}, 100, 'error';
-is $c->{error_state}, '#S0000', 'error_state';
-is $c->{error_str}, 'stupid error', 'error_str';
+is $c->{error_code}, 100, 'error';
+is $c->{sql_state}, '#S0000', 'sql_state';
+is $c->{error_message}, 'stupid error', 'error_message';
 is $c->_state, 'idle', 'state idle on error';
 
 $c->_reset;

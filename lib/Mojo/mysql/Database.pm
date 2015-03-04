@@ -47,7 +47,7 @@ sub do {
         $self->connection->query($sql);
         $self->_unsubscribe;
         my $current = shift @{$self->{waiting}};
-        croak $self->connection->{error_str} if $self->connection->{error};
+        croak $self->connection->{error_message} if $self->connection->{error_code};
         return $self;
     }
 
@@ -71,7 +71,7 @@ sub query {
     $self->connection->query($sql);
     $self->_unsubscribe;
     my $current = shift @{$self->{waiting}};
-    croak $self->connection->{error_str} if $self->connection->{error};
+    croak $self->connection->{error_message} if $self->connection->{error_code};
     return $current->{results};
   }
 
@@ -88,7 +88,7 @@ sub _next {
   $self->connection->query($next->{sql}, sub { 
     my $c = shift;
     my $current = shift @{$self->{waiting}};
-    my $error = $c->{error_str};
+    my $error = $c->{error_message};
 
     $self->backlog ? $self->_next : $self->_unsubscribe;
 
@@ -123,7 +123,7 @@ sub _subscribe {
   $self->connection->on(errors => sub {
     my $c = shift;
     return unless my $res = $self->{waiting}->[0]->{results};
-    $res->{$_} = $c->{$_} for qw(error error_state error_str);
+    $res->{$_} = $c->{$_} for qw(error_code sql_state error_message);
   });
 }
 
