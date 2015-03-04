@@ -6,6 +6,7 @@ has 'db';
 sub DESTROY {
   my $self = shift;
   return unless $self->{rollback} and $self->db;
+  local($@);
   $self->db->query('ROLLBACK');
   $self->db->query('SET autocommit=1');
 }
