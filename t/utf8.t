@@ -15,7 +15,7 @@ my $db    = $mysql->db->do(
      name varchar(255) charset utf8
    )'
 );
-$db->do('truncate table results_test');
+$db->query('truncate table results_test');
 $db->query('insert into results_test (name) values (?)', $_) for qw(☺ ☻);
 
 # Result methods
