@@ -6,12 +6,13 @@ has 'db';
 sub DESTROY {
   my $self = shift;
   return unless $self->{rollback} and $self->db;
-  $self->db->do('ROLLBACK');
+  $self->db->query('ROLLBACK');
+  $self->db->query('SET autocommit=1');
 }
 
 sub commit {
   my $self = shift;
-  $self->db->do('COMMIT') if delete $self->{rollback};
+  $self->db->query('COMMIT') and $self->db->query('SET autocommit=1') if delete $self->{rollback};
 }
 
 sub new {

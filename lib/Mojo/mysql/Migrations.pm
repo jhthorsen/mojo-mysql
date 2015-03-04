@@ -65,10 +65,18 @@ sub migrate {
   }
 
   warn "-- Migrate ($active -> $target)\n$sql\n" if DEBUG;
-  chop($sql);
-  $db->query($_) for split(';', $sql);
-  $sql = "update mojo_migrations set version = ? where name = ?";
-  $db->query($sql, $target, $self->name) and $tx->commit;
+  eval {
+    foreach my $q (split(';', $sql)) {
+      next if $q =~ /^\s*$/s;
+      $db->query($q);
+    }
+    $db->query("update mojo_migrations set version = ? where name = ?", $target, $self->name);
+  };
+  if (my $error = $@) {
+    undef $tx;
+    die $error;
+  }
+  $tx->commit;
   return $self;
 }
 
@@ -77,6 +85,7 @@ sub _active {
 
   my $name = $self->name;
   my $results = eval { $db->query('select version from mojo_migrations where name = ?', $name) };
+  my $error = $@;
   if ($results and my $next = $results->array) { return $next->[0] }
 
   $db->query(
@@ -84,7 +93,7 @@ sub _active {
        name    varchar(255) unique not null,
        version bigint not null
      )'
-  ) if $db->connection->{error};
+  ) if $error;
   $db->query('insert into mojo_migrations values (?, ?)', $name, 0);
 
   return 0;

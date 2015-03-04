@@ -20,7 +20,8 @@ sub backlog { scalar @{shift->{waiting} || []} }
 
 sub begin {
   my $self = shift;
-  $self->do('START TRANSACTION');
+  $self->query('START TRANSACTION');
+  $self->query('SET autocommit=0');
   my $tx = Mojo::mysql::Transaction->new(db => $self);
   weaken $tx->{db};
   return $tx;

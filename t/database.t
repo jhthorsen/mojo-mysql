@@ -184,6 +184,6 @@ $mysql->db->query(
 );
 Mojo::IOLoop->start;
 like $fail, qr/does_not_exist/, 'right error';
-#is $result->sth->errstr, $fail, 'same error';
+is $result->errstr, $fail, 'same error';
 
 done_testing();
