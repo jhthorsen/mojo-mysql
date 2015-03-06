@@ -5,6 +5,7 @@ use DBD::mysql;
 use Mojo::IOLoop;
 use Mojo::mysql::Results;
 use Mojo::mysql::Transaction;
+use Mojo::Util 'deprecated';
 use Scalar::Util 'weaken';
 
 has [qw(dbh mysql)];
@@ -32,7 +33,10 @@ sub disconnect {
   $self->dbh->disconnect;
 }
 
+# DEPRECATED!
 sub do {
+  deprecated 'Mojo::mysql::Database::do is DEPRECATED'
+    . ' in favor of Mojo::mysql::Database::query';
   my $self = shift;
   $self->dbh->do(@_);
   return $self;
