@@ -182,12 +182,6 @@ L<Mojo::mysql::Transaction/"commit"> bas been called before it is destroyed.
 
 Disconnect database handle and prevent it from getting cached again.
 
-=head2 do
-
-  $db = $db->do('create table foo (bar text)');
-
-Execute a statement and discard its result.
-
 =head2 pid
 
   my $pid = $db->pid;
