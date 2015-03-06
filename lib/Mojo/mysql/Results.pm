@@ -20,6 +20,19 @@ sub rows { shift->sth->rows }
 
 sub text { tablify shift->arrays }
 
+sub more_results { shift->sth->more_results }
+
+sub affected_rows { shift->{affected_rows} }
+
+sub warnings_count { shift->sth->{mysql_warning_count} }
+
+sub last_insert_id { shift->sth->{mysql_insertid} }
+
+sub err { shift->sth->err }
+
+sub errstr { shift->sth->errstr }
+
+sub state { shift->sth->state }
 1;
 
 =encoding utf8
@@ -98,6 +111,58 @@ Number of rows.
   my $text = $results->text;
 
 Fetch all rows and turn them into a table with L<Mojo::Util/"tablify">.
+
+=head2 more_results
+
+  do {
+    my $columns = $results->columns;
+    my $arrays = $results->arrays;
+  } while ($results->more_results);
+
+Handle multiple results.
+
+=head2 affected_rows
+
+  my $affected = $results->affected_rows;
+
+Number of affected rows by the query.
+The number reported is dependant from C<found_rows> option in L<Mojo::mysql>.
+For example
+
+  UPDATE $table SET id = 1 WHERE id = 1
+
+would return 1 if C<found_rows> is set, and 0 otherwise.
+
+=head2 last_insert_id
+
+  my $last_id = $results->last_insert_id;
+
+That value of C<AUTO_INCREMENT> column if executed query was C<INSERT> in a table with
+C<AUTO_INCREMENT> column.
+
+=head2 warnings_count
+
+  my $warnings = $results->warnings_count;
+
+Number of warnings raised by the executed query.
+
+=head2 err
+
+  my $err = $results->err;
+
+Error code receieved.
+
+=head2 state
+
+  my $state = $results->state;
+
+Error state receieved.
+
+=head2 errstr
+
+  my $errstr = $results->errstr;
+
+Error message receieved.
 
 =head1 SEE ALSO
 
