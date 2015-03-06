@@ -2,7 +2,7 @@
 use ExtUtils::MakeMaker;
 WriteMakefile(
   NAME => 'Mojo::mysql',
-  AUTHOR => 'Svetoslav Naydenov <harry@bix.bg>',
+  AUTHOR => 'Jan Henning Thorsen <jhthorsen@cpan.org>',
   LICENSE => 'artistic_2',
   ABSTRACT_FROM => 'lib/Mojo/mysql.pm',
   VERSION_FROM => 'lib/Mojo/mysql.pm',
@@ -11,7 +11,7 @@ WriteMakefile(
     resources => {
       bugtracker => 'https://github.com/jhthorsen/mojo-mysql/issues',
       homepage => 'https://github.com/jhthorsen/mojo-mysql',
-      repository => 'https://github.com///github.com/jhthorsen/mojo-mysql.git',
+      repository => 'https://github.com/jhthorsen/mojo-mysql.git',
     },
   },
   BUILD_REQUIRES => {
@@ -20,7 +20,7 @@ WriteMakefile(
 ,
   PREREQ_PM => {
   'DBD::mysql' => '4.019',
-  'Mojolicious' => '5.81'
+  'Mojolicious' => '6.0'
 }
 ,
   test => { TESTS => 't/*.t' },
