@@ -260,6 +260,24 @@ Parse configuration from connection string.
 Construct a new L<Mojo::mysql> object and parse connection string with
 L</"from_string"> if necessary.
 
+=head1 REFERENCE
+
+This is the class hierarchy of the L<Mojo::mysql> distribution.
+
+=over 2
+
+=item * L<Mojo::mysql>
+
+=item * L<Mojo::mysql::Database>
+
+=item * L<Mojo::mysql::Migrations>
+
+=item * L<Mojo::mysql::Results>
+
+=item * L<Mojo::mysql::Transaction>
+
+=back
+
 =head1 AUTHOR
 
 Curt Hochwender, C<hochwender@centurytel.net>.
@@ -270,7 +288,7 @@ This code is mostly a rip-off from Sebastian Riedel's L<Mojo::Pg>.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2014, Jan Henning Thorsen.
+Copyright (C) 2014-2015, Jan Henning Thorsen.
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.
