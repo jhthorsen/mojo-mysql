@@ -131,23 +131,22 @@ is_deeply $result, [{one => 1}, {one => 1}, {two => 2}, {two => 2}, {three => 3}
 
 # Connection cache
 is $mysql->max_connections, 5, 'right default';
-my @dbhs = map { $_->dbh } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db;
-is_deeply \@dbhs, [map { $_->dbh } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db], 'same database handles';
-@dbhs = ();
-my $dbh = $mysql->max_connections(1)->db->dbh;
-is $mysql->db->dbh, $dbh, 'same database handle';
-isnt $mysql->db->dbh, $mysql->db->dbh, 'different database handles';
-is $mysql->db->dbh, $dbh, 'different database handles';
-$dbh = $mysql->db->dbh;
-is $mysql->db->dbh, $dbh, 'same database handle';
+my @pids = sort map { $_->pid } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db;
+is_deeply \@pids, [sort map { $_->pid } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db], 'same database pids';
+my $pid = $mysql->max_connections(1)->db->pid;
+is $mysql->db->pid, $pid, 'same database pid';
+isnt $mysql->db->pid, $mysql->db->pid, 'different database pids';
+is $mysql->db->pid, $pid, 'different database pid';
+$pid = $mysql->db->pid;
+is $mysql->db->pid, $pid, 'same database pid';
 $mysql->db->disconnect;
-isnt $mysql->db->dbh, $dbh, 'different database handles';
+isnt $mysql->db->pid, $pid, 'different database pid';
 
 # Fork safety
-$dbh = $mysql->db->dbh;
+$pid = $mysql->db->pid;
 {
   local $$ = -23;
-  isnt $mysql->db->dbh, $dbh, 'different database handles';
+  isnt $mysql->db->pid, $pid, 'different database handles';
 };
 
 # Blocking error
@@ -166,6 +165,6 @@ $mysql->db->query(
 );
 Mojo::IOLoop->start;
 like $fail, qr/does_not_exist/, 'right error';
-is $result->sth->errstr, $fail, 'same error';
+is $result->errstr, $fail, 'same error';
 
 done_testing();

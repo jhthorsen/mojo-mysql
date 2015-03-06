@@ -5,6 +5,7 @@ use DBD::mysql;
 use Mojo::IOLoop;
 use Mojo::mysql::Results;
 use Mojo::mysql::Transaction;
+use Mojo::Util 'deprecated';
 use Scalar::Util 'weaken';
 
 has [qw(dbh mysql)];
@@ -32,7 +33,10 @@ sub disconnect {
   $self->dbh->disconnect;
 }
 
+# DEPRECATED!
 sub do {
+  deprecated 'Mojo::mysql::Database::do is DEPRECATED'
+    . ' in favor of Mojo::mysql::Database::query';
   my $self = shift;
   $self->dbh->do(@_);
   return $self;
@@ -49,8 +53,10 @@ sub query {
   # Blocking
   unless ($cb) {
     my $sth = $self->dbh->prepare($query);
-    $sth->execute(@_);
-    return Mojo::mysql::Results->new(sth => $sth);
+    my $rv = $sth->execute(@_);
+    my $res = Mojo::mysql::Results->new(sth => $sth);
+    $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
+    return $res;
   }
 
   # Non-blocking
@@ -98,10 +104,12 @@ sub _watch {
       my ($sth, $cb) = @{shift @$waiting}{qw(sth cb)};
 
       # Do not raise exceptions inside the event loop
-      my $result = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
-      my $err = defined $result ? undef : $dbh->errstr;
+      my $rv = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
+      my $err = defined $rv ? undef : $dbh->errstr;
+      my $res = Mojo::mysql::Results->new(sth => $sth);
+      $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
 
-      $self->$cb($err, Mojo::mysql::Results->new(sth => $sth));
+      $self->$cb($err, $res);
       $self->_next;
       $self->_unwatch unless $self->backlog;
     }
