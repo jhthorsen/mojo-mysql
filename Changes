@@ -1,5 +1,10 @@
 Revision history for Mojo-mysql
 
+0.07     Mon Mar  9 13:34:31 2015
+       * Deprecated Mojo::mysql::Database::do in favour of Mojo::mysql::Database::query as in Mojo::Pg
+       * Some new methods in Mojo::mysql::Result eliminating need to access sth
+       * bugfix in Mojo::mysql::Migrations with trailing whitespace after last semicolon
+
 0.06     Wed Feb 25 17:31:24 2015
        * OO Mojo::Loader API is deprecated in Mojolicious 5.81
 

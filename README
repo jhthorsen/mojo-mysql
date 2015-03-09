@@ -156,6 +156,19 @@ METHODS
     Construct a new Mojo::mysql object and parse connection string with
     "from_string" if necessary.
 
+REFERENCE
+    This is the class hierarchy of the Mojo::mysql distribution.
+
+    * Mojo::mysql
+
+    * Mojo::mysql::Database
+
+    * Mojo::mysql::Migrations
+
+    * Mojo::mysql::Results
+
+    * Mojo::mysql::Transaction
+
 AUTHOR
     Curt Hochwender, "hochwender@centurytel.net".
 
@@ -164,7 +177,7 @@ AUTHOR
     This code is mostly a rip-off from Sebastian Riedel's Mojo::Pg.
 
 COPYRIGHT AND LICENSE
-    Copyright (C) 2014, Jan Henning Thorsen.
+    Copyright (C) 2014-2015, Jan Henning Thorsen.
 
     This program is free software, you can redistribute it and/or modify it
     under the terms of the Artistic License version 2.0.
