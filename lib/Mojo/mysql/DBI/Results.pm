@@ -1,8 +1,7 @@
-package Mojo::mysql::Results;
-use Mojo::Base -base;
+package Mojo::mysql::DBI::Results;
+use Mojo::Base 'Mojo::mysql::Results';
 
 use Mojo::Collection;
-use Mojo::Util 'tablify';
 
 has 'sth';
 
@@ -18,8 +17,6 @@ sub hashes { Mojo::Collection->new(@{shift->sth->fetchall_arrayref({})}) }
 
 sub rows { shift->sth->rows }
 
-sub text { tablify shift->arrays }
-
 sub more_results { shift->sth->more_results }
 
 sub affected_rows { shift->{affected_rows} }
@@ -33,6 +30,7 @@ sub err { shift->sth->err }
 sub errstr { shift->sth->errstr }
 
 sub state { shift->sth->state }
+
 1;
 
 =encoding utf8

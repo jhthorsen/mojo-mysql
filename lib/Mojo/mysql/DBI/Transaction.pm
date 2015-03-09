@@ -1,5 +1,5 @@
-package Mojo::mysql::Transaction;
-use Mojo::Base -base;
+package Mojo::mysql::DBI::Transaction;
+use Mojo::Base 'Mojo::mysql::Transaction';
 
 has 'db';
 

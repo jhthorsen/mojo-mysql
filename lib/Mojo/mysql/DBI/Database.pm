@@ -1,14 +1,12 @@
-package Mojo::mysql::Database;
-use Mojo::Base 'Mojo::EventEmitter';
+package Mojo::mysql::DBI::Database;
+use Mojo::Base 'Mojo::mysql::Database';
 
-use DBD::mysql;
 use Mojo::IOLoop;
-use Mojo::mysql::Results;
-use Mojo::mysql::Transaction;
-use Mojo::Util 'deprecated';
+use Mojo::mysql::DBI::Results;
+use Mojo::mysql::DBI::Transaction;
 use Scalar::Util 'weaken';
 
-has [qw(dbh mysql)];
+has 'dbh';
 
 sub DESTROY {
   my $self = shift;
@@ -22,7 +20,7 @@ sub backlog { scalar @{shift->{waiting} || []} }
 sub begin {
   my $self = shift;
   $self->dbh->begin_work;
-  my $tx = Mojo::mysql::Transaction->new(db => $self);
+  my $tx = Mojo::mysql::DBI::Transaction->new(db => $self);
   weaken $tx->{db};
   return $tx;
 }
@@ -31,15 +29,6 @@ sub disconnect {
   my $self = shift;
   $self->_unwatch;
   $self->dbh->disconnect;
-}
-
-# DEPRECATED!
-sub do {
-  deprecated 'Mojo::mysql::Database::do is DEPRECATED'
-    . ' in favor of Mojo::mysql::Database::query';
-  my $self = shift;
-  $self->dbh->do(@_);
-  return $self;
 }
 
 sub pid { shift->dbh->{mysql_thread_id} }
@@ -54,7 +43,7 @@ sub query {
   unless ($cb) {
     my $sth = $self->dbh->prepare($query);
     my $rv = $sth->execute(@_);
-    my $res = Mojo::mysql::Results->new(sth => $sth);
+    my $res = Mojo::mysql::DBI::Results->new(sth => $sth);
     $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
     return $res;
   }
@@ -106,7 +95,7 @@ sub _watch {
       # Do not raise exceptions inside the event loop
       my $rv = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
       my $err = defined $rv ? undef : $dbh->errstr;
-      my $res = Mojo::mysql::Results->new(sth => $sth);
+      my $res = Mojo::mysql::DBI::Results->new(sth => $sth);
       $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
 
       $self->$cb($err, $res);
