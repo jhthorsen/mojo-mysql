@@ -14,9 +14,8 @@ has password => '';
 has database => '';
 
 has options => sub { {
-    multi_statements => 0, multi_results => 1,
-    utf8 => 1, found_rows => 0,
-    connect_timeout => 10, query_timeout => 30 } };
+    found_rows => 0, multi_statements => 0, utf8 => 1,
+    connect_timeout => 10, query_timeout => undef } };
 
 has _state => 'disconnected';
 
@@ -188,9 +187,8 @@ sub _chew_str {
 sub _send_auth {
     my $self = shift;
 
-    my @flags = qw(LONG_PASSWORD LONG_FLAG PROTOCOL_41 TRANSACTIONS SECURE_CONNECTION);
+    my @flags = qw(LONG_PASSWORD LONG_FLAG PROTOCOL_41 TRANSACTIONS SECURE_CONNECTION MULTI_RESULTS);
     push @flags, 'CONNECT_WITH_DB' if $self->database;
-    push @flags, 'MULTI_RESULTS' if $self->options->{multi_results};
     push @flags, 'MULTI_STATEMENTS' if $self->options->{multi_statements};
     push @flags, 'FOUND_ROWS' if $self->options->{found_rows};
     my $flags = _flag_set(CLIENT_CAPABILITY, @flags);
@@ -471,7 +469,8 @@ sub _seq {
 
     $self->{iostream} = Mojo::IOLoop::Stream->new($self->{socket});
     $self->{iostream}->reactor($self->_ioloop(0)->reactor) unless $cb;
-    $self->{iostream}->timeout($self->options->{query_timeout});
+    $self->{iostream}->timeout($self->options->{query_timeout})
+        if defined $self->options->{query_timeout};
     weaken $self;
 
     $self->{iostream}->on(read => sub {
@@ -707,7 +706,7 @@ implements the following new ones.
     # Blocking
     $c->connect;
     # Non-Blocking
-    $c->connect(sub => { ... });
+    $c->connect(sub { ... });
 
 Connect and authenticate to MySQL Server.
 
@@ -722,7 +721,7 @@ Disconnect gracefully from server.
     # Blocking
     $c->query('select 1 as `one`');
     # Non-Blocking
-    $c->query('select 1 as `one`', sub => { ... });
+    $c->query('select 1 as `one`', sub { ... });
 
 Send SQL query to server.
 Results are handled by events.
