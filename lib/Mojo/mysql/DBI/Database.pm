@@ -38,7 +38,7 @@ sub begin {
 }
 
 sub connect {
-  my ($self, $url, $options) = @_;
+  my ($self, $url, $username, $password, $options) = @_;
   my $parts = parse_url($url);
   croak "Invalid URL '$url'" unless defined $parts;
   my %connect_options = map { $_ => $options->{$_} }
@@ -52,7 +52,7 @@ sub connect {
   $connect_options{AutoCommit} = 1;
   $connect_options{mysql_auto_reconnect} = 0;
 
-  my $dbh = DBI->connect($parts->{dsn}, $parts->{username} // '', $parts->{password} // '', \%connect_options);
+  my $dbh = DBI->connect($parts->{dsn}, $username, $password, \%connect_options);
   return $self->dbh($dbh);
 }
 

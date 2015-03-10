@@ -32,7 +32,7 @@ sub db {
     Mojo::mysql::Native::Database->new(connection => $dbh, mysql => $self);
 
   if (!$dbh) {
-    $db->connect($self->url, $self->options);
+    $db->connect(map { $self->$_ } qw(url username password options));
     $self->emit(connection => $db);
   }
   return $db;
