@@ -1,9 +1,10 @@
 package Mojo::mysql::Native::Database;
 use Mojo::Base 'Mojo::mysql::Database';
 
+use Mojo::mysql::Connection;
 use Mojo::mysql::Native::Results;
 use Mojo::mysql::Native::Transaction;
-use Mojo::mysql::Util 'expand_sql';
+use Mojo::mysql::Util qw(expand_sql parse_url);
 use Scalar::Util 'weaken';
 use Carp 'croak';
 
@@ -25,6 +26,22 @@ sub begin {
   my $tx = Mojo::mysql::Native::Transaction->new(db => $self);
   weaken $tx->{db};
   return $tx;
+}
+
+sub connect {
+  my ($self, $url, $options) = @_;
+  my $parts = parse_url($url);
+
+  my $c = Mojo::mysql::Connection->new(
+    map { $_ => $parts->{$_} } grep { exists $parts->{$_} }
+      qw (host port username password database)
+  );
+  do { $c->options->{$_} = $options->{$_} if exists $options->{$_} }
+    for qw(found_rows multi_statements utf8 connect_timeout query_timeout);
+
+  eval { $c->connect };
+  croak "Unable to connect to '$url' $@" if $@;
+  return $self->connection($c);
 }
 
 sub disconnect { shift->connection->disconnect }

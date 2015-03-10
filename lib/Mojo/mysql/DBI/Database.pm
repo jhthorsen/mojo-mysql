@@ -1,10 +1,22 @@
 package Mojo::mysql::DBI::Database;
 use Mojo::Base 'Mojo::mysql::Database';
 
+use DBI;
 use Mojo::IOLoop;
 use Mojo::mysql::DBI::Results;
 use Mojo::mysql::DBI::Transaction;
+use Mojo::mysql::Util 'parse_url';
 use Scalar::Util 'weaken';
+use Carp 'croak';
+
+our %dbi_options = (
+  mysql_client_found_rows => 'found_rows',
+  mysql_enable_utf8 => 'utf8',
+  mysql_multi_statements => 'multi_statements',
+  mysql_connect_timeout => 'connect_timeout',
+  mysql_read_timeout => 'query_timeout',
+  mysql_write_timeout => 'query_timeout',
+);
 
 has 'dbh';
 
@@ -12,7 +24,7 @@ sub DESTROY {
   my $self = shift;
   return unless my $dbh   = $self->dbh;
   return unless my $mysql = $self->mysql;
-  $mysql->_enqueue($dbh, $self->{handle});
+  $mysql->_enqueue($dbh, $self->{handle}) if $dbh->{Active};
 }
 
 sub backlog { scalar @{shift->{waiting} || []} }
@@ -23,6 +35,25 @@ sub begin {
   my $tx = Mojo::mysql::DBI::Transaction->new(db => $self);
   weaken $tx->{db};
   return $tx;
+}
+
+sub connect {
+  my ($self, $url, $options) = @_;
+  my $parts = parse_url($url);
+  croak "Invalid URL '$url'" unless defined $parts;
+  my %connect_options = map { $_ => $options->{$_} }
+    grep { $_ =~ /^mysql_/ or $_ eq 'PrintError' or $_ eq 'RaiseError' } keys %$options;
+
+  foreach (keys %dbi_options) {
+    $connect_options{$_} = $options->{$dbi_options{$_}}
+      if !exists $connect_options{$_} and exists $options->{$dbi_options{$_}};
+  }
+
+  $connect_options{AutoCommit} = 1;
+  $connect_options{mysql_auto_reconnect} = 0;
+
+  my $dbh = DBI->connect($parts->{dsn}, $parts->{username} // '', $parts->{password} // '', \%connect_options);
+  return $self->dbh($dbh);
 }
 
 sub disconnect {

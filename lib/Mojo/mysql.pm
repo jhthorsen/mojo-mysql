@@ -2,12 +2,12 @@ package Mojo::mysql;
 use Mojo::Base 'Mojo::EventEmitter';
 
 use Carp 'croak';
-use DBI;
-use Mojo::mysql::Database;
+use Mojo::Loader 'load_class';
 use Mojo::mysql::Migrations;
-use Mojo::URL;
+use Mojo::mysql::Util 'parse_url';
 use Scalar::Util 'weaken';
 
+has url             => 'mysql:///test';
 has dsn             => 'dbi:mysql:dbname=test';
 has max_connections => 5;
 has migrations      => sub {
@@ -15,7 +15,7 @@ has migrations      => sub {
   weaken $migrations->{mysql};
   return $migrations;
 };
-has options => sub { {mysql_enable_utf8 => 1, AutoCommit => 1, PrintError => 0, RaiseError => 1} };
+has options => sub { { utf8 => 1, found_rows => 1, PrintError => 0, RaiseError => 1, use_dbi => 1} };
 has [qw(password username)] => '';
 
 our $VERSION = '0.07';
@@ -27,62 +27,48 @@ sub db {
   delete @$self{qw(pid queue)} unless ($self->{pid} //= $$) eq $$;
 
   my ($dbh, $handle) = @{$self->_dequeue};
-  return Mojo::mysql::Database->new(dbh => $dbh, handle => $handle, mysql => $self);
+  my $db = ($self->options->{use_dbi} // 1) ?
+    Mojo::mysql::DBI::Database->new(dbh => $dbh, handle => $handle, mysql => $self) :
+    Mojo::mysql::Native::Database->new(connection => $dbh, mysql => $self);
+
+  if (!$dbh) {
+    $db->connect($self->url, $self->options);
+    $self->emit(connection => $db);
+  }
+  return $db;
 }
 
 sub from_string {
   my ($self, $str) = @_;
 
-  # Protocol
-  return $self unless $str;
-  my $url = Mojo::URL->new($str);
-  croak qq{Invalid MySQL connection string "$str"} unless $url->protocol eq 'mysql';
+  my $parts = parse_url($str);
+  croak qq{Invalid MySQL connection string "$str"} unless defined $parts;
 
-  # Database
-  my $dsn = 'dbi:mysql:dbname=' . $url->path->parts->[0];
+  # Only for Compatibility
+  $self->username($parts->{username}) if exists $parts->{username};
+  $self->password($parts->{password}) if exists $parts->{password};
+  $self->dsn($parts->{dsn});
+  @{$self->options}{keys %{$parts->{options}}} = values %{$parts->{options}};
 
-  # Host and port
-  if (my $host = $url->host) { $dsn .= ";host=$host" }
-  if (my $port = $url->port) { $dsn .= ";port=$port" }
+  load_class(
+    ($self->options->{use_dbi} // 1) ? 'Mojo::mysql::DBI::Database' : 'Mojo::mysql::Native::Database');
 
-  # Username and password
-  if (($url->userinfo // '') =~ /^([^:]+)(?::([^:]+))?$/) {
-    $self->username($1);
-    $self->password($2) if defined $2;
-  }
-
-  # Options
-  my $hash = $url->query->to_hash;
-  @{$self->options}{keys %$hash} = values %$hash;
-
-  return $self->dsn($dsn);
+  return $self->url($str);
 }
 
 sub new { @_ > 1 ? shift->SUPER::new->from_string(@_) : shift->SUPER::new }
 
 sub _dequeue {
   my $self = shift;
-  my $dbh;
 
   while (my $c = shift @{$self->{queue} || []}) { return $c if $c->[0]->ping }
-  $dbh = DBI->connect(map { $self->$_ } qw(dsn username password options));
-
-  # <mst> batman's probably going to have more "fun" than you have ...
-  # especially once he discovers that DBD::mysql randomly reconnects under
-  # you, silently, but only if certain env vars are set
-  # hint: force-set mysql_auto_reconnect or whatever it's called to 0
-  $dbh->{mysql_auto_reconnect} = 0;
-  # Maintain Commits with Mojo::mysql::Transaction
-  $dbh->{AutoCommit} = 1;
-
-  $self->emit(connection => $dbh);
-  [$dbh];
+  return [undef, undef];
 }
 
 sub _enqueue {
   my ($self, $dbh, $handle) = @_;
   my $queue = $self->{queue} ||= [];
-  push @$queue, [$dbh, $handle] if $dbh->{Active};
+  push @$queue, [$dbh, $handle];
   shift @{$self->{queue}} while @{$self->{queue}} > $self->max_connections;
 }
 
@@ -160,6 +146,13 @@ Emitted when a new database connection has been established.
 =head1 ATTRIBUTES
 
 L<Mojo::mysql> implements the following attributes.
+
+=head2 url
+
+  my $url = $mysql->url;
+  $url  = $mysql->url('mysql://user@host/test');
+
+Connection URL string.
 
 =head2 dsn
 
