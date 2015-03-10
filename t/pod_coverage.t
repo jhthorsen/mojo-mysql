@@ -7,4 +7,11 @@ plan skip_all => 'set TEST_POD to enable this test (developer only!)'
 plan skip_all => 'Test::Pod::Coverage 1.04 required for this test!'
   unless eval 'use Test::Pod::Coverage 1.04; 1';
 
-all_pod_coverage_ok({also_private => ['do']});
+pod_coverage_ok('Mojo::mysql');
+pod_coverage_ok('Mojo::mysql::Database', { also_private => ['do'] });
+pod_coverage_ok('Mojo::mysql::Migrations');
+pod_coverage_ok('Mojo::mysql::Results');
+pod_coverage_ok('Mojo::mysql::Transaction');
+pod_coverage_ok('Mojo::mysql::Util');
+
+done_testing();
