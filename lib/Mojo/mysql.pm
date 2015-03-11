@@ -111,20 +111,57 @@ Mojo::mysql - Mojolicious and Async MySQL
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql> is a tiny wrapper around L<DBD::mysql> that makes
-L<MySQL|http://www.mysql.org> a lot of fun to use with the
+L<Mojo::mysql> makes L<MySQL|http://www.mysql.org> a lot of fun to use with the
 L<Mojolicious|http://mojolicio.us> real-time web framework.
 
-Database handles are cached automatically, so they can be reused
-transparently to increase performance. While all I/O operations are performed
-blocking, you can wait for long running queries asynchronously, allowing the
+Database handles are cached automatically, so they can be reused transparently
+to increase performance. And you can handle connection timeouts gracefully by
+holding on to them only for short amounts of time.
+
+This module tries to be as compatible as possible with L<Mojo::Pg>.
+
+This module implements two methods of connecting to MySQL server.
+
+=over 2
+
+=item Using DBI and DBD::mysql
+
+L<DBD::mysql> allows you to submit a long-running query to the server
+and have an event loop inform you when it's ready. 
+
+While all I/O operations are performed blocking,
+you can wait for long running queries asynchronously, allowing the
 L<Mojo::IOLoop> event loop to perform other tasks in the meantime. Since
 database connections usually have a very low latency, this often results in
 very good performance.
 
+=item Using Native Non-Blocking TCP socket implementation
+
+L<Mojo::mysql::Connection> is Fully asynchronous implementation
+of MySQL Client Server Protocol managed by L<Mojo::IOLoop>.
+
+This method is EXPERIMENTAL.
+
+=back
+
+Every database connection can only handle one active query at a time, this
+includes asynchronous ones. So if you start more than one, they will be put on
+a waiting list and performed sequentially. To perform multiple queries
+concurrently, you have to use multiple connections.
+ 
+  # Performed sequentially (10 seconds)
+  my $db = $mysql->db;
+  $db->query('select sleep(5)' => sub {...});
+  $db->query('select sleep(5)' => sub {...});
+ 
+  # Performed concurrently (5 seconds)
+  $mysql->db->query('select sleep(5)' => sub {...});
+  $mysql->db->query('select sleep(5)' => sub {...});
+ 
 All cached database handles will be reset automatically if a new process has
 been forked, this allows multiple processes to share the same L<Mojo::mysql>
 object safely.
+
 
 Note that this whole distribution is EXPERIMENTAL and will change without
 warning!
@@ -186,10 +223,59 @@ easily.
 =head2 options
 
   my $options = $mysql->options;
-  $mysql      = $mysql->options({mysql_use_result => 1});
+  $mysql      = $mysql->options({found_rows => 0, RaiseError => 1});
 
-Options for database handles, defaults to activating C<mysql_enable_utf8>, C<AutoCommit> as well as
-C<RaiseError> and deactivating C<PrintError>.
+Options for connecting to server.
+
+Supported Options are:
+
+=over 2
+
+=item use_dbi
+
+Use L<DBI|DBI> and L<DBD::mysql> when enabled or Native implementation when disabled.
+
+=item found_rows
+
+Enables or disables the flag C<CLIENT_FOUND_ROWS> while connecting to the server.
+Without C<found_rows>, if you perform a query like
+ 
+  UPDATE $table SET id = 1 WHERE id = 1;
+ 
+then the MySQL engine will return 0, because no rows have changed.
+With C<found_rows>, it will return the number of rows that have an id 1.
+
+=item multi_statements
+
+Enables or disables the flag C<CLIENT_MULTI_STATEMENTS> while connecting to the server.
+If enabled multiple statements separated by semicolon (;) can be send with single
+call to $db->L<query|Mojo::mysql::Database/query>.
+
+=item utf8
+
+If enabled default character set is to C<utf-8> while connecting to the server
+and decode correctly utf-8 text results.
+
+=item connect_timeout
+
+The connect request to the server will timeout if it has not been successful
+after the given number of seconds.
+
+=item query_timeout
+
+If enabled, the read or write operation to the server will timeout
+if it has not been successful after the given number of seconds.
+
+=back
+
+Default Options are:
+
+C<utf8 = 1>,
+C<found_rows = 1>,
+C<PrintError = 0>,
+C<RaiseError = 1>
+
+When using DBI method, driver private options (prefixed with C<mysql_> of L<DBD::mysql> are supported.
 
 C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead connections.
 
@@ -269,6 +355,8 @@ This is the class hierarchy of the L<Mojo::mysql> distribution.
 =item * L<Mojo::mysql::Results>
 
 =item * L<Mojo::mysql::Transaction>
+
+=item * L<Mojo::mysql::Connection>
 
 =back
 
