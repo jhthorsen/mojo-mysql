@@ -13,5 +13,6 @@ pod_coverage_ok('Mojo::mysql::Migrations');
 pod_coverage_ok('Mojo::mysql::Results');
 pod_coverage_ok('Mojo::mysql::Transaction');
 pod_coverage_ok('Mojo::mysql::Util');
+pod_coverage_ok('Mojo::mysql::Connection');
 
 done_testing();

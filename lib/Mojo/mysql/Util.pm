@@ -7,27 +7,27 @@ use Exporter 'import';
 our @EXPORT_OK = qw(quote quote_id expand_sql parse_url);
 
 sub quote {
-	my $string = shift;
-	return 'NULL' unless defined $string;
+  my $string = shift;
+  return 'NULL' unless defined $string;
 
-	for ($string) {
-		s/\\/\\\\/g;
-		s/\0/\\0/g;
-		s/\n/\\n/g;
-		s/\r/\\r/g;
-		s/'/\\'/g;
-		# s/"/\\"/g;
-		s/\x1a/\\Z/g;
-	}
+  for ($string) {
+    s/\\/\\\\/g;
+    s/\0/\\0/g;
+    s/\n/\\n/g;
+    s/\r/\\r/g;
+    s/'/\\'/g;
+    # s/"/\\"/g;
+    s/\x1a/\\Z/g;
+  }
 
-	return "'$string'";
+  return "'$string'";
 }
 
 sub quote_id {
-	my $id = shift;
-	return 'NULL' unless defined $id;
-	$id =~ s/`/``/g;
-	return "`$id`";
+  my $id = shift;
+  return 'NULL' unless defined $id;
+  $id =~ s/`/``/g;
+  return "`$id`";
 }
 
 # from Net::Wire10

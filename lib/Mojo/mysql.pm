@@ -171,7 +171,8 @@ C<5>.
 
 =head2 migrations
 
-MySQL does not support DDL transactions. B<Therefore, migrations should be used with extreme caution. Backup your database. You've been warned.> 
+MySQL does not support DDL transactions. B<Therefore, migrations should be used with extreme caution.
+Backup your database. You've been warned.> 
 
   my $migrations = $mysql->migrations;
   $mysql         = $mysql->migrations(Mojo::mysql::Migrations->new);
