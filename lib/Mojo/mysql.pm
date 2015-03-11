@@ -86,7 +86,7 @@ Mojo::mysql - Mojolicious and Async MySQL
 
   # Create a table
   my $mysql = Mojo::mysql->new('mysql://username@/test');
-  $mysql->db->do('create table if not exists names (name text)');
+  $mysql->db->query('create table if not exists names (name text)');
 
   # Insert a few rows
   my $db = $mysql->db;
@@ -270,6 +270,7 @@ if it has not been successful after the given number of seconds.
 
 Default Options are:
 
+C<use_dbi = 1>,
 C<utf8 = 1>,
 C<found_rows = 1>,
 C<PrintError = 0>,
