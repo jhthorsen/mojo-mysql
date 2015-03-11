@@ -15,7 +15,7 @@ has database => '';
 
 has options => sub { {
     found_rows => 0, multi_statements => 0, utf8 => 1,
-    connect_timeout => 10, query_timeout => undef } };
+    connect_timeout => 10, query_timeout => 0 } };
 
 has _state => 'disconnected';
 
@@ -470,7 +470,7 @@ sub _seq {
     $self->{iostream} = Mojo::IOLoop::Stream->new($self->{socket});
     $self->{iostream}->reactor($self->_ioloop(0)->reactor) unless $cb;
     $self->{iostream}->timeout($self->options->{query_timeout})
-        if defined $self->options->{query_timeout};
+        if $self->options->{query_timeout};
     weaken $self;
 
     $self->{iostream}->on(read => sub {
@@ -695,6 +695,52 @@ Database to connect.
 
 Options for Connection.
 
+Supported Options are:
+
+=over 2
+
+=item found_rows
+
+Enables or disables the flag C<CLIENT_FOUND_ROWS> while connecting to the MySQL server.
+Without C<found_rows>, if you perform a query like
+ 
+  UPDATE $table SET id = 1 WHERE id = 1;
+ 
+then the MySQL engine will return 0, because no rows have changed.
+With C<found_rows>, it will return the number of rows that have an id 1.
+
+Default is 1.
+
+=item multi_statements
+
+Enables or disables the flag C<CLIENT_MULTI_STATEMENTS> while connecting to the server.
+If enabled multiple statements separated by semicolon (;) can be send with single
+call to L<query>.
+
+Default is 0.
+
+=item utf8
+
+If enabled default character set is to C<utf8_general_ci> while connecting to the server.
+If disabled C<binary> is the default character set.
+
+Default is 1.
+
+=item connect_timeout
+
+The connect request to the server will timeout if it has not been successful
+after the given number of seconds.
+
+Default is 10.
+
+=item query_timeout
+
+If enabled, the read or write operation to the server will timeout
+if it has not been successful after the given number of seconds.
+
+Default is 0 (disabled).
+
+=back
 
 =head1 METHODS
 

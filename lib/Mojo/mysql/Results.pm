@@ -31,6 +31,7 @@ sub err { croak 'Method "err" not implemented by subclass' }
 sub errstr { croak 'Method "errstr" not implemented by subclass' }
 
 sub state { croak 'Method "state" not implemented by subclass' }
+
 1;
 
 =encoding utf8
