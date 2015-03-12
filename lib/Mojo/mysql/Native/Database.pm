@@ -66,7 +66,8 @@ sub query {
     $self->connection->query($sql);
     $self->_unsubscribe;
     my $current = shift @{$self->{waiting}};
-    croak $self->connection->{error_message} if $self->connection->{error_code};
+    croak $self->connection->{error_message}
+      if $self->connection->{error_code} and $self->mysql->options->{RaiseError};
     return $current->{results};
   }
 
@@ -117,6 +118,8 @@ sub _subscribe {
 
   $self->connection->on(errors => sub {
     my $c = shift;
+    warn "Mojo::mysql error:", $c->{error_message}, "\n"
+      if $self->mysql->options->{PrintError};
     return unless my $res = $self->{waiting}->[0]->{results};
     $res->{$_} = $c->{$_} for qw(error_code sql_state error_message);
   });
