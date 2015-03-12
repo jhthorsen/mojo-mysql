@@ -86,16 +86,34 @@ Mojo::mysql - Mojolicious and Async MySQL
 
   # Create a table
   my $mysql = Mojo::mysql->new('mysql://username@/test');
-  $mysql->db->query('create table if not exists names (name text)');
+  $mysql->db->query('create table names (id integer auto_increment primary key, name text)');
 
   # Insert a few rows
   my $db = $mysql->db;
-  $db->query('insert into names values (?)', 'Sara');
-  $db->query('insert into names values (?)', 'Daniel');
+  $db->query('insert into names (name) values (?)', 'Sara');
+  $db->query('insert into names (name) values (?)', 'Stefan');
+
+  # Insert more rows in a transaction
+  {
+    my $tx = $db->begin;
+    $db->query('insert into names (name) values (?)', 'Baerbel');
+    $db->query('insert into names (name) values (?)', 'Wolfgang');
+    $tx->commit;
+  };
+
+  # Insert another row and return the generated id
+  say $db->query('insert into names (name) values (?)', 'Daniel')
+    ->last_insert_id;
+
+  # Select one row at a time
+  my $results = $db->query('select * from names');
+  while (my $next = $results->hash) {
+    say $next->{name};
+  }
 
   # Select all rows blocking
-  say for $db->query('select * from names')
-    ->hashes->map(sub { $_->{name} })->each;
+  $db->query('select * from names')
+    ->hashes->map(sub { $_->{name} })->join("\n")->say;
 
   # Select all rows non-blocking
   Mojo::IOLoop->delay(
@@ -105,7 +123,7 @@ Mojo::mysql - Mojolicious and Async MySQL
     },
     sub {
       my ($delay, $err, $results) = @_;
-      say for $results->hashes->map(sub { $_->{name} })->each;
+      $results->hashes->map(sub { $_->{name} })->join("\n")->say;
     }
   )->wait;
 
@@ -118,7 +136,19 @@ Database handles are cached automatically, so they can be reused transparently
 to increase performance. And you can handle connection timeouts gracefully by
 holding on to them only for short amounts of time.
 
-This module tries to be as compatible as possible with L<Mojo::Pg>.
+  use Mojolicious::Lite;
+  use Mojo::mysql;
+
+  helper mysql =>
+    sub { state $mysql = Mojo::mysql->new('mysql://sri:s3cret@localhost/db') };
+
+  get '/' => sub {
+    my $c  = shift;
+    my $db = $c->mysql->db;
+    $c->render(json => $db->query('select now() as time')->hash);
+  };
+
+  app->start;
 
 This module implements two methods of connecting to MySQL server.
 
@@ -135,7 +165,7 @@ L<Mojo::IOLoop> event loop to perform other tasks in the meantime. Since
 database connections usually have a very low latency, this often results in
 very good performance.
 
-=item Using Native Non-Blocking TCP socket implementation
+=item Using Native Pure-Perl Non-Blocking I/O
 
 L<Mojo::mysql::Connection> is Fully asynchronous implementation
 of MySQL Client Server Protocol managed by L<Mojo::IOLoop>.
@@ -208,7 +238,8 @@ C<5>.
 
 =head2 migrations
 
-MySQL does not support DDL transactions. B<Therefore, migrations should be used with extreme caution.
+MySQL does not support nested transactions and DDL transactions. DDL statements cause implicit C<COMMIT>.
+B<Therefore, migrations should be used with extreme caution.
 Backup your database. You've been warned.> 
 
   my $migrations = $mysql->migrations;
@@ -253,7 +284,7 @@ call to $db->L<query|Mojo::mysql::Database/query>.
 
 =item utf8
 
-If enabled default character set is to C<utf-8> while connecting to the server
+Set default character set to C<utf-8> while connecting to the server
 and decode correctly utf-8 text results.
 
 =item connect_timeout
@@ -265,6 +296,14 @@ after the given number of seconds.
 
 If enabled, the read or write operation to the server will timeout
 if it has not been successful after the given number of seconds.
+
+=item PrintError
+
+C<warn> on errors.
+
+=item RaiseError
+
+C<die> on error in blocking operations.
 
 =back
 
@@ -311,6 +350,10 @@ Get L<Mojo::mysql::Database> object for a cached or newly created database
 handle. The database handle will be automatically cached again when that
 object is destroyed, so you can handle connection timeouts gracefully by
 holding on to it only for short amounts of time.
+
+  # Add up all the money
+  say $mysql->db->query('select * from accounts')
+    ->hashes->reduce(sub { $a->{money} + $b->{money} });
 
 =head2 from_string
 
