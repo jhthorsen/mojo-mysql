@@ -1,6 +1,6 @@
 -- 1 up
 create table if not exists posts (
-  id    serial primary key,
+  id    integer auto_increment primary key,
   title text,
   body  text
 );
