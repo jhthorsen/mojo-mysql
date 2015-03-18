@@ -402,6 +402,18 @@ This is the class hierarchy of the L<Mojo::mysql> distribution.
 
 =item * L<Mojo::mysql::Connection>
 
+=item * L<Mojo::mysql::Native::Database>
+
+=item * L<Mojo::mysql::Native::Results>
+
+=item * L<Mojo::mysql::Native::Transaction>
+
+=item * L<Mojo::mysql::DBI::Database>
+
+=item * L<Mojo::mysql::DBI::Results>
+
+=item * L<Mojo::mysql::DBI::Transaction>
+
 =back
 
 =head1 AUTHOR

@@ -1,8 +1,6 @@
 package Mojo::mysql::DBI::Transaction;
 use Mojo::Base 'Mojo::mysql::Transaction';
 
-has 'db';
-
 sub DESTROY {
   my $self = shift;
   if ($self->{rollback} && (my $dbh = $self->{dbh})) { $dbh->rollback }
@@ -25,19 +23,19 @@ sub new {
 
 =head1 NAME
 
-Mojo::mysql::Transaction - Transaction
+Mojo::mysql::DBI::Transaction - DBI Transaction
 
 =head1 SYNOPSIS
 
-  use Mojo::mysql::Transaction;
+  use Mojo::mysql::DBI::Transaction;
 
-  my $tx = Mojo::mysql::Transaction->new(db => $db);
+  my $tx = Mojo::mysql::DBI::Transaction->new(db => $db);
   $tx->commit;
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql::Transaction> is a cope guard for L<DBD::mysql> transactions used by
-L<Mojo::mysql::Database>.
+L<Mojo::mysql::DBI::Transaction> is a cope guard for L<DBD::mysql> transactions used by
+L<Mojo::mysql::DBI::Database>.
 
 =head1 ATTRIBUTES
 
@@ -52,8 +50,8 @@ L<Mojo::mysql::Database> object this transaction belongs to.
 
 =head1 METHODS
 
-L<Mojo::mysql::Transaction> inherits all methods from L<Mojo::Base> and
-implements the following new ones.
+L<Mojo::mysql::DBI::Transaction> inherits all methods from L<Mojo::mysql::Transaction> and
+implements the following ones.
 
 =head2 commit
 
@@ -63,12 +61,12 @@ Commit transaction.
 
 =head2 new
 
-  my $tx = Mojo::mysql::Transaction->new;
+  my $tx = Mojo::mysql::DBI::Transaction->new;
 
-Construct a new L<Mojo::mysql::Transaction> object.
+Construct a new L<Mojo::mysql::DBI::Transaction> object.
 
 =head1 SEE ALSO
 
-L<Mojo::mysql>.
+L<Mojo::mysql::Transaction>, L<Mojo::mysql>.
 
 =cut

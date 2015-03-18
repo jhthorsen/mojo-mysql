@@ -33,28 +33,28 @@ sub query { croak 'Method "query" not implemented by subclass' }
 
 =head1 NAME
 
-Mojo::mysql::Database - Database
+Mojo::mysql::Database - abstract Database
 
 =head1 SYNOPSIS
 
-  use Mojo::mysql::Database;
+  package Mojo::mysql::Database::MyDB;
+  use Mojo::Base 'Mojo::mysql::Database';
 
-  my $db = Mojo::mysql::Database->new(mysql => $mysql, dbh => $dbh);
+  sub backlog    {...}
+  sub begin      {...}
+  sub disconnect {...}
+  sub pid        {...}
+  sub ping       {...}
+  sub query      {...}
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql::Database> is a container for database handles used by L<Mojo::MySQL>.
+L<Mojo::mysql::Database> is abstract base class for database handles used by L<Mojo::mysql>.
+Implementations are L<Mojo::mysql::DBI::Database> and L<Mojo::mysql::Native::Database>.
 
 =head1 ATTRIBUTES
 
 L<Mojo::mysql::Database> implements the following attributes.
-
-=head2 dbh
-
-  my $dbh = $db->dbh;
-  $db     = $db->dbh(DBI->new);
-
-Database handle used for all queries.
 
 =head2 mysql
 

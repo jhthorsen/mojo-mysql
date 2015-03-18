@@ -142,21 +142,22 @@ sub _watch {
 
 =head1 NAME
 
-Mojo::mysql::Database - Database
+Mojo::mysql::DBI::Database - DBD::mysql Database
 
 =head1 SYNOPSIS
 
-  use Mojo::mysql::Database;
+  use Mojo::mysql::DBI::Database;
 
-  my $db = Mojo::mysql::Database->new(mysql => $mysql, dbh => $dbh);
+  my $db = Mojo::mysql::DBI::Database->new(mysql => $mysql, dbh => $dbh);
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql::Database> is a container for database handles used by L<Mojo::MySQL>.
+L<Mojo::mysql::DBI::Database> is a container for L<DBI> database handles used by L<Mojo::mysql>.
+L<Mojo::mysql::DBI::Database> is based on L<Mojo::mysql::Database>.
 
 =head1 ATTRIBUTES
 
-L<Mojo::mysql::Database> implements the following attributes.
+L<Mojo::mysql::DBI::Database> implements the following attributes.
 
 =head2 dbh
 
@@ -167,15 +168,12 @@ Database handle used for all queries.
 
 =head2 mysql
 
-  my $mysql = $db->mysql;
-  $db       = $db->mysql(Mojo::mysql->new);
-
 L<Mojo::mysql> object this database belongs to.
 
 =head1 METHODS
 
-L<Mojo::mysql::Database> inherits all methods from L<Mojo::EventEmitter> and
-implements the following new ones.
+L<Mojo::mysql::DBI::Database> inherits all methods from L<Mojo::mysql::Database> and
+implements the following ones.
 
 =head2 backlog
 
@@ -187,9 +185,9 @@ Number of waiting non-blocking queries.
 
   my $tx = $db->begin;
 
-Begin transaction and return L<Mojo::mysql::Transaction> object, which will
+Begin transaction and return L<Mojo::mysql::DBI::Transaction> object, which will
 automatically roll back the transaction unless
-L<Mojo::mysql::Transaction/"commit"> bas been called before it is destroyed.
+L<Mojo::mysql::DBI::Transaction/"commit"> bas been called before it is destroyed.
 
   my $tx = $db->begin;
   $db->query('insert into names values (?)', 'Baerbel');
@@ -219,7 +217,7 @@ Check database connection.
   my $results = $db->query('select * from foo');
   my $results = $db->query('insert into foo values (?, ?, ?)', @values);
 
-Execute a blocking statement and return a L<Mojo::mysql::Results> object with the
+Execute a blocking statement and return a L<Mojo::mysql::DBI::Results> object with the
 results. You can also append a callback to perform operation non-blocking.
 
   $db->query('select * from foo' => sub {
@@ -230,6 +228,6 @@ results. You can also append a callback to perform operation non-blocking.
 
 =head1 SEE ALSO
 
-L<Mojo::mysql>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojo::mysql::Database>, L<Mojo::mysql>.
 
 =cut

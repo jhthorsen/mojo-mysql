@@ -131,3 +131,97 @@ sub _unsubscribe {
 }
 
 1;
+
+=encoding utf8
+
+=head1 NAME
+
+Mojo::mysql::Native::Database - Database
+
+=head1 SYNOPSIS
+
+  use Mojo::mysql::Native::Database;
+
+  my $db = Mojo::mysql::Native::Database->new(mysql => $mysql, connection => Mojo::mysql::Connection->new);
+
+=head1 DESCRIPTION
+
+L<Mojo::mysql::Native::Database> is a container for L<connections|Mojo::mysql::Connection> used by L<Mojo::mysql>.
+L<Mojo::mysql::Native::Database> is based on L<Mojo::mysql::Database>.
+
+=head1 ATTRIBUTES
+
+L<Mojo::mysql::Native::Database> implements the following attributes.
+
+=head2 connection
+
+  my $c = $db->connection;
+  $db   = $db->connection(Mojo::mysql::Connection->new);
+
+Database connection used for all queries.
+
+=head2 mysql
+
+L<Mojo::mysql> object this database belongs to.
+
+=head1 METHODS
+
+L<Mojo::mysql::Native::Database> inherits all methods from L<Mojo::mysql::Database> and
+implements the following ones.
+
+=head2 backlog
+
+  my $num = $db->backlog;
+
+Number of waiting non-blocking queries.
+
+=head2 begin
+
+  my $tx = $db->begin;
+
+Begin transaction and return L<Mojo::mysql::Native::Transaction> object, which will
+automatically roll back the transaction unless
+L<Mojo::mysql::Native::Transaction/"commit"> bas been called before it is destroyed.
+
+  my $tx = $db->begin;
+  $db->query('insert into names values (?)', 'Baerbel');
+  $db->query('insert into names values (?)', 'Wolfgang');
+  $tx->commit;
+
+=head2 disconnect
+
+  $db->disconnect;
+
+Disconnect database connection and prevent it from getting cached again.
+
+=head2 pid
+
+  my $pid = $db->pid;
+
+Return the connection id of the backend server process.
+
+=head2 ping
+
+  my $bool = $db->ping;
+
+Check database connection.
+
+=head2 query
+
+  my $results = $db->query('select * from foo');
+  my $results = $db->query('insert into foo values (?, ?, ?)', @values);
+
+Execute a blocking statement and return a L<Mojo::mysql::Native::Results> object with the
+results. You can also append a callback to perform operation non-blocking.
+
+  $db->query('select * from foo' => sub {
+    my ($db, $err, $results) = @_;
+    ...
+  });
+  Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
+
+=head1 SEE ALSO
+
+L<Mojo::mysql::Database>, L<Mojo::mysql>.
+
+=cut

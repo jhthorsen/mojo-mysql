@@ -37,22 +37,22 @@ sub state { shift->sth->state }
 
 =head1 NAME
 
-Mojo::mysql::Results - Results
+Mojo::mysql::DBI::Results - DBD::mysql Results
 
 =head1 SYNOPSIS
 
-  use Mojo::mysql::Results;
+  use Mojo::mysql::DBI::Results;
 
-  my $results = Mojo::mysql::Results->new(db => $db, sth => $sth);
+  my $results = Mojo::mysql::DBI::Results->new(db => $db, sth => $sth);
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql::Results> is a container for statement handles used by
-L<Mojo::mysql::Database>.
+L<Mojo::mysql::DBI::Results> is a container for L<DBI> statement handles used by
+L<Mojo::mysql::DBI::Database>.
 
 =head1 ATTRIBUTES
 
-L<Mojo::mysql::Results> implements the following attributes.
+L<Mojo::mysql::DBI::Results> implements the following attributes.
 
 =head2 sth
 
@@ -63,8 +63,8 @@ Statement handle results are fetched from.
 
 =head1 METHODS
 
-L<Mojo::mysql::Results> inherits all methods from L<Mojo::Base> and implements
-the following new ones.
+L<Mojo::mysql::DBI::Results> inherits all methods from L<Mojo::mysql::Results> and implements
+the following ones.
 
 =head2 array
 
@@ -164,6 +164,6 @@ Error message receieved.
 
 =head1 SEE ALSO
 
-L<Mojo::mysql>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojo::mysql::Results>, L<Mojo::mysql>.
 
 =cut

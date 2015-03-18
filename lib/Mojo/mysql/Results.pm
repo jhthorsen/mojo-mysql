@@ -38,29 +38,33 @@ sub state { croak 'Method "state" not implemented by subclass' }
 
 =head1 NAME
 
-Mojo::mysql::Results - Results
+Mojo::mysql::Results - abstract Results
 
 =head1 SYNOPSIS
 
-  use Mojo::mysql::Results;
+  package Mojo::mysql::Results::MyRes;
+  use Mojo::Base 'Mojo::mysql::Results';
 
-  my $results = Mojo::mysql::Results->new(db => $db, sth => $sth);
+  sub array          {...}
+  sub arrays         {...}
+  sub columns        {...}
+  sub hash           {...}
+  sub hashes         {...}
+  sub rows           {...}
+  sub more_results   {...}
+  sub affected_rows  {...}
+  sub warnings_count {...}
+  sub last_insert_id {...}
+  sub err            {...}
+  sub errstr         {...}
+  sub state          {...}
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql::Results> is a container for statement handles used by
-L<Mojo::mysql::Database>.
+L<Mojo::mysql::Results> is abstract base class for Database results returned
+by call to $db->L<query|Mojo::mysql::Database/"query">.
 
-=head1 ATTRIBUTES
-
-L<Mojo::mysql::Results> implements the following attributes.
-
-=head2 sth
-
-  my $sth  = $results->sth;
-  $results = $results->sth($sth);
-
-Statement handle results are fetched from.
+Implementations are L<Mojo::mysql::DBI::Results> and L<Mojo::mysql::Native::Results>.
 
 =head1 METHODS
 
