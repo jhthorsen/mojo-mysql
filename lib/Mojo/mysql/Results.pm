@@ -169,6 +169,6 @@ Error message receieved.
 
 =head1 SEE ALSO
 
-L<Mojo::mysql>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojo::mysql>.
 
 =cut
