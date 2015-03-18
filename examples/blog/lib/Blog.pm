@@ -2,7 +2,7 @@ package Blog;
 use Mojo::Base 'Mojolicious';
 
 use Blog::Model::Posts;
-use Mojo::Pg;
+use Mojo::mysql;
 
 sub startup {
   my $self = shift;
@@ -12,13 +12,13 @@ sub startup {
   $self->secrets($self->config('secrets'));
 
   # Model
-  $self->helper(pg => sub { state $pg = Mojo::Pg->new(shift->config('pg')) });
+  $self->helper(mysql => sub { state $mysql = Mojo::mysql->new(shift->config('mysql')) });
   $self->helper(
-    posts => sub { state $posts = Blog::Model::Posts->new(pg => shift->pg) });
+    posts => sub { state $posts = Blog::Model::Posts->new(mysql => shift->mysql) });
 
   # Migrate to latest version if necessary
   my $path = $self->home->rel_file('migrations/blog.sql');
-  $self->pg->migrations->name('blog')->from_file($path)->migrate;
+  $self->mysql->migrations->name('blog')->from_file($path)->migrate;
 
   # Controller
   my $r = $self->routes;
