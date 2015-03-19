@@ -99,7 +99,7 @@ sub parse_url {
 
   # Database
   $parts->{database} = $url->path->parts->[0];
-  $parts->{dsn} = 'dbi:mysql:dbname=' . $parts->{database};
+  $parts->{dsn} = 'dbi:mysql:dbname=' . ($parts->{database} // '');
 
   # Host and port
   if (my $host = $url->host) { $parts->{dsn} .= ";host=$host"; $parts->{host} = $host; }

@@ -273,12 +273,12 @@ L<Mojo::mysql::Migrations> object you can use to change your database schema mor
 easily.
 
   # Load migrations from file and migrate to latest version
-  $mysql->migrations->from_file('/Users/sri/migrations.sql')->migrate;
+  $mysql->migrations->from_file('/home/sri/migrations.sql')->migrate;
 
 =head2 options
 
   my $options = $mysql->options;
-  $mysql      = $mysql->options({found_rows => 0, RaiseError => 1});
+  $mysql      = $mysql->options({found_rows => 0, PrintError => 1});
 
 Options for connecting to server.
 
