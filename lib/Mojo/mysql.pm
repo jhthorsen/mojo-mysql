@@ -31,7 +31,7 @@ sub db {
     Mojo::mysql::Native::Database->new(connection => $dbh, mysql => $self);
 
   if (!$dbh) {
-    $db->connect(map { $self->$_ } qw(url username password options));
+    $db->connect($self->url, $self->options);
     $self->emit(connection => $db);
   }
   return $db;
@@ -261,7 +261,8 @@ C<5>.
 
 =head2 migrations
 
-MySQL does not support nested transactions and DDL transactions. DDL statements cause implicit C<COMMIT>.
+MySQL does not support nested transactions and DDL transactions.
+DDL statements cause implicit C<COMMIT>.
 B<Therefore, migrations should be used with extreme caution.
 Backup your database. You've been warned.> 
 

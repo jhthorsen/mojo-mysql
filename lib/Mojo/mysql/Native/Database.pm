@@ -30,12 +30,11 @@ sub begin {
 }
 
 sub connect {
-  my ($self, $url, $username, $password, $options) = @_;
+  my ($self, $url, $options) = @_;
   my $parts = parse_url($url);
 
   my $c = Mojo::mysql::Connection->new(
-    map { $_ => $parts->{$_} } grep { exists $parts->{$_} } qw (host port database),
-    username => $username, password => $password
+    map { $_ => $parts->{$_} } grep { exists $parts->{$_} } qw(host port database username password)
   );
   do { $c->options->{$_} = $options->{$_} if exists $options->{$_} }
     for qw(found_rows multi_statements utf8 connect_timeout query_timeout);
