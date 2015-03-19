@@ -228,6 +228,8 @@ Connection URL string.
 
 Data Source Name, defaults to C<dbi:mysql:dbname=test>.
 
+This attribute is DEPRECATED and is L<DBI> specific. Use L<url|"/url"> istead.
+
 =head2 max_connections
 
   my $max = $mysql->max_connections;
