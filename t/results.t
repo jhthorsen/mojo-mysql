@@ -64,4 +64,10 @@ is_deeply $db->query('select * from results_test where name = ?', 'tx3')
 
 $db->query('drop table results_test');
 
+eval {
+  my $tx1 = $db->begin;
+  my $tx2 = $db->begin;
+};
+like $@, qr/Already in a transaction/, 'right error';
+
 done_testing();

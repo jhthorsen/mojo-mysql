@@ -21,6 +21,7 @@ sub backlog { scalar @{shift->{waiting} || []} }
 
 sub begin {
   my $self = shift;
+  croak 'Already in a transaction' if ($self->connection->{status_flags} & 0x0001);
   $self->query('START TRANSACTION');
   $self->query('SET autocommit=0');
   my $tx = Mojo::mysql::Native::Transaction->new(db => $self);
