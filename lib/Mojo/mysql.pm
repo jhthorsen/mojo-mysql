@@ -5,10 +5,10 @@ use Carp 'croak';
 use Mojo::Loader 'load_class';
 use Mojo::mysql::Migrations;
 use Mojo::mysql::Util 'parse_url';
+use Mojo::Util 'deprecated';
 use Scalar::Util 'weaken';
 
 has url             => 'mysql:///test';
-has dsn             => 'dbi:mysql:dbname=test';
 has max_connections => 5;
 has migrations      => sub {
   my $migrations = Mojo::mysql::Migrations->new(mysql => shift);
@@ -16,7 +16,6 @@ has migrations      => sub {
   return $migrations;
 };
 has options => sub { { utf8 => 1, found_rows => 1, PrintError => 0, RaiseError => 1, use_dbi => 1} };
-has [qw(password username)] => '';
 
 our $VERSION = '0.07';
 
@@ -45,9 +44,9 @@ sub from_string {
   croak qq{Invalid MySQL connection string "$str"} unless defined $parts;
 
   # Only for Compatibility
-  $self->username($parts->{username}) if exists $parts->{username};
-  $self->password($parts->{password}) if exists $parts->{password};
-  $self->dsn($parts->{dsn});
+  $self->{username} = $parts->{username} if exists $parts->{username};
+  $self->{password} = $parts->{password} if exists $parts->{password};
+  $self->{dsn} = $parts->{dsn};
   @{$self->options}{keys %{$parts->{options}}} = values %{$parts->{options}};
 
   load_class(
@@ -70,6 +69,28 @@ sub _enqueue {
   my $queue = $self->{queue} ||= [];
   push @$queue, [$dbh, $handle];
   shift @{$self->{queue}} while @{$self->{queue}} > $self->max_connections;
+}
+
+sub password {
+  return exists $_[0]->{password} ? $_[0]->{password} : '' if @_ == 1;
+  my ($self, $value) = @_;
+  deprecated 'Mojo::mysql::password is DEPRECATED in favor of Mojo::mysql::url';
+  $_[0]->{password} = $_[1];
+  return $_[0];
+}
+
+sub username {
+  return exists $_[0]->{username} ? $_[0]->{username} : '' if @_ == 1;
+  deprecated 'Mojo::mysql::username is DEPRECATED in favor of Mojo::mysql::url';
+  $_[0]->{username} = $_[1];
+  return $_[0];
+}
+
+sub dsn {
+  return exists $_[0]->{dsn} ? $_[0]->{dsn} : 'dbi:mysql:dbname=test' if @_ == 1;
+  deprecated 'Mojo::mysql::dsn is DEPRECATED in favor of Mojo::mysql::url';
+  $_[0]->{dsn} = $_[1];
+  return $_[0];
 }
 
 1;
@@ -332,12 +353,16 @@ C<RaiseError> is disabled in event loop for asyncronous queries.
 
 Database password, defaults to an empty string.
 
+This attribute is DEPRECATED. Use L<url|"/url"> istead.
+
 =head2 username
 
   my $username = $mysql->username;
   $mysql       = $mysql->username('batman');
 
 Database username, defaults to an empty string.
+
+This attribute is DEPRECATED. Use L<url|"/url"> istead.
 
 =head1 METHODS
 
