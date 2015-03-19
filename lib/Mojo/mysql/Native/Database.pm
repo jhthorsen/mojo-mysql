@@ -116,7 +116,7 @@ sub _subscribe {
     $res->{$_} = $c->{$_} for qw(affected_rows last_insert_id warnings_count);
   });
 
-  $self->connection->on(errors => sub {
+  $self->connection->on(error => sub {
     my $c = shift;
     warn "Mojo::mysql error:", $c->{error_message}, "\n"
       if $self->mysql->options->{PrintError};
@@ -127,7 +127,7 @@ sub _subscribe {
 
 sub _unsubscribe {
   my $self = shift;
-  $self->connection->unsubscribe($_) for qw(fields result end errors);
+  $self->connection->unsubscribe($_) for qw(fields result end error);
 }
 
 1;

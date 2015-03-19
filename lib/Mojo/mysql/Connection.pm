@@ -254,7 +254,7 @@ sub _recv_error {
     ' message:', $self->{error_message}, "\n" if DEBUG;
 
   $self->_state($self->_state eq 'query' ? 'idle' : 'error');
-  $self->emit(errors => $self->{error_message});
+  $self->emit(error => $self->{error_message});
 }
 
 sub _recv_ok {
@@ -449,7 +449,7 @@ sub _seq_next {
   return unless $next;
   if (substr($next, 0, 6) eq '_send_') {
     my $packet = $self->$next();
-    $self->{iostream}->write(_encode_int(length $packet, 3) . _encode_int($self->{seq}, 1) . $packet);
+    $self->{stream}->write(_encode_int(length $packet, 3) . _encode_int($self->{seq}, 1) . $packet);
   }
   elsif (substr($next, 0, 6) eq '_recv_') {
     return if $writeonly;
@@ -468,13 +468,13 @@ sub _seq_next {
 sub _seq {
   my ($self, $cmd, $cb) = @_;
 
-  $self->{iostream} = Mojo::IOLoop::Stream->new($self->{socket});
-  $self->{iostream}->reactor($self->_ioloop(0)->reactor) unless $cb;
-  $self->{iostream}->timeout($self->options->{query_timeout})
+  $self->{stream} = Mojo::IOLoop::Stream->new($self->{socket});
+  $self->{stream}->reactor($self->_ioloop(0)->reactor) unless $cb;
+  $self->{stream}->timeout($self->options->{query_timeout})
     if $self->options->{query_timeout};
   weaken $self;
 
-  $self->{iostream}->on(read => sub {
+  $self->{stream}->on(read => sub {
     my ($stream, $bytes) = @_;
     $self->{incoming} .= $bytes;
 
@@ -482,30 +482,31 @@ sub _seq {
 
     if ($self->_state eq 'idle' or $self->_state eq 'error') {
       $stream->steal_handle;
-      delete $self->{iostream};
+      delete $self->{stream};
       $cb ? $self->$cb() : $self->_ioloop(0)->stop;
     }
     else {
       $self->_seq_next($cmd, 1);
     }
   });
-  $self->{iostream}->on(error => sub {
+  $self->{stream}->on(error => sub {
     my ($stream, $err) = @_;
     warn "stream error: $err\n" if DEBUG;
     $self->{error_message} //= $err;
+    $self->emit(error => $err);
   });
-  $self->{iostream}->on(timeout => sub {
+  $self->{stream}->on(timeout => sub {
     warn "stream timeout\n" if DEBUG;
     $self->{error_message} //= 'timeout';
   });
-  $self->{iostream}->on(close => sub {
+  $self->{stream}->on(close => sub {
     $self->{socket} = undef;
     $self->_state('disconnected');
     $cb ? $self->$cb() : $self->_ioloop(0)->stop;
   });
 
   $self->_seq_next($cmd, 1);
-  $self->{iostream}->start;
+  $self->{stream}->start;
 }
 
 sub _cmd {
@@ -540,6 +541,7 @@ sub connect {
     my ($client, $err) = @_;
     delete $self->{client};
     $self->_state('disconnected');
+    $self->emit(error => $err);
     $cb ? $self->$cb() : $self->_ioloop(0)->stop;
   });
 
@@ -567,7 +569,7 @@ sub ping {
 
 sub DESTROY {
   my $self = shift;
-  $self->unsubscribe($_) for qw(connect fields result end errors);
+  $self->unsubscribe($_) for qw(connect fields result end error);
   $self->disconnect if $self->_state eq 'idle' and $self->{socket};
 }
 
@@ -640,9 +642,9 @@ Emited when a result row is received.
 
 Emited when query ended successfully.
 
-=head2 errors
+=head2 error
 
-  $c->on(errors => sub {
+  $c->on(error => sub {
     my ($c, $error) = @_;
     ...
   });
