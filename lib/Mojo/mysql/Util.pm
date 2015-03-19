@@ -4,7 +4,7 @@ use Mojo::Base -strict;
 use Mojo::URL;
 use Exporter 'import';
 
-our @EXPORT_OK = qw(quote quote_id expand_sql parse_url);
+our @EXPORT_OK = qw(quote quote_id expand_sql flag_list flag_set flag_is parse_url);
 
 sub quote {
   my $string = shift;
@@ -59,6 +59,34 @@ sub expand_sql {
   my ($sql, @args) = @_;
   my @sql = $sql =~ m/$split_sql/g;
   return join('', map { $_ eq '?' ? quote(shift @args) : $_ } @sql);
+}
+
+# Flag functions
+
+sub flag_list($$;$) {
+  my ($list, $data, $sep) = @_;
+  my $i = 0;
+  return join $sep || '|', grep { $data & 1 << $i++ } @$list;
+}
+
+sub flag_set($;@) {
+  my ($list, @ops) = @_;
+  my ($i, $flags) = (0, 0);
+  foreach my $flag (@$list) {
+    do { $flags |= 1 << $i if $_ eq $flag } for @ops; 
+    $i++;
+  }
+  return $flags;
+}
+
+sub flag_is($$$) {
+  my ($list, $data, $flag) = @_;
+  my $i = 0;
+  foreach (@$list) {
+    return $data & 1 << $i if $flag eq $_;
+    $i++;
+  }
+  return undef;
 }
 
 sub parse_url {
@@ -130,6 +158,29 @@ Quote identifier for passing to SQL query.
   my $sql = expand_sql("select name from table where id=?", $id);
  
 Replace ? in SQL query with quoted arguments.
+
+=head2 flag_list \@names, $int, $separator
+
+  say flag_list(['one' 'two' 'three'], 3, ',');   # one,two
+  say flag_list(['one' 'two' 'three'], 4, ',');   # three
+  say flag_list(['one' 'two' 'three'], 6);        # one|two|three
+
+List bit flags that are set in integer.
+
+=head2 flag_set \@names, @flags
+
+  say flag_set(['one' 'two' 'three'], 'one', 'two');  # 3
+  say flag_set(['one' 'two' 'three'])                 # 0
+
+Set named bit flags.
+
+=head2 flag_is \@names, $int, $flag
+
+  say flag_is(['one' 'two' 'three'], 1, 'one');     # true
+  say flag_is(['one' 'two' 'three'], 3, 'two');     # true
+  say flag_is(['one' 'two' 'three'], 3, 'three');   # false
+
+Check if named bit flag is set.
  
 =head2 parse_url
  

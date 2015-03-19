@@ -6,6 +6,7 @@ use Encode qw(_utf8_off _utf8_on);
 use Digest::SHA qw(sha1);
 use Scalar::Util 'weaken';
 use Mojo::IOLoop;
+use Mojo::mysql::Util qw(flag_list flag_set);
 
 has host => 'localhost';
 has port => 3306,
@@ -83,33 +84,6 @@ use constant SEQ => {
     quit => '_recv_ok'
   }
 };
-
-
-sub _flag_list($$;$) {
-  my ($list, $data, $sep) = @_;
-  my $i = 0;
-  return join $sep || '|', grep { $data & 1 << $i++ } @$list;
-}
-
-sub _flag_set($@) {
-  my ($list, @ops) = @_;
-  my ($i, $flags) = (0, 0);
-  foreach my $flag (@$list) {
-    do { $flags |= 1 << $i if $_ eq $flag } for @ops; 
-    $i++;
-  }
-  return $flags;
-}
-
-sub _flag_is($$$) {
-  my ($list, $data, $flag) = @_;
-  my $i = 0;
-  foreach (@$list) {
-    return $data & 1 << $i if $flag eq $_;
-    $i++;
-  }
-  return undef;
-}
 
 
 # encode fixed length integer
@@ -191,11 +165,11 @@ sub _send_auth {
   push @flags, 'CONNECT_WITH_DB' if $self->database;
   push @flags, 'MULTI_STATEMENTS' if $self->options->{multi_statements};
   push @flags, 'FOUND_ROWS' if $self->options->{found_rows};
-  my $flags = _flag_set(CLIENT_CAPABILITY, @flags);
+  my $flags = flag_set(CLIENT_CAPABILITY, @flags);
 
   warn '>>> AUTH ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n",
     ' user:', $self->username, ' database:', $self->database,
-    ' flags:', _flag_list(CLIENT_CAPABILITY, $flags),
+    ' flags:', flag_list(CLIENT_CAPABILITY, $flags),
     '(', sprintf('%08X', $flags), ')', "\n" if DEBUG > 1;
 
   my ($user, $password, $database, $crypt) = ($self->username, $self->password, $self->database, '');
@@ -273,7 +247,7 @@ sub _recv_ok {
   warn '<<< OK ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n",
     ' affected:', $self->{affected_rows},
     ' last_insert_id:', $self->{last_insert_id},
-    ' status:', _flag_list(SERVER_STATUS, $self->{status_flags}),
+    ' status:', flag_list(SERVER_STATUS, $self->{status_flags}),
     '(', sprintf('%04X', $self->{status_flags}), ')',
     ' warnings:', $self->{warnings_count}, "\n" if DEBUG > 1;
 
@@ -308,7 +282,7 @@ sub _recv_eof {
 
   warn '<<< EOF ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n",
     ' warnings:', $self->{warnings_count},
-    ' status:', _flag_list(SERVER_STATUS, $self->{status_flags}),
+    ' status:', flag_list(SERVER_STATUS, $self->{status_flags}),
     '(', sprintf('%04X', $self->{status_flags}), ')', "\n" if DEBUG > 1;
 
   if ($self->_state eq 'field') {
@@ -359,7 +333,7 @@ sub _recv_field {
     ' type:', REV_DATATYPE->{chr $field->{column_type}}, '(', $field->{column_type}, ')',
     ' length:', $field->{column_length},
     ' charset:', REV_CHARSET->{$field->{character_set}} // 'UNKNOWN', '(', $field->{character_set}, ')',
-    ' flags:', _flag_list(FIELD_FLAG, $field->{flags}), '(', $field->{flags}, ')', , "\n" if DEBUG > 1;
+    ' flags:', flag_list(FIELD_FLAG, $field->{flags}), '(', $field->{flags}, ')', , "\n" if DEBUG > 1;
 }
 
 sub _recv_row {
@@ -405,9 +379,9 @@ sub _recv_handshake {
     ' protocol:', $self->{protocol_version},
     ' version:', $self->{server_version},
     ' connection:', $self->{connection_id},
-    ' status:', _flag_list(SERVER_STATUS, $self->{status_flags}),
+    ' status:', flag_list(SERVER_STATUS, $self->{status_flags}),
     '(', sprintf('%04X', $self->{status_flags}), ')',
-    ' capabilities:', _flag_list(CLIENT_CAPABILITY, $self->{capability_flags}),
+    ' capabilities:', flag_list(CLIENT_CAPABILITY, $self->{capability_flags}),
     '(', sprintf('%08X', $self->{capability_flags}), ')',
     ' auth:', $auth_plugin_name, "\n" if DEBUG > 1;
 
