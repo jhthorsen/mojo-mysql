@@ -68,6 +68,6 @@ eval {
   my $tx1 = $db->begin;
   my $tx2 = $db->begin;
 };
-like $@, qr/Already in a transaction/, 'right error';
+like $@, qr/already/i, 'right error';
 
 done_testing();
