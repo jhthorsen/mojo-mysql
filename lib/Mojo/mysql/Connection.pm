@@ -196,7 +196,7 @@ sub _send_auth {
   warn '>>> AUTH ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n",
     ' user:', $self->username, ' database:', $self->database,
     ' flags:', _flag_list(CLIENT_CAPABILITY, $flags),
-    '(', sprintf('%08X', $flags), ')', "\n" if DEBUG;
+    '(', sprintf('%08X', $flags), ')', "\n" if DEBUG > 1;
 
   my ($user, $password, $database, $crypt) = ($self->username, $self->password, $self->database, '');
   _utf8_off $user; _utf8_off $password; _utf8_off $database;
@@ -216,7 +216,7 @@ sub _send_auth {
 
 sub _send_quit {
   my $self = shift;
-  warn '>>> QUIT ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n" if DEBUG;
+  warn '>>> QUIT ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n" if DEBUG > 1;
   $self->_state('quit');
   return pack 'C', 1;
 }
@@ -225,7 +225,7 @@ sub _send_query {
   my $self = shift;
   my $sql = $self->{sql};
   warn '>>> QUERY ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n",
-    " sql:$sql\n" if DEBUG;
+    " sql:$sql\n" if DEBUG > 1;
   _utf8_off $sql;
   $self->_state('query');
   return pack('C', 3) . $sql;
@@ -233,7 +233,7 @@ sub _send_query {
 
 sub _send_ping {
   my $self = shift;
-  warn '>>> PING ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n" if DEBUG;
+  warn '>>> PING ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n" if DEBUG > 1;
   $self->_state('ping');
   return pack 'C', 14;
 }
@@ -251,7 +251,7 @@ sub _recv_error {
   warn '<<< ERROR ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n",
     ' error:', $self->{error_code},
     ' state:', $self->{sql_state},
-    ' message:', $self->{error_message}, "\n" if DEBUG;
+    ' message:', $self->{error_message}, "\n" if DEBUG > 1;
 
   $self->_state($self->_state eq 'query' ? 'idle' : 'error');
   $self->emit(error => $self->{error_message});
@@ -275,7 +275,7 @@ sub _recv_ok {
     ' last_insert_id:', $self->{last_insert_id},
     ' status:', _flag_list(SERVER_STATUS, $self->{status_flags}),
     '(', sprintf('%04X', $self->{status_flags}), ')',
-    ' warnings:', $self->{warnings_count}, "\n" if DEBUG;
+    ' warnings:', $self->{warnings_count}, "\n" if DEBUG > 1;
 
   $self->emit('connect') if $self->_state eq 'auth';
   $self->emit('end') if $self->_state eq 'query';
@@ -291,7 +291,7 @@ sub _recv_query_responce {
   $self->{field_count} = $self->_chew_lcint;
 
   warn '<<< QUERY_RESPONSE ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n",
-    ' fields:', $self->{field_count}, "\n" if DEBUG;
+    ' fields:', $self->{field_count}, "\n" if DEBUG > 1;
 
   $self->_state('field');
 }
@@ -309,7 +309,7 @@ sub _recv_eof {
   warn '<<< EOF ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n",
     ' warnings:', $self->{warnings_count},
     ' status:', _flag_list(SERVER_STATUS, $self->{status_flags}),
-    '(', sprintf('%04X', $self->{status_flags}), ')', "\n" if DEBUG;
+    '(', sprintf('%04X', $self->{status_flags}), ')', "\n" if DEBUG > 1;
 
   if ($self->_state eq 'field') {
     $self->emit(fields => $self->{column_info});
@@ -359,7 +359,7 @@ sub _recv_field {
     ' type:', REV_DATATYPE->{chr $field->{column_type}}, '(', $field->{column_type}, ')',
     ' length:', $field->{column_length},
     ' charset:', REV_CHARSET->{$field->{character_set}} // 'UNKNOWN', '(', $field->{character_set}, ')',
-    ' flags:', _flag_list(FIELD_FLAG, $field->{flags}), '(', $field->{flags}, ')', , "\n" if DEBUG;
+    ' flags:', _flag_list(FIELD_FLAG, $field->{flags}), '(', $field->{flags}, ')', , "\n" if DEBUG > 1;
 }
 
 sub _recv_row {
@@ -376,7 +376,7 @@ sub _recv_row {
   }
 
   warn '<<< ROW ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n",
-    join(', ', map { defined $_ ? "'" . $_ . "'" : 'null' } @row), "\n" if DEBUG;
+    join(', ', map { defined $_ ? "'" . $_ . "'" : 'null' } @row), "\n" if DEBUG > 1;
 
   $self->emit(result => \@row);
 }
@@ -409,7 +409,7 @@ sub _recv_handshake {
     '(', sprintf('%04X', $self->{status_flags}), ')',
     ' capabilities:', _flag_list(CLIENT_CAPABILITY, $self->{capability_flags}),
     '(', sprintf('%08X', $self->{capability_flags}), ')',
-    ' auth:', $auth_plugin_name, "\n" if DEBUG;
+    ' auth:', $auth_plugin_name, "\n" if DEBUG > 1;
 
   die '_recv_handshake() invalid protocol version ' . $self->{protocol_version}
     unless $self->{protocol_version} == 10;
@@ -445,7 +445,7 @@ sub _seq_next_ready {
 sub _seq_next {
   my ($self, $cmd, $writeonly) = @_;
   my $next = SEQ->{$cmd}{$self->_state};
-  warn 'stream state:', $self->_state, ' doing:', $cmd, ' next:', ($next // ''), "\n" if DEBUG > 1;
+  warn 'stream state:', $self->_state, ' doing:', $cmd, ' next:', ($next // ''), "\n" if DEBUG > 2;
   return unless $next;
   if (substr($next, 0, 6) eq '_send_') {
     my $packet = $self->$next();
