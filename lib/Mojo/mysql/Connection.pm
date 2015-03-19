@@ -563,8 +563,8 @@ sub query {
 }
 
 sub ping {
-  my $self = shift;
-  return $self->_state eq 'disconnected' ? 0 : $self->_cmd('ping');
+  my ($self, $cb) = @_;
+  return $self->_state eq 'disconnected' ? 0 : $self->_cmd('ping', $cb);
 }
 
 sub DESTROY {
