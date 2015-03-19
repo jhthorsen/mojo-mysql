@@ -781,6 +781,12 @@ Results are handled by events.
 
 Check if connection is alive.
 
+=head1 DEBUGGING
+
+Debugging is enabled if environment variable MOJO_MYSQL_DEBUG is set.
+
+Packet tracing is enabled if MOJO_MYSQL_DEBUG is 2 or greater.
+
 =head1 AUTHOR
 
 Svetoslav Naydenov, C<harryl@cpan.org>.
