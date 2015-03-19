@@ -569,7 +569,6 @@ sub ping {
 
 sub DESTROY {
   my $self = shift;
-  $self->unsubscribe($_) for qw(connect fields result end error);
   $self->disconnect if $self->_state eq 'idle' and $self->{socket};
 }
 
