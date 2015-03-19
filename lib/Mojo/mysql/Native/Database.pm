@@ -66,8 +66,7 @@ sub query {
     $self->connection->query($sql);
     $self->_unsubscribe;
     my $current = shift @{$self->{waiting}};
-    croak $self->connection->{error_message}
-      if $self->connection->{error_code} and $self->mysql->options->{RaiseError};
+    croak $self->connection->{error_message} if $self->connection->{error_code};
     return $current->{results};
   }
 

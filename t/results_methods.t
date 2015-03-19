@@ -74,14 +74,4 @@ like $err, qr/results_test/, 'has error';
 is $err, $res->errstr, 'same error';
 is length($res->state), 5, 'has state';
 
-undef $res;
-$db->disconnect;
-$mysql->options->{RaiseError} = 0;
-$db = $mysql->db;
-$res = $db->query('select name from results_test');
-like $err, qr/results_test/, 'has error';
-is $err, $res->errstr, 'same error';
-is length($res->state), 5, 'has state';
-
-
 done_testing;

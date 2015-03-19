@@ -15,7 +15,7 @@ has migrations      => sub {
   weaken $migrations->{mysql};
   return $migrations;
 };
-has options => sub { { utf8 => 1, found_rows => 1, PrintError => 0, RaiseError => 1, use_dbi => 1} };
+has options => sub { { utf8 => 1, found_rows => 1, PrintError => 0, use_dbi => 1} };
 
 our $VERSION = '0.07';
 
@@ -325,10 +325,6 @@ if it has not been successful after the given number of seconds.
 
 C<warn> on errors.
 
-=item RaiseError
-
-C<die> on error in blocking operations.
-
 =back
 
 Default Options are:
@@ -336,8 +332,7 @@ Default Options are:
 C<use_dbi = 1>,
 C<utf8 = 1>,
 C<found_rows = 1>,
-C<PrintError = 0>,
-C<RaiseError = 1>
+C<PrintError = 0>
 
 When using DBI method, driver private options (prefixed with C<mysql_> of L<DBD::mysql> are supported.
 
@@ -345,7 +340,7 @@ C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead conn
 
 C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/begin> to manage transactions.
 
-C<RaiseError> is disabled in event loop for asyncronous queries.
+C<RaiseError> is always enabled for blocking and disabled non-blocking queries.
 
 =head2 password
 
@@ -402,7 +397,7 @@ Parse configuration from connection string.
   $mysql->from_string('mysql://batman@%2ftmp%2fmysql.sock/db4');
 
   # Username, database and additional options
-  $mysql->from_string('mysql://batman@/db5?PrintError=1&RaiseError=0');
+  $mysql->from_string('mysql://batman@/db5?PrintError=1');
 
 =head2 new
 

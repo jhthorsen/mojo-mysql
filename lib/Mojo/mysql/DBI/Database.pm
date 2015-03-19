@@ -42,7 +42,7 @@ sub connect {
   my $parts = parse_url($url);
   croak "Invalid URL '$url'" unless defined $parts;
   my %connect_options = map { $_ => $options->{$_} }
-    grep { $_ =~ /^mysql_/ or $_ eq 'PrintError' or $_ eq 'RaiseError' } keys %$options;
+    grep { $_ =~ /^mysql_/ or $_ eq 'PrintError' } keys %$options;
 
   foreach (keys %dbi_options) {
     $connect_options{$_} = $options->{$dbi_options{$_}}
@@ -50,6 +50,7 @@ sub connect {
   }
 
   $connect_options{AutoCommit} = 1;
+  $connect_options{RaiseError} = 1;
   $connect_options{mysql_auto_reconnect} = 0;
 
   my $dbh = DBI->connect($parts->{dsn}, $parts->{username}, $parts->{password}, \%connect_options);

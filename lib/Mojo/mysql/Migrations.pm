@@ -46,7 +46,6 @@ sub migrate {
   return $self if $self->_active($db) == $target;
 
   # Lock migrations table and check version again
-  local $db->dbh->{RaiseError} = 1 if $db->{dbh};
   my $tx = $db->begin;
 
   return $self if (my $active = $self->_active($db)) == $target;
