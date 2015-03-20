@@ -227,7 +227,7 @@ following new ones.
 =head2 connection
 
   $mysql->on(connection => sub {
-    my ($mysql, $dbh) = @_;
+    my ($mysql, $db) = @_;
     ...
   });
 
@@ -277,13 +277,41 @@ easily.
 
 Options for connecting to server.
 
-Supported Options are:
+This attribute is DEPRECATED and is L<DBI> specific. Use L<url|"/url"> istead.
+
+=head2 password
+
+  my $password = $mysql->password;
+  $mysql       = $mysql->password('s3cret');
+
+Database password, defaults to an empty string.
+
+This attribute is DEPRECATED. Use L<url|"/url"> istead.
+
+=head2 username
+
+  my $username = $mysql->username;
+  $mysql       = $mysql->username('batman');
+
+Database username, defaults to an empty string.
+
+This attribute is DEPRECATED. Use L<url|"/url"> istead.
+
+=head2 url
+
+  my $url = $mysql->url;
+  $url  = $mysql->url(Mojo::mysql::URL->new('mysql://user@host/test?PrintError=0'));
+
+Connection L<URL|Mojo::mysql::URL>.
+
+Supported URL Options are:
 
 =over 2
 
 =item use_dbi
 
-Use L<DBI|DBI> and L<DBD::mysql> when enabled or Native implementation when disabled.
+Use L<DBI|DBI> and L<DBD::mysql> when enabled or not specified.
+Native implementation when disabled.
 
 =item found_rows
 
@@ -324,7 +352,6 @@ C<warn> on errors.
 
 Default Options are:
 
-C<use_dbi = 1>,
 C<utf8 = 1>,
 C<found_rows = 1>,
 C<PrintError = 0>
@@ -333,34 +360,9 @@ When using DBI method, driver private options (prefixed with C<mysql_> of L<DBD:
 
 C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead connections.
 
-C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/begin> to manage transactions.
+C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/"begin"> to manage transactions.
 
 C<RaiseError> is always enabled for blocking and disabled non-blocking queries.
-
-=head2 password
-
-  my $password = $mysql->password;
-  $mysql       = $mysql->password('s3cret');
-
-Database password, defaults to an empty string.
-
-This attribute is DEPRECATED. Use L<url|"/url"> istead.
-
-=head2 username
-
-  my $username = $mysql->username;
-  $mysql       = $mysql->username('batman');
-
-Database username, defaults to an empty string.
-
-This attribute is DEPRECATED. Use L<url|"/url"> istead.
-
-=head2 url
-
-  my $url = $mysql->url;
-  $url  = $mysql->url(Mojo::mysql::URL->new('mysql://user@host/test'));
-
-Connection L<URL|Mojo::mysql::URL>.
 
 =head1 METHODS
 
