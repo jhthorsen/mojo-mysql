@@ -20,7 +20,8 @@ $db->query(
 $db->query('insert into results_test (name) values (?)', $_) for qw(foo bar);
 
 # Result methods
-is_deeply $db->query('select * from results_test')->rows, 2, 'two rows';
+my $rows = $db->{dbh} && $db->dbh->{mysql_use_result} ? 0 : 2;
+is $db->query('select * from results_test')->rows, $rows, 'two rows';
 is_deeply $db->query('select * from results_test')->columns, ['id', 'name'],
   'right structure';
 is_deeply $db->query('select * from results_test')->array, [1, 'foo'],
