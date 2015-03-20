@@ -8,7 +8,7 @@ use Mojo::mysql::URL;
 use Mojo::Util 'deprecated';
 use Scalar::Util 'weaken';
 
-has url             => 'mysql:///test';
+has url             => sub { Mojo::mysql::URL->new('mysql:///test') };
 has max_connections => 5;
 has migrations      => sub {
   my $migrations = Mojo::mysql::Migrations->new(mysql => shift);
@@ -246,7 +246,7 @@ L<Mojo::mysql> implements the following attributes.
   my $dsn = $mysql->dsn;
   $mysql  = $mysql->dsn('dbi:mysql:dbname=foo');
 
-Data Source Name, defaults to C<dbi:mysql:dbname=test>.
+Data Source Name.
 
 This attribute is DEPRECATED and is L<DBI> specific. Use L<url|"/url"> istead.
 
