@@ -1,32 +1,51 @@
 package Mojo::mysql::URL;
 use Mojo::Base 'Mojo::URL';
 
+sub new { @_ > 1 ? shift->SUPER::new->parse(@_) : shift->SUPER::new }
+ 
+sub parse {
+  my ($self, $url) = @_;
+  $self->SUPER::parse($url);
+
+  $self->database($self->path->parts->[0] // '');
+
+  if (($self->userinfo // '') =~ /^([^:]+)(?::([^:]+))?$/) {
+    $self->username($1);
+    $self->password($2) if defined $2;
+  }
+
+  my $hash = $self->query->to_hash;
+  @{$self->options}{keys %$hash} = values %$hash;
+
+  return $self;
+}
+
 sub database {
   my $self = shift;
-  if (@_) {
-    return $self->path(shift // '');
-  }
-  return $self->path->parts->[0] // '';
+  return $self->{database} // '' unless @_;
+  my $database = shift // '';
+  $self->{database} = $database;
+  return $self->path($database);
+}
+
+sub options {
+  my $self = shift;
+  return $self->query->to_hash unless @_;
+  return $self->query(@_);
 }
 
 sub password {
   my $self = shift;
-  if (@_) {
-    my $password = shift;
-    return $self->userinfo($self->username . $password ? ':' . $password : '');
-  }
-  return '' unless ($self->userinfo // '') =~ /^([^:]+)(?::([^:]+))?$/;
-  return $2 // '';
+  return $self->{password} // '' unless @_;
+  $self->{password} = shift // '';
+  return $self->userinfo($self->username . $self->password ? ':' . $self->password : '');
 }
 
 sub username {
   my $self = shift;
-  if (@_) {
-    my $username = shift // '';
-    return $self->userinfo($username . $self->password ? ':' . $self->password : '');
-  }
-  return '' unless ($self->userinfo // '') =~ /^([^:]+)(?::([^:]+))?$/;
-  return $1;
+  return $self->{username} // '' unless @_;
+  $self->{username} = shift // '';
+  return $self->userinfo($self->username . $self->password ? ':' . $self->password : '');
 }
 
 sub dsn {
@@ -83,6 +102,13 @@ L<Mojo::mysql::URL> inherits all attributes from L<Mojo::URL> and implements the
 
 Database name.
 
+=head2 options
+
+  my $options  = $url->options;
+  $url         = $url->options->{PrintError} = 1;
+
+Database options.
+
 =head2 password
 
   my $password = $url->password;
@@ -109,6 +135,19 @@ following new ones.
   say $url->dsn;
 
 Convert URL to L<DBI> Data Source Name.
+
+=head2 parse
+
+  $url->parse('mysql://server:3000/test');
+
+Parse URL string.
+
+=head2 new
+
+  my $url = Mojo::mysql::URL->new;
+  $url->parse('mysql://server:3000/test');
+
+  my $url = Mojo::mysql::URL->new('mysql://server:3000/test');
 
 =head1 SEE ALSO
 
