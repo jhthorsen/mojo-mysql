@@ -11,6 +11,7 @@ is $mysql->password, '',        'no password';
 my $options = {
   utf8 => 1,
   found_rows => 1,
+  PrintError => 0,
 };
 is_deeply $mysql->options, $options, 'right options';
 
@@ -22,6 +23,7 @@ is $mysql->password, '',                    'no password';
 $options = {
   utf8 => 1,
   found_rows => 1,
+  PrintError => 0,
 };
 is_deeply $mysql->options, $options, 'right options';
 
@@ -46,6 +48,7 @@ is $mysql->password, '', 'no password';
 $options = {
   utf8 => 1,
   found_rows => 1,
+  PrintError => 0,
 };
 is_deeply $mysql->options, $options, 'right options';
 
@@ -57,6 +60,7 @@ is $mysql->password, '',                    'no password';
 $options = {
   utf8 => 1,
   found_rows => 1,
+  PrintError => 0,
 };
 is_deeply $mysql->options, $options, 'right options';
 

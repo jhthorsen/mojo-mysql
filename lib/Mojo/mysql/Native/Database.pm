@@ -30,9 +30,9 @@ sub begin {
 }
 
 sub connect {
-  my ($self, $url, $options) = @_;
+  my ($self, $url) = @_;
   my $c = Mojo::mysql::Connection->new(url => $url);
-  do { $c->options->{$_} = $options->{$_} if exists $options->{$_} }
+  do { $c->options->{$_} = $url->options->{$_} if exists $url->options->{$_} }
     for qw(found_rows multi_statements utf8 connect_timeout query_timeout);
 
   eval { $c->connect };

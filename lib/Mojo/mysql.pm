@@ -30,7 +30,7 @@ sub db {
     Mojo::mysql::Native::Database->new(connection => $dbh, mysql => $self);
 
   if (!$dbh) {
-    $db->connect($self->url, $self->options);
+    $db->connect($self->url);
     $self->emit(connection => $db);
   }
   return $db;

@@ -18,6 +18,7 @@ sub parse {
   $self->{options} = {
     utf8 => 1,
     found_rows => 1,
+    PrintError => 0
   } unless exists $self->{options};
 
   @{$self->options}{keys %$hash} = values %$hash;

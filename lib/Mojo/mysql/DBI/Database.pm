@@ -37,13 +37,13 @@ sub begin {
 }
 
 sub connect {
-  my ($self, $url, $options) = @_;
-  my %connect_options = map { $_ => $options->{$_} }
-    grep { $_ =~ /^mysql_/ or $_ eq 'PrintError' } keys %$options;
+  my ($self, $url) = @_;
+  my %connect_options = map { $_ => $url->options->{$_} }
+    grep { $_ =~ /^mysql_/ or $_ eq 'PrintError' } keys %{$url->options};
 
   foreach (keys %dbi_options) {
-    $connect_options{$_} = $options->{$dbi_options{$_}}
-      if !exists $connect_options{$_} and exists $options->{$dbi_options{$_}};
+    $connect_options{$_} = $url->options->{$dbi_options{$_}}
+      if !exists $connect_options{$_} and exists $url->options->{$dbi_options{$_}};
   }
 
   $connect_options{AutoCommit} = 1;
