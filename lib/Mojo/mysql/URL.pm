@@ -15,6 +15,13 @@ sub parse {
   }
 
   my $hash = $self->query->to_hash;
+  $self->{options} = {
+    utf8 => 1,
+    found_rows => 1,
+    PrintError => 0,
+    use_dbi => 1
+  } unless exists $self->{options};
+
   @{$self->options}{keys %$hash} = values %$hash;
 
   return $self;
@@ -30,7 +37,8 @@ sub database {
 
 sub options {
   my $self = shift;
-  return $self->query->to_hash unless @_;
+  return $self->{options} unless @_;
+  $self->{options} = @_;
   return $self->query(@_);
 }
 

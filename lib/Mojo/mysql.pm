@@ -15,7 +15,6 @@ has migrations      => sub {
   weaken $migrations->{mysql};
   return $migrations;
 };
-has options => sub { { utf8 => 1, found_rows => 1, PrintError => 0, use_dbi => 1} };
 
 our $VERSION = '0.07';
 
@@ -42,16 +41,8 @@ sub from_string {
   my $url = Mojo::mysql::URL->new($str);
   croak qq{Invalid MySQL connection string "$str"} unless $url->protocol eq 'mysql';
 
-  # Only for Compatibility
-  $self->{username} = $url->username;
-  $self->{password} = $url->password;
-  $self->{dsn} = $url->dsn;
-
-  my $hash = $url->query->to_hash;
-  @{$self->options}{keys %$hash} = values %$hash;
-
   load_class(
-    ($self->options->{use_dbi} // 1) ? 'Mojo::mysql::DBI::Database' : 'Mojo::mysql::Native::Database');
+    ($url->options->{use_dbi} // 1) ? 'Mojo::mysql::DBI::Database' : 'Mojo::mysql::Native::Database');
 
   return $self->url($url);
 }
@@ -93,6 +84,14 @@ sub username {
   return $self->url->username unless @_;
   deprecated 'Mojo::mysql::username is DEPRECATED in favor of Mojo::mysql::url';
   $self->url->username(@_);
+  return $self;
+}
+
+sub options {
+  my $self = shift;
+  return $self->url->options unless @_;
+  deprecated 'Mojo::mysql::options is DEPRECATED in favor of Mojo::mysql::url';
+  $self->url->options(@_);
   return $self;
 }
 
