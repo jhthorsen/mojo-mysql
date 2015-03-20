@@ -74,28 +74,25 @@ sub _enqueue {
 
 # deprecated attributes
 sub dsn {
-  return exists $_[0]->{dsn} ? $_[0]->{dsn} : 'dbi:mysql:dbname=test' if @_ == 1;
-  my ($self, $value) = @_;
+  my $self = shift;
+  return $self->url->dsn unless @_;
   deprecated 'Mojo::mysql::dsn is DEPRECATED in favor of Mojo::mysql::url';
-  $self->{dsn} = $value;
   return $self;
 }
 
 sub password {
-  return exists $_[0]->{password} ? $_[0]->{password} : '' if @_ == 1;
-  my ($self, $value) = @_;
+  my $self = shift;
+  return $self->url->password unless @_;
   deprecated 'Mojo::mysql::password is DEPRECATED in favor of Mojo::mysql::url';
-  $self->{password} = $value;
-  $self->url->password($value);
+  $self->url->password(@_);
   return $self;
 }
 
 sub username {
-  return exists $_[0]->{username} ? $_[0]->{username} : '' if @_ == 1;
-  my ($self, $value) = @_;
+  my $self = shift;
+  return $self->url->username unless @_;
   deprecated 'Mojo::mysql::username is DEPRECATED in favor of Mojo::mysql::url';
-  $self->{username} = $value;
-  $self->url->username($value);
+  $self->url->username(@_);
   return $self;
 }
 
