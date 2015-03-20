@@ -4,31 +4,7 @@ use Mojo::Base -strict;
 use Mojo::URL;
 use Exporter 'import';
 
-our @EXPORT_OK = qw(quote quote_id expand_sql flag_list flag_set flag_is);
-
-sub quote {
-  my $string = shift;
-  return 'NULL' unless defined $string;
-
-  for ($string) {
-    s/\\/\\\\/g;
-    s/\0/\\0/g;
-    s/\n/\\n/g;
-    s/\r/\\r/g;
-    s/'/\\'/g;
-    # s/"/\\"/g;
-    s/\x1a/\\Z/g;
-  }
-
-  return "'$string'";
-}
-
-sub quote_id {
-  my $id = shift;
-  return 'NULL' unless defined $id;
-  $id =~ s/`/``/g;
-  return "`$id`";
-}
+our @EXPORT_OK = qw(expand_sql flag_list flag_set flag_is quote quote_id);
 
 # from Net::Wire10
 my $split_sql = qr/
@@ -89,6 +65,30 @@ sub flag_is($$$) {
   return undef;
 }
 
+sub quote {
+  my $string = shift;
+  return 'NULL' unless defined $string;
+
+  for ($string) {
+    s/\\/\\\\/g;
+    s/\0/\\0/g;
+    s/\n/\\n/g;
+    s/\r/\\r/g;
+    s/'/\\'/g;
+    # s/"/\\"/g;
+    s/\x1a/\\Z/g;
+  }
+
+  return "'$string'";
+}
+
+sub quote_id {
+  my $id = shift;
+  return 'NULL' unless defined $id;
+  $id =~ s/`/``/g;
+  return "`$id`";
+}
+
 1;
 
 =encoding utf8
@@ -113,18 +113,6 @@ L<Mojo::mysql::Util> provides utility functions for L<Mojo::mysql>.
 L<Mojo::mysql::Util> implements the following functions, which can be imported
 individually.
  
-=head2 quote
- 
-  my $escaped = quote $str;
- 
-Quote string value for passing to SQL query.
- 
-=head2 quote_id
- 
-  my $escaped = quote_id $id;
- 
-Quote identifier for passing to SQL query.
-
 =head2 expand_sql
  
   my $sql = expand_sql("select name from table where id=?", $id);
@@ -153,5 +141,17 @@ Set named bit flags.
   say flag_is(['one' 'two' 'three'], 3, 'three');   # false
 
 Check if named bit flag is set.
+
+=head2 quote
+ 
+  my $escaped = quote $str;
+ 
+Quote string value for passing to SQL query.
+ 
+=head2 quote_id
+ 
+  my $escaped = quote_id $id;
+ 
+Quote identifier for passing to SQL query.
 
 =cut

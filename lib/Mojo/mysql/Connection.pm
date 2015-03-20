@@ -529,15 +529,15 @@ sub connect {
 
 sub disconnect { shift->_cmd('disconnect') }
 
+sub ping {
+  my ($self, $cb) = @_;
+  return $self->_state eq 'disconnected' ? 0 : $self->_cmd('ping', $cb);
+}
+
 sub query {
   my ($self, $sql, $cb) = @_;
   $self->{sql} = $sql;
   $self->_cmd('query', $cb);
-}
-
-sub ping {
-  my ($self, $cb) = @_;
-  return $self->_state eq 'disconnected' ? 0 : $self->_cmd('ping', $cb);
 }
 
 sub DESTROY {
@@ -708,6 +708,12 @@ Connect and authenticate to MySQL Server.
 
 Disconnect gracefully from server.
 
+=head2 ping
+  
+  say "ok" if $c->ping;
+
+Check if connection is alive.
+
 =head2 query
 
   # Blocking
@@ -717,12 +723,6 @@ Disconnect gracefully from server.
 
 Send SQL query to server.
 Results are handled by events.
-
-=head2 ping
-  
-  say "ok" if $c->ping;
-
-Check if connection is alive.
 
 =head1 DEBUGGING
 

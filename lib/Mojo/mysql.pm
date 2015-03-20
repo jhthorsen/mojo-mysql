@@ -72,6 +72,15 @@ sub _enqueue {
   shift @{$self->{queue}} while @{$self->{queue}} > $self->max_connections;
 }
 
+# deprecated attributes
+sub dsn {
+  return exists $_[0]->{dsn} ? $_[0]->{dsn} : 'dbi:mysql:dbname=test' if @_ == 1;
+  my ($self, $value) = @_;
+  deprecated 'Mojo::mysql::dsn is DEPRECATED in favor of Mojo::mysql::url';
+  $self->{dsn} = $value;
+  return $self;
+}
+
 sub password {
   return exists $_[0]->{password} ? $_[0]->{password} : '' if @_ == 1;
   my ($self, $value) = @_;
@@ -88,13 +97,6 @@ sub username {
   $self->{username} = $value;
   $self->url->username($value);
   return $self;
-}
-
-sub dsn {
-  return exists $_[0]->{dsn} ? $_[0]->{dsn} : 'dbi:mysql:dbname=test' if @_ == 1;
-  deprecated 'Mojo::mysql::dsn is DEPRECATED in favor of Mojo::mysql::url';
-  $_[0]->{dsn} = $_[1];
-  return $_[0];
 }
 
 1;
@@ -239,13 +241,6 @@ Emitted when a new database connection has been established.
 
 L<Mojo::mysql> implements the following attributes.
 
-=head2 url
-
-  my $url = $mysql->url;
-  $url  = $mysql->url(Mojo::mysql::URL->new('mysql://user@host/test'));
-
-Connection L<URL|Mojo::mysql::URL>.
-
 =head2 dsn
 
   my $dsn = $mysql->dsn;
@@ -363,6 +358,13 @@ This attribute is DEPRECATED. Use L<url|"/url"> istead.
 Database username, defaults to an empty string.
 
 This attribute is DEPRECATED. Use L<url|"/url"> istead.
+
+=head2 url
+
+  my $url = $mysql->url;
+  $url  = $mysql->url(Mojo::mysql::URL->new('mysql://user@host/test'));
+
+Connection L<URL|Mojo::mysql::URL>.
 
 =head1 METHODS
 
