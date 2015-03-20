@@ -31,9 +31,7 @@ sub begin {
 
 sub connect {
   my ($self, $url, $options) = @_;
-  my $c = Mojo::mysql::Connection->new(
-    map { $_ => $url->$_ } grep { $url->$_ } qw(host port database username password)
-  );
+  my $c = Mojo::mysql::Connection->new(url => $url);
   do { $c->options->{$_} = $options->{$_} if exists $options->{$_} }
     for qw(found_rows multi_statements utf8 connect_timeout query_timeout);
 

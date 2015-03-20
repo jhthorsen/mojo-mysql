@@ -427,6 +427,8 @@ This is the class hierarchy of the L<Mojo::mysql> distribution.
 
 =item * L<Mojo::mysql::Transaction>
 
+=item * L<Mojo::mysql::URL>
+
 =item * L<Mojo::mysql::Connection>
 
 =item * L<Mojo::mysql::Native::Database>

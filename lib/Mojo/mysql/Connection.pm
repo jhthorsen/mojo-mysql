@@ -8,11 +8,7 @@ use Scalar::Util 'weaken';
 use Mojo::IOLoop;
 use Mojo::mysql::Util qw(flag_list flag_set);
 
-has host => 'localhost';
-has port => 3306,
-has username => '';
-has password => '';
-has database => '';
+has 'url';
 
 has options => sub { {
   found_rows => 0, multi_statements => 0, utf8 => 1,
@@ -161,21 +157,23 @@ sub _chew_str {
 sub _send_auth {
   my $self = shift;
 
+  my ($username, $password, $database, $crypt) =
+    ($self->url->username, $self->url->password, $self->url->database, '');
+
   my @flags = qw(LONG_PASSWORD LONG_FLAG PROTOCOL_41 TRANSACTIONS SECURE_CONNECTION MULTI_RESULTS);
-  push @flags, 'CONNECT_WITH_DB' if $self->database;
+  push @flags, 'CONNECT_WITH_DB' if $database;
   push @flags, 'MULTI_STATEMENTS' if $self->options->{multi_statements};
   push @flags, 'FOUND_ROWS' if $self->options->{found_rows};
   my $flags = flag_set(CLIENT_CAPABILITY, @flags);
 
   warn '>>> AUTH ', $self->{connection_id}, ' #', $self->{seq}, ' state:', $self->_state, "\n",
-    ' user:', $self->username, ' database:', $self->database,
+    ' user:', $username, ' database:', $database,
     ' flags:', flag_list(CLIENT_CAPABILITY, $flags),
     '(', sprintf('%08X', $flags), ')', "\n" if DEBUG > 1;
 
-  my ($user, $password, $database, $crypt) = ($self->username, $self->password, $self->database, '');
-  _utf8_off $user; _utf8_off $password; _utf8_off $database;
+  _utf8_off $username; _utf8_off $password; _utf8_off $database;
 
-  if ($self->password) {
+  if ($password) {
     my $crypt1 = sha1($password);
     my $crypt2 = sha1($self->{auth_plugin_data} . sha1 $crypt1);
     $crypt = $crypt1 ^ $crypt2;
@@ -185,7 +183,7 @@ sub _send_auth {
   delete $self->{auth_plugin_data};
   return pack 'VVCx23Z*a*Z*',
     $flags, 131072, $self->options->{utf8} ? CHARSET->{UTF8} : CHARSET->{BINARY},
-    $user, _encode_lcstr($crypt), $database, 'mysql_native_password';
+    $username, _encode_lcstr($crypt), $database, 'mysql_native_password';
 }
 
 sub _send_quit {
@@ -520,7 +518,8 @@ sub connect {
   });
 
   $self->{client}->connect(
-    address => $self->host, port => $self->port,
+    address => $self->url->host || 'localhost',
+    port => $self->url->port || 3306,
     timeout => $self->options->{connect_timeout}
   );
 
@@ -559,9 +558,8 @@ Mojo::mysql::Connection - TCP connection to MySQL Server
   use Mojo::mysql::Conection;
 
   my $c = Mojo::mysql::Conection->new(
-    host => '127.0.0.1', port => 3306,
-    username => 'test', password => 'password',
-    database => 'test');
+    url => 'mysql://test:password@127.0.0.1:3306/test',
+    options => { found_rows => 1, connect_timeout => 2 });
 
   Mojo::IOLoop->delay(
     sub {
@@ -629,40 +627,12 @@ Emited when Error is received.
 
 L<Mojo::mysql::Conection> implements the following attributes.
 
-=head2 host
+=head2 url
 
-  my $host = $c->host;
-  $c->host('localhost');
+  my $url = $c->url;
+  $c->url(Mojo::mysql::URL->new('mysql://localhost/test');
 
-MySQL server TCP host.
-
-=head2 port
-
-  my $port = $c->port;
-  $c->port(3306);
-
-MySQL server TCP port.
-
-=head2 username
-
-  my $user = $c->username;
-  $c->username('root');
-
-Username to authenticate against MySQL Server.
-
-=head2 password
-
-  my $pass = $c->password;
-  $c->password('s3cret');
-
-Password to authenticate against MySQL Server.
-
-=head2 database
-
-  my $db = $c->database;
-  $c->database('test');
-
-Database to connect.
+MySQL Connection URL.
 
 =head2 options
 
