@@ -104,6 +104,10 @@ following new ones.
 
 =head2 dsn
 
+  my $url = Mojo::mysql::URL->new('mysql://server:3000/test');
+  # dbi:mysql:dbname=test;host=server;port=3000
+  say $url->dsn;
+
 Convert URL to L<DBI> Data Source Name.
 
 =head1 SEE ALSO
