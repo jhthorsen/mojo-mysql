@@ -4,7 +4,7 @@ use Mojo::Base -strict;
 use Mojo::URL;
 use Exporter 'import';
 
-our @EXPORT_OK = qw(quote quote_id expand_sql flag_list flag_set flag_is parse_url);
+our @EXPORT_OK = qw(quote quote_id expand_sql flag_list flag_set flag_is);
 
 sub quote {
   my $string = shift;
@@ -89,34 +89,6 @@ sub flag_is($$$) {
   return undef;
 }
 
-sub parse_url {
-  my $str = shift;
-  my $parts = {};
-
-  # Protocol
-  my $url = Mojo::URL->new($str);
-  return undef unless $url->protocol eq 'mysql';
-
-  # Database
-  $parts->{database} = $url->path->parts->[0];
-  $parts->{dsn} = 'dbi:mysql:dbname=' . ($parts->{database} // '');
-
-  # Host and port
-  if (my $host = $url->host) { $parts->{dsn} .= ";host=$host"; $parts->{host} = $host; }
-  if (my $port = $url->port) { $parts->{dsn} .= ";port=$port"; $parts->{port} = $port; }
-
-  # Username and password
-  if (($url->userinfo // '') =~ /^([^:]+)(?::([^:]+))?$/) {
-    $parts->{username} = $1;
-    $parts->{password} = $2 // '';
-  }
-
-  # Options
-  $parts->{options} = $url->query->to_hash;
-
-  return $parts;
-}
-
 1;
 
 =encoding utf8
@@ -181,19 +153,5 @@ Set named bit flags.
   say flag_is(['one' 'two' 'three'], 3, 'three');   # false
 
 Check if named bit flag is set.
- 
-=head2 parse_url
- 
-  my $parts = parse_url('mysql://user:password@host:3306/test');
-  print
-    'Username:', $parts->{username}, "\n",
-    'Password:', $parts->{password}, "\n",
-    'Host:', $parts->{host}, "\n",
-    'Port:', $parts->{port}, "\n",
-    'DBI DSN:', $parts->{dsn}, "\n";
- 
-Parse MySQL URL into hash.
 
 =cut
-
-

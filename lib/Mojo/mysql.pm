@@ -4,7 +4,7 @@ use Mojo::Base 'Mojo::EventEmitter';
 use Carp 'croak';
 use Mojo::Loader 'load_class';
 use Mojo::mysql::Migrations;
-use Mojo::mysql::Util 'parse_url';
+use Mojo::mysql::URL;
 use Mojo::Util 'deprecated';
 use Scalar::Util 'weaken';
 
@@ -39,20 +39,21 @@ sub db {
 
 sub from_string {
   my ($self, $str) = @_;
-
-  my $parts = parse_url($str);
-  croak qq{Invalid MySQL connection string "$str"} unless defined $parts;
+  my $url = Mojo::mysql::URL->new($str);
+  croak qq{Invalid MySQL connection string "$str"} unless $url->protocol eq 'mysql';
 
   # Only for Compatibility
-  $self->{username} = $parts->{username} if exists $parts->{username};
-  $self->{password} = $parts->{password} if exists $parts->{password};
-  $self->{dsn} = $parts->{dsn};
-  @{$self->options}{keys %{$parts->{options}}} = values %{$parts->{options}};
+  $self->{username} = $url->username;
+  $self->{password} = $url->password;
+  $self->{dsn} = $url->dsn;
+
+  my $hash = $url->query->to_hash;
+  @{$self->options}{keys %$hash} = values %$hash;
 
   load_class(
     ($self->options->{use_dbi} // 1) ? 'Mojo::mysql::DBI::Database' : 'Mojo::mysql::Native::Database');
 
-  return $self->url($str);
+  return $self->url($url);
 }
 
 sub new { @_ > 1 ? shift->SUPER::new->from_string(@_) : shift->SUPER::new }
@@ -75,15 +76,18 @@ sub password {
   return exists $_[0]->{password} ? $_[0]->{password} : '' if @_ == 1;
   my ($self, $value) = @_;
   deprecated 'Mojo::mysql::password is DEPRECATED in favor of Mojo::mysql::url';
-  $_[0]->{password} = $_[1];
-  return $_[0];
+  $self->{password} = $value;
+  $self->url->password($value);
+  return $self;
 }
 
 sub username {
   return exists $_[0]->{username} ? $_[0]->{username} : '' if @_ == 1;
+  my ($self, $value) = @_;
   deprecated 'Mojo::mysql::username is DEPRECATED in favor of Mojo::mysql::url';
-  $_[0]->{username} = $_[1];
-  return $_[0];
+  $self->{username} = $value;
+  $self->url->username($value);
+  return $self;
 }
 
 sub dsn {
@@ -238,9 +242,9 @@ L<Mojo::mysql> implements the following attributes.
 =head2 url
 
   my $url = $mysql->url;
-  $url  = $mysql->url('mysql://user@host/test');
+  $url  = $mysql->url(Mojo::mysql::URL->new('mysql://user@host/test'));
 
-Connection URL string.
+Connection L<URL|Mojo::mysql::URL>.
 
 =head2 dsn
 

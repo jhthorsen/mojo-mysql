@@ -5,7 +5,6 @@ use DBI;
 use Mojo::IOLoop;
 use Mojo::mysql::DBI::Results;
 use Mojo::mysql::DBI::Transaction;
-use Mojo::mysql::Util 'parse_url';
 use Scalar::Util 'weaken';
 use Carp 'croak';
 
@@ -39,8 +38,6 @@ sub begin {
 
 sub connect {
   my ($self, $url, $options) = @_;
-  my $parts = parse_url($url);
-  croak "Invalid URL '$url'" unless defined $parts;
   my %connect_options = map { $_ => $options->{$_} }
     grep { $_ =~ /^mysql_/ or $_ eq 'PrintError' } keys %$options;
 
@@ -53,7 +50,7 @@ sub connect {
   $connect_options{RaiseError} = 1;
   $connect_options{mysql_auto_reconnect} = 0;
 
-  my $dbh = DBI->connect($parts->{dsn}, $parts->{username}, $parts->{password}, \%connect_options);
+  my $dbh = DBI->connect($url->dsn, $url->username, $url->password, \%connect_options);
   return $self->dbh($dbh);
 }
 

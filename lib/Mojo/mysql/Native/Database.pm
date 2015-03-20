@@ -4,7 +4,7 @@ use Mojo::Base 'Mojo::mysql::Database';
 use Mojo::mysql::Connection;
 use Mojo::mysql::Native::Results;
 use Mojo::mysql::Native::Transaction;
-use Mojo::mysql::Util qw(expand_sql parse_url);
+use Mojo::mysql::Util 'expand_sql';
 use Scalar::Util 'weaken';
 use Carp 'croak';
 
@@ -31,10 +31,8 @@ sub begin {
 
 sub connect {
   my ($self, $url, $options) = @_;
-  my $parts = parse_url($url);
-
   my $c = Mojo::mysql::Connection->new(
-    map { $_ => $parts->{$_} } grep { exists $parts->{$_} } qw(host port database username password)
+    map { $_ => $url->$_ } grep { $url->$_ } qw(host port database username password)
   );
   do { $c->options->{$_} = $options->{$_} if exists $options->{$_} }
     for qw(found_rows multi_statements utf8 connect_timeout query_timeout);
