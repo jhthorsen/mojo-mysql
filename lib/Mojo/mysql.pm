@@ -2,21 +2,19 @@ package Mojo::mysql;
 use Mojo::Base 'Mojo::EventEmitter';
 
 use Carp 'croak';
-use DBI;
-use Mojo::mysql::Database;
+use Mojo::Loader 'load_class';
 use Mojo::mysql::Migrations;
-use Mojo::URL;
+use Mojo::mysql::URL;
+use Mojo::Util 'deprecated';
 use Scalar::Util 'weaken';
 
-has dsn             => 'dbi:mysql:dbname=test';
 has max_connections => 5;
 has migrations      => sub {
   my $migrations = Mojo::mysql::Migrations->new(mysql => shift);
   weaken $migrations->{mysql};
   return $migrations;
 };
-has options => sub { {mysql_enable_utf8 => 1, AutoCommit => 1, PrintError => 0, RaiseError => 1} };
-has [qw(password username)] => '';
+has url             => sub { Mojo::mysql::URL->new('mysql:///test') };
 
 our $VERSION = '0.07';
 
@@ -27,63 +25,77 @@ sub db {
   delete @$self{qw(pid queue)} unless ($self->{pid} //= $$) eq $$;
 
   my ($dbh, $handle) = @{$self->_dequeue};
-  return Mojo::mysql::Database->new(dbh => $dbh, handle => $handle, mysql => $self);
+
+  my $dbi = $self->url->options->{use_dbi} // 1;
+  my $class = $dbi ? 'Mojo::mysql::DBI::Database' : 'Mojo::mysql::Native::Database';
+  load_class($class);
+
+  my $db = $dbi ?
+    $class->new(dbh => $dbh, handle => $handle, mysql => $self) :
+    $class->new(connection => $dbh, mysql => $self);
+
+  if (!$dbh) {
+    $db->connect($self->url);
+    $self->emit(connection => $db);
+  }
+  return $db;
 }
 
 sub from_string {
   my ($self, $str) = @_;
-
-  # Protocol
-  return $self unless $str;
-  my $url = Mojo::URL->new($str);
+  my $url = Mojo::mysql::URL->new($str);
   croak qq{Invalid MySQL connection string "$str"} unless $url->protocol eq 'mysql';
 
-  # Database
-  my $dsn = 'dbi:mysql:dbname=' . $url->path->parts->[0];
-
-  # Host and port
-  if (my $host = $url->host) { $dsn .= ";host=$host" }
-  if (my $port = $url->port) { $dsn .= ";port=$port" }
-
-  # Username and password
-  if (($url->userinfo // '') =~ /^([^:]+)(?::([^:]+))?$/) {
-    $self->username($1);
-    $self->password($2) if defined $2;
-  }
-
-  # Options
-  my $hash = $url->query->to_hash;
-  @{$self->options}{keys %$hash} = values %$hash;
-
-  return $self->dsn($dsn);
+  return $self->url($url);
 }
 
 sub new { @_ > 1 ? shift->SUPER::new->from_string(@_) : shift->SUPER::new }
 
 sub _dequeue {
   my $self = shift;
-  my $dbh;
 
   while (my $c = shift @{$self->{queue} || []}) { return $c if $c->[0]->ping }
-  $dbh = DBI->connect(map { $self->$_ } qw(dsn username password options));
-
-  # <mst> batman's probably going to have more "fun" than you have ...
-  # especially once he discovers that DBD::mysql randomly reconnects under
-  # you, silently, but only if certain env vars are set
-  # hint: force-set mysql_auto_reconnect or whatever it's called to 0
-  $dbh->{mysql_auto_reconnect} = 0;
-  # Maintain Commits with Mojo::mysql::Transaction
-  $dbh->{AutoCommit} = 1;
-
-  $self->emit(connection => $dbh);
-  [$dbh];
+  return [undef, undef];
 }
 
 sub _enqueue {
   my ($self, $dbh, $handle) = @_;
   my $queue = $self->{queue} ||= [];
-  push @$queue, [$dbh, $handle] if $dbh->{Active};
+  push @$queue, [$dbh, $handle];
   shift @{$self->{queue}} while @{$self->{queue}} > $self->max_connections;
+}
+
+# deprecated attributes
+sub dsn {
+  my $self = shift;
+  deprecated 'Mojo::mysql::dsn is DEPRECATED in favor of Mojo::mysql::url';
+  return $self->url->dsn unless @_;
+  # No conversion from dsn to url
+  return $self;
+}
+
+sub password {
+  my $self = shift;
+  deprecated 'Mojo::mysql::password is DEPRECATED in favor of Mojo::mysql::url';
+  return $self->url->password unless @_;
+  $self->url->password(@_);
+  return $self;
+}
+
+sub username {
+  my $self = shift;
+  deprecated 'Mojo::mysql::username is DEPRECATED in favor of Mojo::mysql::url';
+  return $self->url->username unless @_;
+  $self->url->username(@_);
+  return $self;
+}
+
+sub options {
+  my $self = shift;
+  deprecated 'Mojo::mysql::options is DEPRECATED in favor of Mojo::mysql::url';
+  return $self->url->options unless @_;
+  $self->url->options(@_);
+  return $self;
 }
 
 1;
@@ -100,16 +112,34 @@ Mojo::mysql - Mojolicious and Async MySQL
 
   # Create a table
   my $mysql = Mojo::mysql->new('mysql://username@/test');
-  $mysql->db->do('create table if not exists names (name text)');
+  $mysql->db->query('create table names (id integer auto_increment primary key, name text)');
 
   # Insert a few rows
   my $db = $mysql->db;
-  $db->query('insert into names values (?)', 'Sara');
-  $db->query('insert into names values (?)', 'Daniel');
+  $db->query('insert into names (name) values (?)', 'Sara');
+  $db->query('insert into names (name) values (?)', 'Stefan');
+
+  # Insert more rows in a transaction
+  {
+    my $tx = $db->begin;
+    $db->query('insert into names (name) values (?)', 'Baerbel');
+    $db->query('insert into names (name) values (?)', 'Wolfgang');
+    $tx->commit;
+  };
+
+  # Insert another row and return the generated id
+  say $db->query('insert into names (name) values (?)', 'Daniel')
+    ->last_insert_id;
+
+  # Select one row at a time
+  my $results = $db->query('select * from names');
+  while (my $next = $results->hash) {
+    say $next->{name};
+  }
 
   # Select all rows blocking
-  say for $db->query('select * from names')
-    ->hashes->map(sub { $_->{name} })->each;
+  $db->query('select * from names')
+    ->hashes->map(sub { $_->{name} })->join("\n")->say;
 
   # Select all rows non-blocking
   Mojo::IOLoop->delay(
@@ -119,26 +149,75 @@ Mojo::mysql - Mojolicious and Async MySQL
     },
     sub {
       my ($delay, $err, $results) = @_;
-      say for $results->hashes->map(sub { $_->{name} })->each;
+      $results->hashes->map(sub { $_->{name} })->join("\n")->say;
     }
   )->wait;
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql> is a tiny wrapper around L<DBD::mysql> that makes
-L<MySQL|http://www.mysql.org> a lot of fun to use with the
+L<Mojo::mysql> makes L<MySQL|http://www.mysql.org> a lot of fun to use with the
 L<Mojolicious|http://mojolicio.us> real-time web framework.
 
-Database handles are cached automatically, so they can be reused
-transparently to increase performance. While all I/O operations are performed
-blocking, you can wait for long running queries asynchronously, allowing the
+Database handles are cached automatically, so they can be reused transparently
+to increase performance. And you can handle connection timeouts gracefully by
+holding on to them only for short amounts of time.
+
+  use Mojolicious::Lite;
+  use Mojo::mysql;
+
+  helper mysql =>
+    sub { state $mysql = Mojo::mysql->new('mysql://sri:s3cret@localhost/db') };
+
+  get '/' => sub {
+    my $c  = shift;
+    my $db = $c->mysql->db;
+    $c->render(json => $db->query('select now() as time')->hash);
+  };
+
+  app->start;
+
+This module implements two methods of connecting to MySQL server.
+
+=over 2
+
+=item Using DBI and DBD::mysql
+
+L<DBD::mysql> allows you to submit a long-running query to the server
+and have an event loop inform you when it's ready. 
+
+While all I/O operations are performed blocking,
+you can wait for long running queries asynchronously, allowing the
 L<Mojo::IOLoop> event loop to perform other tasks in the meantime. Since
 database connections usually have a very low latency, this often results in
 very good performance.
 
+=item Using Native Pure-Perl Non-Blocking I/O
+
+L<Mojo::mysql::Connection> is Fully asynchronous implementation
+of MySQL Client Server Protocol managed by L<Mojo::IOLoop>.
+
+This method is EXPERIMENTAL.
+
+=back
+
+Every database connection can only handle one active query at a time, this
+includes asynchronous ones. So if you start more than one, they will be put on
+a waiting list and performed sequentially. To perform multiple queries
+concurrently, you have to use multiple connections.
+ 
+  # Performed sequentially (10 seconds)
+  my $db = $mysql->db;
+  $db->query('select sleep(5)' => sub {...});
+  $db->query('select sleep(5)' => sub {...});
+ 
+  # Performed concurrently (5 seconds)
+  $mysql->db->query('select sleep(5)' => sub {...});
+  $mysql->db->query('select sleep(5)' => sub {...});
+ 
 All cached database handles will be reset automatically if a new process has
 been forked, this allows multiple processes to share the same L<Mojo::mysql>
 object safely.
+
 
 Note that this whole distribution is EXPERIMENTAL and will change without
 warning!
@@ -151,7 +230,7 @@ following new ones.
 =head2 connection
 
   $mysql->on(connection => sub {
-    my ($mysql, $dbh) = @_;
+    my ($mysql, $db) = @_;
     ...
   });
 
@@ -166,7 +245,9 @@ L<Mojo::mysql> implements the following attributes.
   my $dsn = $mysql->dsn;
   $mysql  = $mysql->dsn('dbi:mysql:dbname=foo');
 
-Data Source Name, defaults to C<dbi:mysql:dbname=test>.
+Data Source Name.
+
+This attribute is DEPRECATED and is L<DBI> specific. Use L<url|"/url">->dsn istead.
 
 =head2 max_connections
 
@@ -178,7 +259,10 @@ C<5>.
 
 =head2 migrations
 
-MySQL does not support DDL transactions. B<Therefore, migrations should be used with extreme caution. Backup your database. You've been warned.> 
+MySQL does not support nested transactions and DDL transactions.
+DDL statements cause implicit C<COMMIT>.
+B<Therefore, migrations should be used with extreme caution.
+Backup your database. You've been warned.> 
 
   my $migrations = $mysql->migrations;
   $mysql         = $mysql->migrations(Mojo::mysql::Migrations->new);
@@ -187,21 +271,16 @@ L<Mojo::mysql::Migrations> object you can use to change your database schema mor
 easily.
 
   # Load migrations from file and migrate to latest version
-  $mysql->migrations->from_file('/Users/sri/migrations.sql')->migrate;
+  $mysql->migrations->from_file('/home/sri/migrations.sql')->migrate;
 
 =head2 options
 
   my $options = $mysql->options;
-  $mysql      = $mysql->options({mysql_use_result => 1});
+  $mysql      = $mysql->options({found_rows => 0, PrintError => 1});
 
-Options for database handles, defaults to activating C<mysql_enable_utf8>, C<AutoCommit> as well as
-C<RaiseError> and deactivating C<PrintError>.
+Options for connecting to server.
 
-C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead connections.
-
-C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/begin> to manage transactions.
-
-C<RaiseError> is disabled in event loop for asyncronous queries.
+This attribute is DEPRECATED. Use L<url|"/url">->options istead.
 
 =head2 password
 
@@ -210,12 +289,83 @@ C<RaiseError> is disabled in event loop for asyncronous queries.
 
 Database password, defaults to an empty string.
 
+This attribute is DEPRECATED. Use L<url|"/url">->password istead.
+
 =head2 username
 
   my $username = $mysql->username;
   $mysql       = $mysql->username('batman');
 
 Database username, defaults to an empty string.
+
+This attribute is DEPRECATED. Use L<url|"/url">->username istead.
+
+=head2 url
+
+  my $url = $mysql->url;
+  $url  = $mysql->url(Mojo::mysql::URL->new('mysql://user@host/test?PrintError=0'));
+
+Connection L<URL|Mojo::mysql::URL>.
+
+Supported URL Options are:
+
+=over 2
+
+=item use_dbi
+
+Use L<DBI|DBI> and L<DBD::mysql> when enabled or not specified.
+Native implementation when disabled.
+
+=item found_rows
+
+Enables or disables the flag C<CLIENT_FOUND_ROWS> while connecting to the server.
+Without C<found_rows>, if you perform a query like
+ 
+  UPDATE $table SET id = 1 WHERE id = 1;
+ 
+then the MySQL engine will return 0, because no rows have changed.
+With C<found_rows>, it will return the number of rows that have an id 1.
+
+=item multi_statements
+
+Enables or disables the flag C<CLIENT_MULTI_STATEMENTS> while connecting to the server.
+If enabled multiple statements separated by semicolon (;) can be send with single
+call to $db->L<query|Mojo::mysql::Database/"query">.
+
+=item utf8
+
+Set default character set to C<utf-8> while connecting to the server
+and decode correctly utf-8 text results.
+
+=item connect_timeout
+
+The connect request to the server will timeout if it has not been successful
+after the given number of seconds.
+
+=item query_timeout
+
+If enabled, the read or write operation to the server will timeout
+if it has not been successful after the given number of seconds.
+
+=item PrintError
+
+C<warn> on errors.
+
+=back
+
+Default Options are:
+
+C<utf8 = 1>,
+C<found_rows = 1>,
+C<PrintError = 0>
+
+When using DBI method, driver private options (prefixed with C<mysql_>) of L<DBD::mysql> are supported.
+
+C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead connections.
+
+C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/"begin"> to manage transactions.
+
+C<RaiseError> is always enabled for blocking and disabled non-blocking queries.
 
 =head1 METHODS
 
@@ -230,6 +380,10 @@ Get L<Mojo::mysql::Database> object for a cached or newly created database
 handle. The database handle will be automatically cached again when that
 object is destroyed, so you can handle connection timeouts gracefully by
 holding on to it only for short amounts of time.
+
+  # Add up all the money
+  say $mysql->db->query('select * from accounts')
+    ->hashes->reduce(sub { $a->{money} + $b->{money} });
 
 =head2 from_string
 
@@ -250,12 +404,12 @@ Parse configuration from connection string.
   $mysql->from_string('mysql://batman@%2ftmp%2fmysql.sock/db4');
 
   # Username, database and additional options
-  $mysql->from_string('mysql://batman@/db5?PrintError=1&RaiseError=0');
+  $mysql->from_string('mysql://batman@/db5?PrintError=1');
 
 =head2 new
 
   my $mysql = Mojo::mysql->new;
-  my $mysql = Mojo::mysql->new('mysql://user@/test');
+  my $mysql = Mojo::mysql->new('mysql://user:password@host:port/database');
 
 Construct a new L<Mojo::mysql> object and parse connection string with
 L</"from_string"> if necessary.
@@ -275,6 +429,36 @@ This is the class hierarchy of the L<Mojo::mysql> distribution.
 =item * L<Mojo::mysql::Results>
 
 =item * L<Mojo::mysql::Transaction>
+
+=item * L<Mojo::mysql::URL>
+
+=item * L<Mojo::mysql::Util>
+
+=back
+
+Modules for C<Native> implementation
+
+=over 2
+
+=item * L<Mojo::mysql::Connection>
+
+=item * L<Mojo::mysql::Native::Database>
+
+=item * L<Mojo::mysql::Native::Results>
+
+=item * L<Mojo::mysql::Native::Transaction>
+
+=back
+
+Modules L<DBD::mysql> implementation
+
+=over 2
+
+=item * L<Mojo::mysql::DBI::Database>
+
+=item * L<Mojo::mysql::DBI::Results>
+
+=item * L<Mojo::mysql::DBI::Transaction>
 
 =back
 

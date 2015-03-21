@@ -1,23 +1,11 @@
 package Mojo::mysql::Transaction;
 use Mojo::Base -base;
 
+use Carp 'croak';
+
 has 'db';
 
-sub DESTROY {
-  my $self = shift;
-  if ($self->{rollback} && (my $dbh = $self->{dbh})) { $dbh->rollback }
-}
-
-sub commit {
-  my $self = shift;
-  $self->{dbh}->commit if delete $self->{rollback};
-}
-
-sub new {
-  my $self = shift->SUPER::new(@_, rollback => 1);
-  $self->{dbh} = $self->db->dbh;
-  return $self;
-}
+sub commit { croak 'Method "commit" not implemented by subclass' }
 
 1;
 
@@ -25,19 +13,22 @@ sub new {
 
 =head1 NAME
 
-Mojo::mysql::Transaction - Transaction
+Mojo::mysql::Transaction - abstract Transaction
 
 =head1 SYNOPSIS
 
-  use Mojo::mysql::Transaction;
+  package Mojo::mysql::Transaction::MyTrans;
+  use Mojo::Base 'Mojo::mysql::Transaction';
 
-  my $tx = Mojo::mysql::Transaction->new(db => $db);
-  $tx->commit;
+  sub commit  {...}
+  sub DESTROY {...}
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql::Transaction> is a cope guard for L<DBD::mysql> transactions used by
-L<Mojo::mysql::Database>.
+L<Mojo::mysql::Transaction> is abstract base class for transactions
+started by call to $db->L<begin|Mojo::mysql::Database/"begin">.
+
+Implementations are L<Mojo::mysql::DBI::Transaction> and L<Mojo::mysql::Native::Transaction>.
 
 =head1 ATTRIBUTES
 

@@ -46,7 +46,6 @@ sub migrate {
   return $self if $self->_active($db) == $target;
 
   # Lock migrations table and check version again
-  local $db->dbh->{RaiseError} = 1;
   my $tx = $db->begin;
 
   return $self if (my $active = $self->_active($db)) == $target;
@@ -112,7 +111,7 @@ Mojo::mysql::Migrations - Migrations
   use Mojo::mysql::Migrations;
 
   my $migrations = Mojo::mysql::Migrations->new(mysql => $mysql);
-  $migrations->from_file('/Users/sri/migrations.sql')->migrate;
+  $migrations->from_file('/home/sri/migrations.sql')->migrate;
 
 =head1 DESCRIPTION
 
@@ -186,7 +185,7 @@ L<Mojo::Loader>, defaults to using the caller class and L</"name">.
 
 =head2 from_file
 
-  $migrations = $migrations->from_file('/Users/sri/migrations.sql');
+  $migrations = $migrations->from_file('/home/sri/migrations.sql');
 
 Extract migrations from a file.
 

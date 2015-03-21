@@ -1,67 +1,70 @@
 package Mojo::mysql::Results;
 use Mojo::Base -base;
 
-use Mojo::Collection;
+use Carp 'croak';
 use Mojo::Util 'tablify';
 
-has 'sth';
+sub array { croak 'Method "array" not implemented by subclass' }
 
-sub array { shift->sth->fetchrow_arrayref }
+sub arrays { croak 'Method "arrays" not implemented by subclass' }
 
-sub arrays { Mojo::Collection->new(@{shift->sth->fetchall_arrayref}) }
+sub columns { croak 'Method "columns" not implemented by subclass' }
 
-sub columns { shift->sth->{NAME} }
+sub hash { croak 'Method "hash" not implemented by subclass' }
 
-sub hash { shift->sth->fetchrow_hashref }
+sub hashes { croak 'Method "hashes" not implemented by subclass' }
 
-sub hashes { Mojo::Collection->new(@{shift->sth->fetchall_arrayref({})}) }
-
-sub rows { shift->sth->rows }
+sub rows { croak 'Method "rows" not implemented by subclass' }
 
 sub text { tablify shift->arrays }
 
-sub more_results { shift->sth->more_results }
+sub more_results { croak 'Method "more_results" not implemented by subclass' }
 
-sub affected_rows { shift->{affected_rows} }
+sub affected_rows { croak 'Method "affected_rows" not implemented by subclass' }
 
-sub warnings_count { shift->sth->{mysql_warning_count} }
+sub warnings_count { croak 'Method "warnings_count" not implemented by subclass' }
 
-sub last_insert_id { shift->sth->{mysql_insertid} }
+sub last_insert_id { croak 'Method "last_insert_id" not implemented by subclass' }
 
-sub err { shift->sth->err }
+sub err { croak 'Method "err" not implemented by subclass' }
 
-sub errstr { shift->sth->errstr }
+sub errstr { croak 'Method "errstr" not implemented by subclass' }
 
-sub state { shift->sth->state }
+sub state { croak 'Method "state" not implemented by subclass' }
+
 1;
 
 =encoding utf8
 
 =head1 NAME
 
-Mojo::mysql::Results - Results
+Mojo::mysql::Results - abstract Results
 
 =head1 SYNOPSIS
 
-  use Mojo::mysql::Results;
+  package Mojo::mysql::Results::MyRes;
+  use Mojo::Base 'Mojo::mysql::Results';
 
-  my $results = Mojo::mysql::Results->new(db => $db, sth => $sth);
+  sub array          {...}
+  sub arrays         {...}
+  sub columns        {...}
+  sub hash           {...}
+  sub hashes         {...}
+  sub rows           {...}
+  sub more_results   {...}
+  sub affected_rows  {...}
+  sub warnings_count {...}
+  sub last_insert_id {...}
+  sub err            {...}
+  sub errstr         {...}
+  sub state          {...}
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql::Results> is a container for statement handles used by
-L<Mojo::mysql::Database>.
+L<Mojo::mysql::Results> is abstract base class for Database results returned
+by call to $db->L<query|Mojo::mysql::Database/"query">.
 
-=head1 ATTRIBUTES
-
-L<Mojo::mysql::Results> implements the following attributes.
-
-=head2 sth
-
-  my $sth  = $results->sth;
-  $results = $results->sth($sth);
-
-Statement handle results are fetched from.
+Implementations are L<Mojo::mysql::DBI::Results> and L<Mojo::mysql::Native::Results>.
 
 =head1 METHODS
 
@@ -166,6 +169,6 @@ Error message receieved.
 
 =head1 SEE ALSO
 
-L<Mojo::mysql>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojo::mysql>.
 
 =cut

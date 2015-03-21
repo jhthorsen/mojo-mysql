@@ -11,7 +11,7 @@ use Mojo::IOLoop;
 use Mojo::mysql;
 
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
-$mysql->options->{mysql_client_found_rows} = 0;
+$mysql->url->options->{found_rows} = 0;
 my $db = $mysql->db;
 $db->query(
   'create table if not exists results_test (
@@ -40,16 +40,17 @@ is $db->query('update results_test set name=? where name=?', 'foo', 'foo1')->aff
 is $db->query('update results_test set name=? where name=?', 'foo', 'foo')->affected_rows, 0, 'right affected rows';
 is $db->query('update results_test set id=1 where id=1')->affected_rows, 0, 'right affected rows';
 
+my $count = $db->{dbh} && $db->dbh->{mysql_use_result} ? 0 : 1;
 $res = $db->query("select 1 + '4a'");
-is_deeply $res->array, [ 5 ];
-is $res->warnings_count, 1, 'warnings';
+is_deeply $res->arrays, [[5 ]];
+is $res->warnings_count, $count, 'warnings';
 
 $res = $db->query('show warnings');
 like $res->hashes->[0]->{Message}, qr/Truncated/, 'warning message';
 
 $db->disconnect;
 
-$mysql->options->{mysql_client_found_rows} = 1;
+$mysql->url->options->{found_rows} = 1;
 $db = $mysql->db;
 
 is $db->query('update results_test set name=? where name=?', 'foo', 'foo1')->affected_rows, 0, 'right affected rows';

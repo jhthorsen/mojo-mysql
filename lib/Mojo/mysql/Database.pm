@@ -1,120 +1,31 @@
 package Mojo::mysql::Database;
 use Mojo::Base 'Mojo::EventEmitter';
 
-use DBD::mysql;
-use Mojo::IOLoop;
-use Mojo::mysql::Results;
-use Mojo::mysql::Transaction;
+use Carp 'croak';
 use Mojo::Util 'deprecated';
-use Scalar::Util 'weaken';
 
-has [qw(dbh mysql)];
+has 'mysql';
 
-sub DESTROY {
-  my $self = shift;
-  return unless my $dbh   = $self->dbh;
-  return unless my $mysql = $self->mysql;
-  $mysql->_enqueue($dbh, $self->{handle});
-}
+sub backlog { croak 'Method "backlog" not implemented by subclass' }
 
-sub backlog { scalar @{shift->{waiting} || []} }
+sub begin {croak 'Method "begin" not implemented by subclass' }
 
-sub begin {
-  my $self = shift;
-  $self->dbh->begin_work;
-  my $tx = Mojo::mysql::Transaction->new(db => $self);
-  weaken $tx->{db};
-  return $tx;
-}
-
-sub disconnect {
-  my $self = shift;
-  $self->_unwatch;
-  $self->dbh->disconnect;
-}
+sub disconnect { croak 'Method "disconnect" not implemented by subclass' }
 
 # DEPRECATED!
 sub do {
   deprecated 'Mojo::mysql::Database::do is DEPRECATED'
     . ' in favor of Mojo::mysql::Database::query';
   my $self = shift;
-  $self->dbh->do(@_);
+  $self->query(@_);
   return $self;
 }
 
-sub pid { shift->dbh->{mysql_thread_id} }
+sub pid { croak 'Method "pid" not implemented by subclass' }
 
-sub ping { shift->dbh->ping }
+sub ping { croak 'Method "ping" not implemented by subclass' }
 
-sub query {
-  my ($self, $query) = (shift, shift);
-  my $cb = ref $_[-1] eq 'CODE' ? pop : undef;
-
-  # Blocking
-  unless ($cb) {
-    my $sth = $self->dbh->prepare($query);
-    my $rv = $sth->execute(@_);
-    my $res = Mojo::mysql::Results->new(sth => $sth);
-    $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
-    return $res;
-  }
-
-  # Non-blocking
-  push @{$self->{waiting}}, {args => [@_], cb => $cb, query => $query};
-  $self->$_ for qw(_next _watch);
-}
-
-sub _next {
-  my $self = shift;
-
-  return unless my $next = $self->{waiting}[0];
-  return if $next->{sth};
-
-  my $sth = $next->{sth} = $self->dbh->prepare($next->{query}, {async => 1});
-  $sth->execute(@{$next->{args}});
-
-  # keep reference to async handles to prevent being finished on result destroy while whatching fd
-  push @{$self->{async_sth} ||= []}, $sth;
-}
-
-sub _unwatch {
-  my $self = shift;
-  return unless delete $self->{watching};
-  Mojo::IOLoop->singleton->reactor->remove($self->{handle});
-
-  $self->{async_sth} = [];
-}
-
-sub _watch {
-  my $self = shift;
-
-  return if $self->{watching} || $self->{watching}++;
-
-  my $dbh = $self->dbh;
-  $self->{handle} ||= do {
-    open my $FH, '<&', $dbh->mysql_fd or die "Dup mysql_fd: $!";
-    $FH;
-  };
-  Mojo::IOLoop->singleton->reactor->io(
-    $self->{handle} => sub {
-      my $reactor = shift;
-
-      return unless my $waiting = $self->{waiting};
-      return unless @$waiting and $waiting->[0]{sth} and $waiting->[0]{sth}->mysql_async_ready;
-      my ($sth, $cb) = @{shift @$waiting}{qw(sth cb)};
-
-      # Do not raise exceptions inside the event loop
-      my $rv = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
-      my $err = defined $rv ? undef : $dbh->errstr;
-      my $res = Mojo::mysql::Results->new(sth => $sth);
-      $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
-
-      $self->$cb($err, $res);
-      $self->_next;
-      $self->_unwatch unless $self->backlog;
-    }
-  )->watch($self->{handle}, 1, 0);
-}
+sub query { croak 'Method "query" not implemented by subclass' }
 
 1;
 
@@ -122,28 +33,28 @@ sub _watch {
 
 =head1 NAME
 
-Mojo::mysql::Database - Database
+Mojo::mysql::Database - abstract Database
 
 =head1 SYNOPSIS
 
-  use Mojo::mysql::Database;
+  package Mojo::mysql::Database::MyDB;
+  use Mojo::Base 'Mojo::mysql::Database';
 
-  my $db = Mojo::mysql::Database->new(mysql => $mysql, dbh => $dbh);
+  sub backlog    {...}
+  sub begin      {...}
+  sub disconnect {...}
+  sub pid        {...}
+  sub ping       {...}
+  sub query      {...}
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql::Database> is a container for database handles used by L<Mojo::MySQL>.
+L<Mojo::mysql::Database> is abstract base class for database handles used by L<Mojo::mysql>.
+Implementations are L<Mojo::mysql::DBI::Database> and L<Mojo::mysql::Native::Database>.
 
 =head1 ATTRIBUTES
 
 L<Mojo::mysql::Database> implements the following attributes.
-
-=head2 dbh
-
-  my $dbh = $db->dbh;
-  $db     = $db->dbh(DBI->new);
-
-Database handle used for all queries.
 
 =head2 mysql
 
@@ -210,6 +121,6 @@ results. You can also append a callback to perform operation non-blocking.
 
 =head1 SEE ALSO
 
-L<Mojo::mysql>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojo::mysql>.
 
 =cut
