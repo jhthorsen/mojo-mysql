@@ -8,13 +8,13 @@ use Mojo::mysql::URL;
 use Mojo::Util 'deprecated';
 use Scalar::Util 'weaken';
 
-has url             => sub { Mojo::mysql::URL->new('mysql:///test') };
 has max_connections => 5;
 has migrations      => sub {
   my $migrations = Mojo::mysql::Migrations->new(mysql => shift);
   weaken $migrations->{mysql};
   return $migrations;
 };
+has url             => sub { Mojo::mysql::URL->new('mysql:///test') };
 
 our $VERSION = '0.07';
 
@@ -25,9 +25,14 @@ sub db {
   delete @$self{qw(pid queue)} unless ($self->{pid} //= $$) eq $$;
 
   my ($dbh, $handle) = @{$self->_dequeue};
-  my $db = ($self->url->options->{use_dbi} // 1) ?
-    Mojo::mysql::DBI::Database->new(dbh => $dbh, handle => $handle, mysql => $self) :
-    Mojo::mysql::Native::Database->new(connection => $dbh, mysql => $self);
+
+  my $dbi = $self->url->options->{use_dbi} // 1;
+  my $class = $dbi ? 'Mojo::mysql::DBI::Database' : 'Mojo::mysql::Native::Database';
+  load_class($class);
+
+  my $db = $dbi ?
+    $class->new(dbh => $dbh, handle => $handle, mysql => $self) :
+    $class->new(connection => $dbh, mysql => $self);
 
   if (!$dbh) {
     $db->connect($self->url);
@@ -40,9 +45,6 @@ sub from_string {
   my ($self, $str) = @_;
   my $url = Mojo::mysql::URL->new($str);
   croak qq{Invalid MySQL connection string "$str"} unless $url->protocol eq 'mysql';
-
-  load_class(
-    ($url->options->{use_dbi} // 1) ? 'Mojo::mysql::DBI::Database' : 'Mojo::mysql::Native::Database');
 
   return $self->url($url);
 }
