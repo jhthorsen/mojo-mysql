@@ -25,7 +25,7 @@ sub db {
   delete @$self{qw(pid queue)} unless ($self->{pid} //= $$) eq $$;
 
   my ($dbh, $handle) = @{$self->_dequeue};
-  my $db = ($self->options->{use_dbi} // 1) ?
+  my $db = ($self->url->options->{use_dbi} // 1) ?
     Mojo::mysql::DBI::Database->new(dbh => $dbh, handle => $handle, mysql => $self) :
     Mojo::mysql::Native::Database->new(connection => $dbh, mysql => $self);
 

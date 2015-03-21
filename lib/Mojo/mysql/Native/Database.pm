@@ -114,7 +114,7 @@ sub _subscribe {
   $self->connection->on(error => sub {
     my $c = shift;
     warn "Mojo::mysql error:", $c->{error_message}, "\n"
-      if $self->mysql->options->{PrintError};
+      if $self->mysql->url->options->{PrintError};
     return unless my $res = $self->{waiting}->[0]->{results};
     $res->{$_} = $c->{$_} for qw(error_code sql_state error_message);
   });

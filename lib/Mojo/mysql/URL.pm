@@ -1,7 +1,7 @@
 package Mojo::mysql::URL;
 use Mojo::Base 'Mojo::URL';
 
-sub new { @_ > 1 ? shift->SUPER::new->parse(@_) : shift->SUPER::new }
+sub new { shift->SUPER::new->parse(@_ ? @_ : 'mysql://') }
  
 sub parse {
   my ($self, $url) = @_;
