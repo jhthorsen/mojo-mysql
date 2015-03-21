@@ -66,31 +66,32 @@ sub _enqueue {
 # deprecated attributes
 sub dsn {
   my $self = shift;
-  return $self->url->dsn unless @_;
   deprecated 'Mojo::mysql::dsn is DEPRECATED in favor of Mojo::mysql::url';
+  return $self->url->dsn unless @_;
+  # No conversion from dsn to url
   return $self;
 }
 
 sub password {
   my $self = shift;
-  return $self->url->password unless @_;
   deprecated 'Mojo::mysql::password is DEPRECATED in favor of Mojo::mysql::url';
+  return $self->url->password unless @_;
   $self->url->password(@_);
   return $self;
 }
 
 sub username {
   my $self = shift;
-  return $self->url->username unless @_;
   deprecated 'Mojo::mysql::username is DEPRECATED in favor of Mojo::mysql::url';
+  return $self->url->username unless @_;
   $self->url->username(@_);
   return $self;
 }
 
 sub options {
   my $self = shift;
-  return $self->url->options unless @_;
   deprecated 'Mojo::mysql::options is DEPRECATED in favor of Mojo::mysql::url';
+  return $self->url->options unless @_;
   $self->url->options(@_);
   return $self;
 }
