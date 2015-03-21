@@ -247,7 +247,7 @@ L<Mojo::mysql> implements the following attributes.
 
 Data Source Name.
 
-This attribute is DEPRECATED and is L<DBI> specific. Use L<url|"/url"> istead.
+This attribute is DEPRECATED and is L<DBI> specific. Use L<url|"/url">->dsn istead.
 
 =head2 max_connections
 
@@ -280,7 +280,7 @@ easily.
 
 Options for connecting to server.
 
-This attribute is DEPRECATED and is L<DBI> specific. Use L<url|"/url"> istead.
+This attribute is DEPRECATED. Use L<url|"/url">->options istead.
 
 =head2 password
 
@@ -289,7 +289,7 @@ This attribute is DEPRECATED and is L<DBI> specific. Use L<url|"/url"> istead.
 
 Database password, defaults to an empty string.
 
-This attribute is DEPRECATED. Use L<url|"/url"> istead.
+This attribute is DEPRECATED. Use L<url|"/url">->password istead.
 
 =head2 username
 
@@ -298,7 +298,7 @@ This attribute is DEPRECATED. Use L<url|"/url"> istead.
 
 Database username, defaults to an empty string.
 
-This attribute is DEPRECATED. Use L<url|"/url"> istead.
+This attribute is DEPRECATED. Use L<url|"/url">->username istead.
 
 =head2 url
 
@@ -359,7 +359,7 @@ C<utf8 = 1>,
 C<found_rows = 1>,
 C<PrintError = 0>
 
-When using DBI method, driver private options (prefixed with C<mysql_> of L<DBD::mysql> are supported.
+When using DBI method, driver private options (prefixed with C<mysql_>) of L<DBD::mysql> are supported.
 
 C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead connections.
 
@@ -409,7 +409,7 @@ Parse configuration from connection string.
 =head2 new
 
   my $mysql = Mojo::mysql->new;
-  my $mysql = Mojo::mysql->new('mysql://user@/test');
+  my $mysql = Mojo::mysql->new('mysql://user:password@host:port/database');
 
 Construct a new L<Mojo::mysql> object and parse connection string with
 L</"from_string"> if necessary.
@@ -432,6 +432,12 @@ This is the class hierarchy of the L<Mojo::mysql> distribution.
 
 =item * L<Mojo::mysql::URL>
 
+=back
+
+Modules for C<Native> implementation
+
+=over 2
+
 =item * L<Mojo::mysql::Connection>
 
 =item * L<Mojo::mysql::Native::Database>
@@ -439,6 +445,12 @@ This is the class hierarchy of the L<Mojo::mysql> distribution.
 =item * L<Mojo::mysql::Native::Results>
 
 =item * L<Mojo::mysql::Native::Transaction>
+
+=back
+
+Modules L<DBD::mysql> implementation
+
+=over 2
 
 =item * L<Mojo::mysql::DBI::Database>
 
