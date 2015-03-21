@@ -330,7 +330,7 @@ With C<found_rows>, it will return the number of rows that have an id 1.
 
 Enables or disables the flag C<CLIENT_MULTI_STATEMENTS> while connecting to the server.
 If enabled multiple statements separated by semicolon (;) can be send with single
-call to $db->L<query|Mojo::mysql::Database/query>.
+call to $db->L<query|Mojo::mysql::Database/"query">.
 
 =item utf8
 
@@ -431,6 +431,8 @@ This is the class hierarchy of the L<Mojo::mysql> distribution.
 =item * L<Mojo::mysql::Transaction>
 
 =item * L<Mojo::mysql::URL>
+
+=item * L<Mojo::mysql::Util>
 
 =back
 
