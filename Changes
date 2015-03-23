@@ -1,4 +1,10 @@
-Revision history for Mojo-mysql
+Revision history for Mojo::mysql
+
+0.08
+       * better examples in POD
+       * Improved Mojo::mysql::Migrations to make no changes to the database when
+        checking the currently active version.
+       * Fixed Mojo::mysql::Migrations to handle UTF-8 encoded files correctly
 
 0.07     Mon Mar  9 13:34:31 2015
        * Deprecated Mojo::mysql::Database::do in favour of Mojo::mysql::Database::query as in Mojo::Pg
