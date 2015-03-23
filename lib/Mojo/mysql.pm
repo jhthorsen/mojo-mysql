@@ -238,7 +238,9 @@ C<5>.
 
 =head2 migrations
 
-MySQL does not support DDL transactions. B<Therefore, migrations should be used with extreme caution. Backup your database. You've been warned.> 
+MySQL does not support nested transactions and DDL transactions.
+DDL statements cause implicit C<COMMIT>.
+B<Therefore, migrations should be used with extreme caution. Backup your database. You've been warned.> 
 
   my $migrations = $mysql->migrations;
   $mysql         = $mysql->migrations(Mojo::mysql::Migrations->new);
@@ -357,7 +359,12 @@ the terms of the Artistic License version 2.0.
 
 =head1 SEE ALSO
 
-L<Mojo::Pg>, L<https://github.com/jhthorsen/mojo-mysql>,
+L<https://github.com/jhthorsen/mojo-mysql>,
+
+L<Mojo::Pg> Async Connector for PostgreSQL using L<DBD::Pg>, L<https://github.com/kraih/mojo-pg>,
+
+L<Mojo::MySQL5> Pure-Perl non-blocking I/O MySQL Connector, L<https://github.com/harry-bix/mojo-mysql5>,
+
 L<Mojolicious::Guides>, L<http://mojolicio.us>.
 
 =cut
