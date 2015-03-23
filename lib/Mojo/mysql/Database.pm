@@ -171,10 +171,14 @@ Begin transaction and return L<Mojo::mysql::Transaction> object, which will
 automatically roll back the transaction unless
 L<Mojo::mysql::Transaction/"commit"> bas been called before it is destroyed.
 
-  my $tx = $db->begin;
-  $db->query('insert into names values (?)', 'Baerbel');
-  $db->query('insert into names values (?)', 'Wolfgang');
-  $tx->commit;
+  # Add names in a transaction
+  eval {
+    my $tx = $db->begin;
+    $db->query('insert into names values (?)', 'Baerbel');
+    $db->query('insert into names values (?)', 'Wolfgang');
+    $tx->commit;
+  };
+  say $@ if $@;
 
 =head2 disconnect
 
