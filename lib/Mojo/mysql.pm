@@ -15,7 +15,15 @@ has migrations      => sub {
   weaken $migrations->{mysql};
   return $migrations;
 };
-has options => sub { {mysql_enable_utf8 => 1, AutoCommit => 1, PrintError => 0, RaiseError => 1} };
+has options => sub {
+  {
+    mysql_enable_utf8 => 1,
+    AutoCommit => 1,
+    AutoInactiveDestroy => 1,
+    PrintError => 0,
+    RaiseError => 1
+  }
+};
 has [qw(password username)] => '';
 
 our $VERSION = '0.07';
@@ -100,16 +108,36 @@ Mojo::mysql - Mojolicious and Async MySQL
 
   # Create a table
   my $mysql = Mojo::mysql->new('mysql://username@/test');
-  $mysql->db->do('create table if not exists names (name text)');
+  $mysql->db->query(
+    'create table names (id integer auto_increment primary key, name text)');
 
   # Insert a few rows
   my $db = $mysql->db;
-  $db->query('insert into names values (?)', 'Sara');
-  $db->query('insert into names values (?)', 'Daniel');
+  $db->query('insert into names (name) values (?)', 'Sara');
+  $db->query('insert into names (name) values (?)', 'Stefan');
+
+  # Insert more rows in a transaction
+  eval {
+    my $tx = $db->begin;
+    $db->query('insert into names (name) values (?)', 'Baerbel');
+    $db->query('insert into names (name) values (?)', 'Wolfgang');
+    $tx->commit;
+  };
+  say $@ if $@;
+
+  # Insert another row and return the generated id
+  say $db->query('insert into names (name) values (?)', 'Daniel')
+    ->last_insert_id;
+
+  # Select one row at a time
+  my $results = $db->query('select * from names');
+  while (my $next = $results->hash) {
+    say $next->{name};
+  }
 
   # Select all rows blocking
-  say for $db->query('select * from names')
-    ->hashes->map(sub { $_->{name} })->each;
+  $db->query('select * from names')
+    ->hashes->map(sub { $_->{name} })->join("\n")->say;
 
   # Select all rows non-blocking
   Mojo::IOLoop->delay(
@@ -119,9 +147,11 @@ Mojo::mysql - Mojolicious and Async MySQL
     },
     sub {
       my ($delay, $err, $results) = @_;
-      say for $results->hashes->map(sub { $_->{name} })->each;
+      $results->hashes->map(sub { $_->{name} })->join("\n")->say;
     }
   )->wait;
+
+  Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 
 =head1 DESCRIPTION
 
@@ -129,12 +159,42 @@ L<Mojo::mysql> is a tiny wrapper around L<DBD::mysql> that makes
 L<MySQL|http://www.mysql.org> a lot of fun to use with the
 L<Mojolicious|http://mojolicio.us> real-time web framework.
 
-Database handles are cached automatically, so they can be reused
-transparently to increase performance. While all I/O operations are performed
-blocking, you can wait for long running queries asynchronously, allowing the
-L<Mojo::IOLoop> event loop to perform other tasks in the meantime. Since
-database connections usually have a very low latency, this often results in
-very good performance.
+Database and handles are cached automatically, so they can be reused
+transparently to increase performance. And you can handle connection timeouts
+gracefully by holding on to them only for short amounts of time.
+
+  use Mojolicious::Lite;
+  use Mojo::mysql;
+
+  helper mysql =>
+    sub { state $pg = Mojo::mysql->new('mysql://sri:s3cret@localhost/db') };
+
+  get '/' => sub {
+    my $c  = shift;
+    my $db = $c->mysql->db;
+    $c->render(json => $db->query('select now() as time')->hash);
+  };
+
+  app->start;
+
+While all I/O operations are performed blocking, you can wait for long running
+queries asynchronously, allowing the L<Mojo::IOLoop> event loop to perform
+other tasks in the meantime. Since database connections usually have a very low
+latency, this often results in very good performance.
+
+Every database connection can only handle one active query at a time, this
+includes asynchronous ones. So if you start more than one, they will be put on
+a waiting list and performed sequentially. To perform multiple queries
+concurrently, you have to use multiple connections.
+
+  # Performed sequentially (10 seconds)
+  my $db = $mysql->db;
+  $db->query('select sleep(5)' => sub {...});
+  $db->query('select sleep(5)' => sub {...});
+
+  # Performed concurrently (5 seconds)
+  $mysql->db->query('select sleep(5)' => sub {...});
+  $mysql->db->query('select sleep(5)' => sub {...});
 
 All cached database handles will be reset automatically if a new process has
 been forked, this allows multiple processes to share the same L<Mojo::mysql>
@@ -194,14 +254,16 @@ easily.
   my $options = $mysql->options;
   $mysql      = $mysql->options({mysql_use_result => 1});
 
-Options for database handles, defaults to activating C<mysql_enable_utf8>, C<AutoCommit> as well as
-C<RaiseError> and deactivating C<PrintError>.
+Options for database handles, defaults to activating C<mysql_enable_utf8>, C<AutoCommit>,
+C<AutoInactiveDestroy> as well as C<RaiseError> and deactivating C<PrintError>.
+Note that C<AutoCommit> and C<RaiseError> are considered mandatory, so
+deactivating them would be very dangerous.
 
 C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead connections.
 
 C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/begin> to manage transactions.
 
-C<RaiseError> is disabled in event loop for asyncronous queries.
+C<RaiseError> is enabled for blocking and disabled in event loop for non-blocking queries.
 
 =head2 password
 
