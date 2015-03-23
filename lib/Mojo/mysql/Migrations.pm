@@ -3,7 +3,7 @@ use Mojo::Base -base;
 
 use Carp 'croak';
 use Mojo::Loader 'data_section';
-use Mojo::Util 'slurp';
+use Mojo::Util qw(decode slurp);
 
 use constant DEBUG => $ENV{MOJO_MIGRATIONS_DEBUG} || 0;
 
@@ -14,10 +14,11 @@ sub active { $_[0]->_active($_[0]->mysql->db) }
 
 sub from_data {
   my ($self, $class, $name) = @_;
-  return $self->from_string(data_section($class //= caller, $name // $self->name));
+  return $self->from_string(
+    data_section($class //= caller, $name // $self->name));
 }
 
-sub from_file { shift->from_string(slurp pop) }
+sub from_file { shift->from_string(decode 'UTF-8', slurp pop) }
 
 sub from_string {
   my ($self, $sql) = @_;
@@ -43,25 +44,23 @@ sub migrate {
 
   # Already the right version (make sure migrations table exists)
   my $db = $self->mysql->db;
-  return $self if $self->_active($db) == $target;
+  return $self if $self->_active($db, 1) == $target;
 
   # Lock migrations table and check version again
-  local $db->dbh->{RaiseError} = 1;
   my $tx = $db->begin;
-
-  return $self if (my $active = $self->_active($db)) == $target;
+  return $self if (my $active = $self->_active($db, 1)) == $target;
 
   # Up
   my $sql;
   if ($active < $target) {
     my @up = grep { $_ <= $target && $_ > $active } sort keys %$up;
-    $sql = join '', map { $up->{$_} } @up;
+    $sql = join '', @$up{@up};
   }
 
   # Down
   else {
     my @down = grep { $_ > $target && $_ <= $active } reverse sort keys %$down;
-    $sql = join '', map { $down->{$_} } @down;
+    $sql = join '', @$down{@down};
   }
 
   warn "-- Migrate ($active -> $target)\n$sql\n" if DEBUG;
@@ -81,11 +80,12 @@ sub migrate {
 }
 
 sub _active {
-  my ($self, $db) = @_;
+  my ($self, $db, $create) = @_;
 
   my $name = $self->name;
   my $results = eval { $db->query('select version from mojo_migrations where name = ?', $name) };
   my $error = $@;
+  return 0 if !$create and !$results;
   if ($results and my $next = $results->array) { return $next->[0] }
 
   $db->query(
@@ -112,7 +112,7 @@ Mojo::mysql::Migrations - Migrations
   use Mojo::mysql::Migrations;
 
   my $migrations = Mojo::mysql::Migrations->new(mysql => $mysql);
-  $migrations->from_file('/Users/sri/migrations.sql')->migrate;
+  $migrations->from_file('/home/sri/migrations.sql')->migrate;
 
 =head1 DESCRIPTION
 
@@ -126,6 +126,7 @@ C<-- VERSION UP/DOWN>.
   insert into messages values ('I ♥ Mojolicious!');
   -- 1 down
   drop table messages;
+
   -- 2 up (...you can comment freely here...)
   create table stuff (whatever int);
   -- 2 down
@@ -174,7 +175,8 @@ Currently active version.
   $migrations = $migrations->from_data('main', 'file_name');
 
 Extract migrations from a file in the DATA section of a class with
-L<Mojo::Loader>, defaults to using the caller class and L</"name">.
+L<Mojo::Loader/"data_section">, defaults to using the caller class and
+L</"name">.
 
   __DATA__
   @@ migrations
@@ -186,7 +188,7 @@ L<Mojo::Loader>, defaults to using the caller class and L</"name">.
 
 =head2 from_file
 
-  $migrations = $migrations->from_file('/Users/sri/migrations.sql');
+  $migrations = $migrations->from_file('/home/sri/migrations.sql');
 
 Extract migrations from a file.
 
