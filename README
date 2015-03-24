@@ -6,16 +6,36 @@ SYNOPSIS
 
       # Create a table
       my $mysql = Mojo::mysql->new('mysql://username@/test');
-      $mysql->db->do('create table if not exists names (name text)');
+      $mysql->db->query(
+        'create table names (id integer auto_increment primary key, name text)');
 
       # Insert a few rows
       my $db = $mysql->db;
-      $db->query('insert into names values (?)', 'Sara');
-      $db->query('insert into names values (?)', 'Daniel');
+      $db->query('insert into names (name) values (?)', 'Sara');
+      $db->query('insert into names (name) values (?)', 'Stefan');
+
+      # Insert more rows in a transaction
+      eval {
+        my $tx = $db->begin;
+        $db->query('insert into names (name) values (?)', 'Baerbel');
+        $db->query('insert into names (name) values (?)', 'Wolfgang');
+        $tx->commit;
+      };
+      say $@ if $@;
+
+      # Insert another row and return the generated id
+      say $db->query('insert into names (name) values (?)', 'Daniel')
+        ->last_insert_id;
+
+      # Select one row at a time
+      my $results = $db->query('select * from names');
+      while (my $next = $results->hash) {
+        say $next->{name};
+      }
 
       # Select all rows blocking
-      say for $db->query('select * from names')
-        ->hashes->map(sub { $_->{name} })->each;
+      $db->query('select * from names')
+        ->hashes->map(sub { $_->{name} })->join("\n")->say;
 
       # Select all rows non-blocking
       Mojo::IOLoop->delay(
@@ -25,21 +45,54 @@ SYNOPSIS
         },
         sub {
           my ($delay, $err, $results) = @_;
-          say for $results->hashes->map(sub { $_->{name} })->each;
+          $results->hashes->map(sub { $_->{name} })->join("\n")->say;
         }
       )->wait;
+
+      Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 
 DESCRIPTION
     Mojo::mysql is a tiny wrapper around DBD::mysql that makes MySQL
     <http://www.mysql.org> a lot of fun to use with the Mojolicious
     <http://mojolicio.us> real-time web framework.
 
-    Database handles are cached automatically, so they can be reused
-    transparently to increase performance. While all I/O operations are
-    performed blocking, you can wait for long running queries
-    asynchronously, allowing the Mojo::IOLoop event loop to perform other
-    tasks in the meantime. Since database connections usually have a very
-    low latency, this often results in very good performance.
+    Database and handles are cached automatically, so they can be reused
+    transparently to increase performance. And you can handle connection
+    timeouts gracefully by holding on to them only for short amounts of
+    time.
+
+      use Mojolicious::Lite;
+      use Mojo::mysql;
+
+      helper mysql =>
+        sub { state $pg = Mojo::mysql->new('mysql://sri:s3cret@localhost/db') };
+
+      get '/' => sub {
+        my $c  = shift;
+        my $db = $c->mysql->db;
+        $c->render(json => $db->query('select now() as time')->hash);
+      };
+
+      app->start;
+
+    While all I/O operations are performed blocking, you can wait for long
+    running queries asynchronously, allowing the Mojo::IOLoop event loop to
+    perform other tasks in the meantime. Since database connections usually
+    have a very low latency, this often results in very good performance.
+
+    Every database connection can only handle one active query at a time,
+    this includes asynchronous ones. So if you start more than one, they
+    will be put on a waiting list and performed sequentially. To perform
+    multiple queries concurrently, you have to use multiple connections.
+
+      # Performed sequentially (10 seconds)
+      my $db = $mysql->db;
+      $db->query('select sleep(5)' => sub {...});
+      $db->query('select sleep(5)' => sub {...});
+
+      # Performed concurrently (5 seconds)
+      $mysql->db->query('select sleep(5)' => sub {...});
+      $mysql->db->query('select sleep(5)' => sub {...});
 
     All cached database handles will be reset automatically if a new process
     has been forked, this allows multiple processes to share the same
@@ -77,8 +130,9 @@ ATTRIBUTES
     defaults to 5.
 
   migrations
-    MySQL does not support DDL transactions. Therefore, migrations should be
-    used with extreme caution. Backup your database. You've been warned.
+    MySQL does not support nested transactions and DDL transactions. DDL
+    statements cause implicit "COMMIT". Therefore, migrations should be used
+    with extreme caution. Backup your database. You've been warned.
 
       my $migrations = $mysql->migrations;
       $mysql         = $mysql->migrations(Mojo::mysql::Migrations->new);
@@ -94,8 +148,10 @@ ATTRIBUTES
       $mysql      = $mysql->options({mysql_use_result => 1});
 
     Options for database handles, defaults to activating
-    "mysql_enable_utf8", "AutoCommit" as well as "RaiseError" and
-    deactivating "PrintError".
+    "mysql_enable_utf8", "AutoCommit", "AutoInactiveDestroy" as well as
+    "RaiseError" and deactivating "PrintError". Note that "AutoCommit" and
+    "RaiseError" are considered mandatory, so deactivating them would be
+    very dangerous.
 
     "mysql_auto_reconnect" is never enabled, Mojo::mysql takes care of dead
     connections.
@@ -103,7 +159,8 @@ ATTRIBUTES
     "AutoCommit" cannot not be disabled, use $db->begin to manage
     transactions.
 
-    "RaiseError" is disabled in event loop for asyncronous queries.
+    "RaiseError" is enabled for blocking and disabled in event loop for
+    non-blocking queries.
 
   password
       my $password = $mysql->password;
@@ -183,6 +240,13 @@ COPYRIGHT AND LICENSE
     under the terms of the Artistic License version 2.0.
 
 SEE ALSO
-    Mojo::Pg, <https://github.com/jhthorsen/mojo-mysql>,
+    <https://github.com/jhthorsen/mojo-mysql>,
+
+    Mojo::Pg Async Connector for PostgreSQL using DBD::Pg,
+    <https://github.com/kraih/mojo-pg>,
+
+    Mojo::MySQL5 Pure-Perl non-blocking I/O MySQL Connector,
+    <https://github.com/harry-bix/mojo-mysql5>,
+
     Mojolicious::Guides, <http://mojolicio.us>.
 

@@ -26,7 +26,7 @@ has options => sub {
 };
 has [qw(password username)] => '';
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 sub db {
   my $self = shift;
@@ -263,7 +263,7 @@ deactivating them would be very dangerous.
 
 C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead connections.
 
-C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/begin> to manage transactions.
+C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/"begin"> to manage transactions.
 
 C<RaiseError> is enabled for blocking and disabled in event loop for non-blocking queries.
 
