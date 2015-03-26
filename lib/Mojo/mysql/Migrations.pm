@@ -35,37 +35,21 @@ sub from_string {
     elsif ($sql =~ /^delimiter\s*(\S+)/ip) {
       ($new, $token, $delimiter) = (1, ${^MATCH}, $1);
     }
-    elsif ($sql =~ /^(\s+)/) {
-      # whitespace
+    elsif ($sql =~ /^(\s+)/ # whitespace
+      or $sql =~ /^(\w+)/   # general name
+      )
+    {
       $token = $1;
     }
-    elsif ($sql =~ /^--.*(?:\n|\z)/p) {
-      # double-dash comment
+    elsif ($sql =~ /^--.*(?:\n|\z)/p                        # double-dash comment
+      or $sql =~ /^\#.*(?:\n|\z)/p                          # hash comment
+      or $sql =~ /^\/\*(?:[^\*]|\*[^\/])*(?:\*\/|\*\z|\z)/p # C-style comment
+      or $sql =~ /^'(?:[^'\\]*|\\(?:.|\n)|'')*(?:'|\z)/p    # single-quoted literal text
+      or $sql =~ /^"(?:[^"\\]*|\\(?:.|\n)|"")*(?:"|\z)/p    # double-quoted literal text
+      or $sql =~ /^`(?:[^`]*|``)*(?:`|\z)/p                 # schema-quoted literal text
+      )
+    {
       $token = ${^MATCH};
-    }
-    elsif ($sql =~ /^\#.*(?:\n|\z)/p) {
-      # hash comment
-      $token = ${^MATCH};
-    }
-    elsif ($sql =~ /^\/\*(?:[^\*]|\*[^\/])*(?:\*\/|\*\z|\z)/p) {
-      # C-style comment
-      $token = ${^MATCH};
-    }
-    elsif ($sql =~ /^'(?:[^'\\]*|\\(?:.|\n)|'')*(?:'|\z)/p) {
-      # single-quoted literal text
-      $token = ${^MATCH};
-    }
-    elsif ($sql =~ /^"(?:[^"\\]*|\\(?:.|\n)|"")*(?:"|\z)/p) {
-      # double-quoted literal text
-      $token = ${^MATCH};     
-    }
-    elsif ($sql =~ /^`(?:[^`]*|``)*(?:`|\z)/p) {
-      # schema-quoted literal text
-      $token = ${^MATCH};     
-    }
-    elsif ($sql =~ /^(\w+)/) {
-      # general name
-      $token = $1;
     }
     else {
       $token = substr($sql, 0, 1);
