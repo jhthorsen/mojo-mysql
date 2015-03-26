@@ -35,8 +35,8 @@ sub from_string {
     elsif ($sql =~ /^delimiter\s*(\S+)/ip) {
       ($new, $token, $delimiter) = (1, ${^MATCH}, $1);
     }
-    elsif ($sql =~ /^(\s+)/ # whitespace
-      or $sql =~ /^(\w+)/   # general name
+    elsif ($sql =~ /^(\s+)/s  # whitespace
+      or $sql =~ /^(\w+)/     # general name
       )
     {
       $token = $1;
