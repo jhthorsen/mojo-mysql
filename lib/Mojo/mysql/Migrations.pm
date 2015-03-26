@@ -23,11 +23,76 @@ sub from_file { shift->from_string(decode 'UTF-8', slurp pop) }
 sub from_string {
   my ($self, $sql) = @_;
   my ($version, $way);
+  my ($new, $last, $delimiter) = (1, '', ';');
   my $migrations = $self->{migrations} = {up => {}, down => {}};
-  for my $line (split "\n", $sql // '') {
-    ($version, $way) = ($1, lc $2) if $line =~ /^\s*--\s*(\d+)\s*(up|down)/i;
-    $migrations->{$way}{$version} .= "$line\n" if $version;
+
+  while ($sql) {
+    my $token;
+
+    if ($sql =~ /^$delimiter/x) {
+      ($new, $token) = (1, $delimiter);
+    }
+    elsif ($sql =~ /^delimiter\s*(\S+)/ip) {
+      ($new, $token, $delimiter) = (1, ${^MATCH}, $1);
+    }
+    elsif ($sql =~ /^(\s+)/) {
+      # whitespace
+      $token = $1;
+    }
+    elsif ($sql =~ /^--.*(?:\n|\z)/p) {
+      # double-dash comment
+      $token = ${^MATCH};
+    }
+    elsif ($sql =~ /^\#.*(?:\n|\z)/p) {
+      # hash comment
+      $token = ${^MATCH};
+    }
+    elsif ($sql =~ /^\/\*(?:[^\*]|\*[^\/])*(?:\*\/|\*\z|\z)/p) {
+      # C-style comment
+      $token = ${^MATCH};
+    }
+    elsif ($sql =~ /^'(?:[^'\\]*|\\(?:.|\n)|'')*(?:'|\z)/p) {
+      # single-quoted literal text
+      $token = ${^MATCH};
+    }
+    elsif ($sql =~ /^"(?:[^"\\]*|\\(?:.|\n)|"")*(?:"|\z)/p) {
+      # double-quoted literal text
+      $token = ${^MATCH};     
+    }
+    elsif ($sql =~ /^`(?:[^`]*|``)*(?:`|\z)/p) {
+      # schema-quoted literal text
+      $token = ${^MATCH};     
+    }
+    elsif ($sql =~ /^(\w+)/) {
+      # general name
+      $token = $1;
+    }
+    else {
+      $token = substr($sql, 0, 1);
+    }
+
+    # chew token
+    substr($sql, 0, length($token), '');
+
+    if ($token =~ /^--\s+(\d+)\s*(up|down)/i) {
+      my ($new_version, $new_way) = ($1, lc $2);
+      push @{$migrations->{$way}{$version} //= []}, $last
+        if $version and $last !~ /^\s*$/s;
+      ($version, $way) = ($new_version, $new_way);
+      ($new, $last) = (0, '');
+    }
+
+    if ($new) {
+      push @{$migrations->{$way}{$version} //= []}, $last
+        if $version and $last !~ /^\s*$/s;
+      ($new, $last) = (0, '');
+    }
+    else {
+      $last .= $token;
+    }
   }
+  push @{$migrations->{$way}{$version} //= []}, $last
+    if $version and $last !~ /^\s*$/s;
 
   return $self;
 }
@@ -51,24 +116,25 @@ sub migrate {
   return $self if (my $active = $self->_active($db, 1)) == $target;
 
   # Up
-  my $sql;
+  my @sql;
   if ($active < $target) {
     my @up = grep { $_ <= $target && $_ > $active } sort keys %$up;
-    $sql = join '', @$up{@up};
+    foreach (@up) {
+      push @sql, @{$up->{$_}};
+    }
   }
 
   # Down
   else {
     my @down = grep { $_ > $target && $_ <= $active } reverse sort keys %$down;
-    $sql = join '', @$down{@down};
+    foreach (@down) {
+      push @sql, @{$down->{$_}};
+    }
   }
 
-  warn "-- Migrate ($active -> $target)\n$sql\n" if DEBUG;
+  warn "-- Migrate ($active -> $target)\n" , join("\n", @sql), "\n" if DEBUG;
   eval {
-    foreach my $q (split(';', $sql)) {
-      next if $q =~ /^\s*$/s;
-      $db->query($q);
-    }
+    $db->query($_) for @sql;
     $db->query("update mojo_migrations set version = ? where name = ?", $target, $self->name);
   };
   if (my $error = $@) {
