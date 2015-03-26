@@ -95,24 +95,21 @@ sub migrate {
   my $db = $self->mysql->db;
   return $self if $self->_active($db, 1) == $target;
 
-  # Lock migrations table and check version again
+  # Check version again
   my $tx = $db->begin;
   return $self if (my $active = $self->_active($db, 1)) == $target;
 
   # Up
   my @sql;
   if ($active < $target) {
-    my @up = grep { $_ <= $target && $_ > $active } sort keys %$up;
-    foreach (@up) {
-      push @sql, @{$up->{$_}};
+    foreach (sort keys %$up) {
+      push @sql, @{$up->{$_}} if $_ <= $target && $_ > $active;
     }
   }
-
   # Down
   else {
-    my @down = grep { $_ > $target && $_ <= $active } reverse sort keys %$down;
-    foreach (@down) {
-      push @sql, @{$down->{$_}};
+    foreach (reverse sort keys %$down) {
+      push @sql, @{$down->{$_}} if $_ > $target && $_ <= $active;
     }
   }
 
