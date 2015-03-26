@@ -4,6 +4,7 @@ use Mojo::Base -base;
 use Carp 'croak';
 use Mojo::Loader 'data_section';
 use Mojo::Util qw(decode slurp);
+use Encode '_utf8_off';
 
 use constant DEBUG => $ENV{MOJO_MIGRATIONS_DEBUG} || 0;
 
@@ -25,6 +26,8 @@ sub from_string {
   my ($version, $way);
   my ($new, $last, $delimiter) = (1, '', ';');
   my $migrations = $self->{migrations} = {up => {}, down => {}};
+
+  _utf8_off $sql;
 
   while ($sql) {
     my $token;
