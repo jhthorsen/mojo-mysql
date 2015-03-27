@@ -23,13 +23,15 @@ sub from_file { shift->from_string(decode 'UTF-8', slurp pop) }
 
 sub from_string {
   my ($self, $sql) = @_;
+  return $self unless defined $sql;
+
   my ($version, $way);
   my ($new, $last, $delimiter) = (1, '', ';');
   my $migrations = $self->{migrations} = {up => {}, down => {}};
 
   _utf8_off $sql;
 
-  while ($sql) {
+  while (length($sql) > 0) {
     my $token;
 
     if ($sql =~ /^$delimiter/x) {
