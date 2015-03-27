@@ -35,11 +35,11 @@ sub from_string {
     if ($sql =~ /^$delimiter/x) {
       ($new, $token) = (1, $delimiter);
     }
-    elsif ($sql =~ /^delimiter\s*(\S+)/ip) {
+    elsif ($sql =~ /^delimiter\s+(\S+)\s*(?:\n|\z)/ip) {
       ($new, $token, $delimiter) = (1, ${^MATCH}, $1);
     }
-    elsif ($sql =~ /^(\s+)/s  # whitespace
-      or $sql =~ /^(\w+)/     # general name
+    elsif ($sql =~ /^(\s+)/s                                # whitespace
+      or $sql =~ /^(\w+)/                                   # general name
       )
     {
       $token = $1;
@@ -66,7 +66,7 @@ sub from_string {
       push @{$migrations->{$way}{$version} //= []}, $last
         if $version and $last !~ /^\s*$/s;
       ($version, $way) = ($new_version, $new_way);
-      ($new, $last) = (0, '');
+      ($new, $last, $delimiter) = (0, '', ';');
     }
 
     if ($new) {
@@ -174,8 +174,15 @@ C<-- VERSION UP/DOWN>.
   -- 1 up
   create table messages (message text);
   insert into messages values ('I ♥ Mojolicious!');
+  delimiter //
+  create procedure mojo_test()
+  begin
+    select text from messages;
+  end
+  //
   -- 1 down
   drop table messages;
+  drop procedure mojo_test;
 
   -- 2 up (...you can comment freely here...)
   create table stuff (whatever int);

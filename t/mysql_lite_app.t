@@ -19,7 +19,7 @@ get '/blocking' => sub {
   my $c  = shift;
   my $db = $c->mysql->db;
   $c->res->headers->header('X-PID' => $db->pid);
-  $c->render(text => $db->query('select * from app_test')->hash->{stuff});
+  $c->render(text => $db->query('call mojo_app_test()')->hash->{stuff});
 };
 
 get '/non-blocking' => sub {
@@ -57,9 +57,17 @@ __DATA__
 @@ app_test
 -- 1 up
 create table if not exists app_test (stuff text);
+delimiter //
+create procedure mojo_app_test()
+  deterministic reads sql data
+begin
+  select * from app_test;
+end
+//
 
 -- 2 up
 insert into app_test values ('I ♥ Mojolicious!');
 
 -- 1 down
 drop table app_test;
+drop procedure mojo_app_test;
