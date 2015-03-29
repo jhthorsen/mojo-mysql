@@ -4,6 +4,7 @@ use Mojo::Base -base;
 use Carp 'croak';
 use Mojo::Loader 'data_section';
 use Mojo::Util qw(decode slurp);
+use Encode '_utf8_off';
 
 use constant DEBUG => $ENV{MOJO_MIGRATIONS_DEBUG} || 0;
 
@@ -22,12 +23,65 @@ sub from_file { shift->from_string(decode 'UTF-8', slurp pop) }
 
 sub from_string {
   my ($self, $sql) = @_;
+  return $self unless defined $sql;
+
   my ($version, $way);
+  my ($new, $last, $delimiter) = (1, '', ';');
   my $migrations = $self->{migrations} = {up => {}, down => {}};
-  for my $line (split "\n", $sql // '') {
-    ($version, $way) = ($1, lc $2) if $line =~ /^\s*--\s*(\d+)\s*(up|down)/i;
-    $migrations->{$way}{$version} .= "$line\n" if $version;
+
+  _utf8_off $sql;
+
+  while (length($sql) > 0) {
+    my $token;
+
+    if ($sql =~ /^$delimiter/x) {
+      ($new, $token) = (1, $delimiter);
+    }
+    elsif ($sql =~ /^delimiter\s+(\S+)\s*(?:\n|\z)/ip) {
+      ($new, $token, $delimiter) = (1, ${^MATCH}, $1);
+    }
+    elsif ($sql =~ /^(\s+)/s                                # whitespace
+      or $sql =~ /^(\w+)/                                   # general name
+      )
+    {
+      $token = $1;
+    }
+    elsif ($sql =~ /^--.*(?:\n|\z)/p                        # double-dash comment
+      or $sql =~ /^\#.*(?:\n|\z)/p                          # hash comment
+      or $sql =~ /^\/\*(?:[^\*]|\*[^\/])*(?:\*\/|\*\z|\z)/p # C-style comment
+      or $sql =~ /^'(?:[^'\\]*|\\(?:.|\n)|'')*(?:'|\z)/p    # single-quoted literal text
+      or $sql =~ /^"(?:[^"\\]*|\\(?:.|\n)|"")*(?:"|\z)/p    # double-quoted literal text
+      or $sql =~ /^`(?:[^`]*|``)*(?:`|\z)/p                 # schema-quoted literal text
+      )
+    {
+      $token = ${^MATCH};
+    }
+    else {
+      $token = substr($sql, 0, 1);
+    }
+
+    # chew token
+    substr($sql, 0, length($token), '');
+
+    if ($token =~ /^--\s+(\d+)\s*(up|down)/i) {
+      my ($new_version, $new_way) = ($1, lc $2);
+      push @{$migrations->{$way}{$version} //= []}, $last
+        if $version and $last !~ /^\s*$/s;
+      ($version, $way) = ($new_version, $new_way);
+      ($new, $last, $delimiter) = (0, '', ';');
+    }
+
+    if ($new) {
+      push @{$migrations->{$way}{$version} //= []}, $last
+        if $version and $last !~ /^\s*$/s;
+      ($new, $last) = (0, '');
+    }
+    else {
+      $last .= $token;
+    }
   }
+  push @{$migrations->{$way}{$version} //= []}, $last
+    if $version and $last !~ /^\s*$/s;
 
   return $self;
 }
@@ -46,29 +100,27 @@ sub migrate {
   my $db = $self->mysql->db;
   return $self if $self->_active($db, 1) == $target;
 
-  # Lock migrations table and check version again
+  # Check version again
   my $tx = $db->begin;
   return $self if (my $active = $self->_active($db, 1)) == $target;
 
   # Up
-  my $sql;
+  my @sql;
   if ($active < $target) {
-    my @up = grep { $_ <= $target && $_ > $active } sort keys %$up;
-    $sql = join '', @$up{@up};
+    foreach (sort keys %$up) {
+      push @sql, @{$up->{$_}} if $_ <= $target && $_ > $active;
+    }
   }
-
   # Down
   else {
-    my @down = grep { $_ > $target && $_ <= $active } reverse sort keys %$down;
-    $sql = join '', @$down{@down};
+    foreach (reverse sort keys %$down) {
+      push @sql, @{$down->{$_}} if $_ > $target && $_ <= $active;
+    }
   }
 
-  warn "-- Migrate ($active -> $target)\n$sql\n" if DEBUG;
+  warn "-- Migrate ($active -> $target)\n" , join("\n", @sql), "\n" if DEBUG;
   eval {
-    foreach my $q (split(';', $sql)) {
-      next if $q =~ /^\s*$/s;
-      $db->query($q);
-    }
+    $db->query($_) for @sql;
     $db->query("update mojo_migrations set version = ? where name = ?", $target, $self->name);
   };
   if (my $error = $@) {
@@ -124,8 +176,15 @@ C<-- VERSION UP/DOWN>.
   -- 1 up
   create table messages (message text);
   insert into messages values ('I ♥ Mojolicious!');
+  delimiter //
+  create procedure mojo_test()
+  begin
+    select text from messages;
+  end
+  //
   -- 1 down
   drop table messages;
+  drop procedure mojo_test;
 
   -- 2 up (...you can comment freely here...)
   create table stuff (whatever int);
