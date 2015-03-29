@@ -64,6 +64,10 @@ sub query {
   $self->$_ for qw(_next _watch);
 }
 
+sub quote { shift->dbh->quote(shift) }
+
+sub quote_id { shift->dbh->quote_identifier(shift) }
+
 sub _next {
   my $self = shift;
 
@@ -211,6 +215,18 @@ results. You can also append a callback to perform operation non-blocking.
     ...
   });
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
+
+=head2 quote
+
+  my $escaped = $db->quote($str);
+ 
+Quote a string literal for use as a literal value in an SQL statement.
+ 
+=head2 quote_id
+ 
+  my $escaped = $db->quote_id($id);
+ 
+Quote an identifier (table name etc.) for use in an SQL statement.
 
 =head1 SEE ALSO
 
