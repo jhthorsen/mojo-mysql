@@ -1,5 +1,11 @@
 Revision history for Mojo::mysql
 
+0.09     Sun Mar 29 18:29:35 2015
+       * Fixed Mojo::mysql::Migrations to allow delimiter in comments and quoted strings
+       * delimiter support in Mojo::mysql::Migrations,
+         allows creation of stored procedures and triggers in migration scripts
+       * 'quote' and 'quote_id' methods in Mojo::mysql::Database
+
 0.08     Tue Mar 24 13:14:32 2015
        * blog example from Mojo::Pg
        * better examples in POD
