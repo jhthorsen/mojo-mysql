@@ -249,7 +249,7 @@ easily.
 
 MySQL does not support nested transactions and DDL transactions.
 DDL statements cause implicit C<COMMIT>. C<ROLLBACK> will be called if
-any step of migration script fails, but not everything can be reverted.
+any step of migration script fails, but only DML statements can be reverted.
 
 This means database can be left in unknown state if migration script fails.
 Use this feature with caution and remember to always backup your database.
