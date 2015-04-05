@@ -1,6 +1,6 @@
 Revision history for Mojo::mysql
 
-0.10
+0.10     Sun Apr  5 23:32:03 2015
        * Fixed bug in Mojo::Pg::Migrations where the latest version could not always
          be determined correctly. (Hernan Lopes)
        * Updated blog example application from Mojo::Pg
