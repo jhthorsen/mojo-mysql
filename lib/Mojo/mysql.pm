@@ -253,7 +253,7 @@ any step of migration script fails, but only DML statements after the
 last implicit or explicit C<COMMIT> can be reverted.
 Not all MySQL storage engines (like C<MYISAM>) support transactions.
 
-This means database can be left in unknown state if migration script fails.
+This means database will most likely be left in unknown state if migration script fails.
 Use this feature with caution and remember to always backup your database.
 
 =head2 options
