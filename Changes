@@ -1,5 +1,9 @@
 Revision history for Mojo::mysql
 
+0.11     Mon Apr  6 03:38:31 2015
+       * Fixed bug in Mojo::mysql::Migrations where migrations would sometimes be
+         executed in the wrong order.
+
 0.10     Sun Apr  5 23:32:03 2015
        * Fixed bug in Mojo::Pg::Migrations where the latest version could not always
          be determined correctly. (Hernan Lopes)
