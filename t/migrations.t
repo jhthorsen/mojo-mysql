@@ -56,8 +56,9 @@ delete from migration_test_one where foo = 'works ♥';
 --
 --  3 Up, create
 --        another
---        table?
-create table if not exists migration_test_two (bar varchar(255));
+--        table?;
+delimiter //
+create table if not exists migration_test_two (bar varchar(255))//
 -- 3  DOWN
 drop table if exists migration_test_two;
 

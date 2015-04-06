@@ -24,7 +24,6 @@ sub from_file { shift->from_string(decode 'UTF-8', slurp pop) }
 sub from_string {
   my ($self, $sql) = @_;
   return $self unless defined $sql;
-
   my ($version, $way);
   my ($new, $last, $delimiter) = (1, '', ';');
   my $migrations = $self->{migrations} = {up => {}, down => {}};
@@ -41,9 +40,7 @@ sub from_string {
       ($new, $token, $delimiter) = (1, ${^MATCH}, $1);
     }
     elsif ($sql =~ /^(\s+)/s                                # whitespace
-      or $sql =~ /^(\w+)/                                   # general name
-      )
-    {
+      or $sql =~ /^(\w+)/) {                                # general name
       $token = $1;
     }
     elsif ($sql =~ /^--.*(?:\n|\z)/p                        # double-dash comment
@@ -51,9 +48,7 @@ sub from_string {
       or $sql =~ /^\/\*(?:[^\*]|\*[^\/])*(?:\*\/|\*\z|\z)/p # C-style comment
       or $sql =~ /^'(?:[^'\\]*|\\(?:.|\n)|'')*(?:'|\z)/p    # single-quoted literal text
       or $sql =~ /^"(?:[^"\\]*|\\(?:.|\n)|"")*(?:"|\z)/p    # double-quoted literal text
-      or $sql =~ /^`(?:[^`]*|``)*(?:`|\z)/p                 # schema-quoted literal text
-      )
-    {
+      or $sql =~ /^`(?:[^`]*|``)*(?:`|\z)/p) {              # schema-quoted literal text
       $token = ${^MATCH};
     }
     else {
