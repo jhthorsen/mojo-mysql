@@ -107,13 +107,13 @@ sub migrate {
   # Up
   my @sql;
   if ($active < $target) {
-    foreach (sort keys %$up) {
+    foreach (sort { $a <=> $b } keys %$up) {
       push @sql, @{$up->{$_}} if $_ <= $target && $_ > $active;
     }
   }
   # Down
   else {
-    foreach (reverse sort keys %$down) {
+    foreach (reverse sort { $a <=> $b } keys %$down) {
       push @sql, @{$down->{$_}} if $_ > $target && $_ <= $active;
     }
   }
