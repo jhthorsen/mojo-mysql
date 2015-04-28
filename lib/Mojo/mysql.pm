@@ -5,6 +5,7 @@ use Carp 'croak';
 use DBI;
 use Mojo::mysql::Database;
 use Mojo::mysql::Migrations;
+use Mojo::mysql::PubSub;
 use Mojo::URL;
 use Scalar::Util 'weaken';
 
@@ -25,6 +26,12 @@ has options => sub {
   }
 };
 has [qw(password username)] => '';
+has pubsub => sub {
+  my $pubsub = Mojo::mysql::PubSub->new(mysql => shift);
+  weaken $pubsub->{mysql};
+  return $pubsub;
+};
+
 
 our $VERSION = '0.11';
 
