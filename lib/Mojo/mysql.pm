@@ -169,8 +169,8 @@ Mojo::mysql - Mojolicious and Async MySQL
     say "bar: $payload";
   });
   $mysql->pubsub->notify(foo => 'MySQL rocks!');
-  Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 
+  Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 
 =head1 DESCRIPTION
 
@@ -376,6 +376,8 @@ This is the class hierarchy of the L<Mojo::mysql> distribution.
 =item * L<Mojo::mysql::Database>
 
 =item * L<Mojo::mysql::Migrations>
+
+=item * L<Mojo::mysql::PubSub>
 
 =item * L<Mojo::mysql::Results>
 

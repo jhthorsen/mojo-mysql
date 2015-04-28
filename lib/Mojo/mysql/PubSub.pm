@@ -3,38 +3,56 @@ use Mojo::Base 'Mojo::EventEmitter';
 
 use Scalar::Util 'weaken';
 
+use constant DEBUG => $ENV{MOJO_PUBSUB_DEBUG} || 0;
+
 has 'mysql';
 
 sub listen {
-  my ($self, $name, $cb) = @_;
-  my $sleeping = $self->_db;
-  my $sql = @{$self->{chans}{$name} ||= []} ?
+  my ($self, $channel, $cb) = @_;
+  my $pid = $self->_db->pid;
+  warn "listen $channel listening:$pid\n" if DEBUG;
+  $self->mysql->db->query(@{$self->{chans}{$channel} ||= []} ?
     'update mojo_pubsub_subscribe set ts = current_timestamp where pid = ? and channel = ?' :
-    'insert into mojo_pubsub_subscribe(pid, channel) values (?, ?)';
-  $self->mysql->db->query($sql, $sleeping->pid, $name);
-  push @{$self->{chans}{$name}}, $cb;
+    'insert into mojo_pubsub_subscribe(pid, channel) values (?, ?)', $pid, $channel);
+  push @{$self->{chans}{$channel}}, $cb;
   return $cb;
 }
 
 sub notify {
-  my ($self, $name, $payload) = @_;
-  $self->_db;
+  my ($self, $channel, $payload) = @_;
+  $payload //= '';
+  my $pid = $self->_db->pid;
+  warn "notify $channel $payload listening:$pid\n" if DEBUG;
   $self->mysql->db->query(
-    'insert into mojo_pubsub_notify(channel, message) values (?, ?)', $name, $payload);
+    'insert into mojo_pubsub_notify(channel, payload) values (?, ?)', $channel, $payload);
   return $self;
 }
 
 sub unlisten {
-  my ($self, $name, $cb) = @_;
-  my $chan = $self->{chans}{$name};
+  my ($self, $channel, $cb) = @_;
+  my $pid = $self->_db->pid;
+  warn "unlisten $channel listening:$pid\n" if DEBUG;
+  my $chan = $self->{chans}{$channel};
   @$chan = grep { $cb ne $_ } @$chan;
   return $self if @$chan;
-  my $sleeping = $self->_db;
   $self->mysql->db->query(
-    'delete from mojo_pubsub_subscribe where pid = ? and channel = ?',
-    $sleeping->pid, $name);
-  delete $self->{chans}{$name};
+    'delete from mojo_pubsub_subscribe where pid = ? and channel = ?', $pid, $channel);
+  delete $self->{chans}{$channel};
   return $self;
+}
+
+sub _recv_notifications {
+  my $self = shift;
+  my $result = $self->{db}->query(
+    'select id, channel, payload from mojo_pubsub_notify where id > ?', $self->{last_id});
+
+  while (my $row = $result->array) {
+    my ($id, $channel, $payload) = @$row;
+    $self->{last_id} = $id;
+    next unless exists $self->{chans}{$channel};
+    warn "received $id on $channel: $payload\n" if DEBUG;
+    for my $cb (@{$self->{chans}{$channel}}) { $self->$cb($payload) }
+  }
 }
 
 sub _db {
@@ -50,8 +68,12 @@ sub _db {
 
   my $db = $self->{db} = $self->mysql->db;
 
-  # id of the last message in table
-  if (!defined $self->{last_id}) {
+  if (defined $self->{last_id}) {
+    # read unread notifications
+    $self->_recv_notifications;
+  }
+  else {
+    # get id of the last message
     my $array = $db->query(
       'select id from mojo_pubsub_notify order by id desc limit 1')->array;
     $self->{last_id} = defined $array ? $array->[0] : 0;
@@ -75,16 +97,17 @@ sub _db {
 
   my $cb;
   $cb = sub {
-    $db->query(
-      'select id, channel, message from mojo_pubsub_notify where id > ?',
-      $self->{last_id})->hashes->each(
-      sub {
-        my ($id, $channel, $payload) = ($_->{id}, $_->{channel}, $_->{message});
-        $self->{last_id} = $id;
-        return unless exists $self->{chans}{$channel};
-        for my $cb (@{$self->{chans}{$channel}}) { $self->$cb($payload) }
-      }
-    );
+    my ($db, $err, $result) = @_;
+    if ($err) {
+      warn "wake up error: $err" if DEBUG;
+      eval { $db->disconnect };
+      delete $self->{db};
+      eval { $self->_db };
+    }
+    else {
+      $self->_recv_notifications if $self;
+    }
+
     $db->query('update mojo_pubsub_subscribe set ts = current_timestamp where pid = ?', $db->pid);
     $db->query('select sleep(600)', $cb);
   };
@@ -215,7 +238,7 @@ create table mojo_pubsub_subscribe(
 create table mojo_pubsub_notify(
   id integer auto_increment primary key,
   channel varchar(64) not null,
-  message varchar(256),
+  payload varchar(256),
   ts timestamp not null default current_timestamp,
   key channel_idx(channel),
   key ts_idx(ts)
