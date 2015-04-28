@@ -97,6 +97,104 @@ sub _db {
 
 1;
 
+=encoding utf8
+
+=head1 NAME
+
+Mojo::mysql::PubSub - Publish/Subscribe
+
+=head1 SYNOPSIS
+
+  use Mojo::mysql::PubSub;
+
+  my $pubsub = Mojo::mysql::PubSub->new(mysql => $mysql);
+  my $cb = $pubsub->listen(foo => sub {
+    my ($pubsub, $payload) = @_;
+    say "Received: $payload";
+  });
+  $pubsub->notify(foo => 'bar');
+  $pubsub->unlisten(foo => $cb);
+
+=head1 DESCRIPTION
+
+L<Mojo::mysql::PubSub> is implementation of the publish/subscribe
+pattern used by L<Mojo::mysql>.
+
+Although MySQL does not have C<SUBSCRIBE/NOTIFY> like PostgreSQL and other RDBMs,
+this module implements similar feature.
+
+Single Database connection waits for notification by executing C<SLEEP> on server.
+C<connection_id> and subscribed channels in stored in C<mojo_pubsub_subscribe> table.
+Inserting new row in C<mojo_pubsub_notify> table triggers C<KILL QUERY> for
+all connections waiting for notification.
+
+=head1 EVENTS
+
+L<Mojo::mysql::PubSub> inherits all events from L<Mojo::EventEmitter> and can
+emit the following new ones.
+
+=head2 reconnect
+
+  $pubsub->on(reconnect => sub {
+    my ($pubsub, $db) = @_;
+    ...
+  });
+
+Emitted after switching to a new database connection for sending and receiving
+notifications.
+
+=head1 ATTRIBUTES
+
+L<Mojo::mysql::PubSub> implements the following attributes.
+
+=head2 mysql
+
+  my $mysql = $pubsub->mysql;
+  $pubsub   = $pubsub->mysql(Mojo::mysql->new);
+
+L<Mojo::mysql> object this publish/subscribe container belongs to.
+
+=head1 METHODS
+
+L<Mojo::mysql::PubSub> inherits all methods from L<Mojo::EventEmitter> and
+implements the following new ones.
+
+=head2 listen
+
+  my $cb = $pubsub->listen(foo => sub {...});
+
+Subscribe to a channel, there is no limit on how many subscribers a channel can
+have.
+
+  # Subscribe to the same channel twice
+  $pubsub->listen(foo => sub {
+    my ($pubsub, $payload) = @_;
+    say "One: $payload";
+  });
+  $pubsub->listen(foo => sub {
+    my ($pubsub, $payload) = @_;
+    say "Two: $payload";
+  });
+
+=head2 notify
+
+  $pubsub = $pubsub->notify('foo');
+  $pubsub = $pubsub->notify(foo => 'bar');
+
+Notify a channel.
+
+=head2 unlisten
+
+  $pubsub = $pubsub->unlisten(foo => $cb);
+
+Unsubscribe from a channel.
+
+=head1 SEE ALSO
+
+L<Mojo::mysql>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+
+=cut
+
 __DATA__
 
 @@ pubsub

@@ -158,7 +158,19 @@ Mojo::mysql - Mojolicious and Async MySQL
     }
   )->wait;
 
+  # Send and receive notifications non-blocking
+  $mysql->pubsub->listen(foo => sub {
+    my ($pubsub, $payload) = @_;
+    say "foo: $payload";
+    $pubsub->notify(bar => $payload);
+  });
+  $mysql->pubsub->listen(bar => sub {
+    my ($pubsub, $payload) = @_;
+    say "bar: $payload";
+  });
+  $mysql->pubsub->notify(foo => 'MySQL rocks!');
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
+
 
 =head1 DESCRIPTION
 
@@ -285,6 +297,23 @@ C<RaiseError> is enabled for blocking and disabled in event loop for non-blockin
   $mysql       = $mysql->password('s3cret');
 
 Database password, defaults to an empty string.
+
+=head2 pubsub
+
+  my $pubsub = $mysql->pubsub;
+  $mysql     = $mysql->pubsub(Mojo::mysql::PubSub->new);
+
+L<Mojo::mysql::PubSub> object you can use to send and receive notifications very
+efficiently, by sharing a single database connection with many consumers.
+
+  # Subscribe to a channel
+  $mysql->pubsub->listen(news => sub {
+    my ($pubsub, $payload) = @_;
+    say "Received: $payload";
+  });
+
+  # Notify a channel
+  $mysql->pubsub->notify(news => 'MySQL rocks!');
 
 =head2 username
 
