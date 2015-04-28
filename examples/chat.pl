@@ -1,7 +1,7 @@
 use Mojolicious::Lite;
 use Mojo::mysql;
 
-helper mysql => sub { state $mysql = Mojo::mysql->new('mysql://oss:prasw0RD@192.168.2.14/oss') };
+helper mysql => sub { state $mysql = Mojo::mysql->new('mysql://mysql@/test') };
 
 get '/' => 'chat';
 
