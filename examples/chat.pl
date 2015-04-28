@@ -10,10 +10,10 @@ websocket '/channel' => sub {
 
   $c->inactivity_timeout(3600);
 
-  # Forward messages from the browser to PostgreSQL
+  # Forward messages from the browser to MySQL
   $c->on(message => sub { shift->mysql->pubsub->notify(mojochat => shift) });
 
-  # Forward messages from PostgreSQL to the browser
+  # Forward messages from MySQL to the browser
   my $cb = $c->mysql->pubsub->listen(mojochat => sub { $c->send(pop) });
   $c->on(finish => sub { shift->mysql->pubsub->unlisten(mojochat => $cb) });
 };
