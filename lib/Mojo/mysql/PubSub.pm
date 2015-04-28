@@ -87,9 +87,7 @@ sub _db {
 
   # re-subscribe
   $db->query(
-    'delete from mojo_pubsub_subscribe where pid = ?', $db->pid);
-  $db->query(
-    'insert into mojo_pubsub_subscribe(pid, channel) values (?, ?)', $db->pid, $_)
+    'replace into mojo_pubsub_subscribe(pid, channel) values (?, ?)', $db->pid, $_)
     for keys %{$self->{chans}};
 
   weaken $db->{mysql};
@@ -104,12 +102,11 @@ sub _db {
       delete $self->{db};
       eval { $self->_db };
     }
-    else {
-      $self->_recv_notifications if $self;
+    elsif ($self and $self->{db}) {
+      $self->_recv_notifications;
+      $db->query('update mojo_pubsub_subscribe set ts = current_timestamp where pid = ?', $db->pid);
+      $db->query('select sleep(600)', $cb);
     }
-
-    $db->query('update mojo_pubsub_subscribe set ts = current_timestamp where pid = ?', $db->pid);
-    $db->query('select sleep(600)', $cb);
   };
   $db->query('select sleep(600)', $cb);
 
