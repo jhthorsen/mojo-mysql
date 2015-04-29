@@ -10,10 +10,9 @@ has 'mysql';
 sub listen {
   my ($self, $channel, $cb) = @_;
   my $pid = $self->_db->pid;
-  warn "listen $channel listening:$pid\n" if DEBUG;
-  $self->mysql->db->query(@{$self->{chans}{$channel} ||= []} ?
-    'update mojo_pubsub_subscribe set ts = current_timestamp where pid = ? and channel = ?' :
-    'insert into mojo_pubsub_subscribe(pid, channel) values (?, ?)', $pid, $channel);
+  warn "listen channel:$channel listening:$pid\n" if DEBUG;
+  $self->mysql->db->query(
+    'replace mojo_pubsub_subscribe(pid, channel, ts) values (?, ?, current_timestamp)', $pid, $channel);
   push @{$self->{chans}{$channel}}, $cb;
   return $cb;
 }
@@ -22,7 +21,7 @@ sub notify {
   my ($self, $channel, $payload) = @_;
   $payload //= '';
   my $pid = $self->_db->pid;
-  warn "notify $channel $payload listening:$pid\n" if DEBUG;
+  warn "notify channel:$channel $payload listening:$pid\n" if DEBUG;
   $self->mysql->db->query(
     'insert into mojo_pubsub_notify(channel, payload) values (?, ?)', $channel, $payload);
   return $self;
@@ -31,7 +30,7 @@ sub notify {
 sub unlisten {
   my ($self, $channel, $cb) = @_;
   my $pid = $self->_db->pid;
-  warn "unlisten $channel listening:$pid\n" if DEBUG;
+  warn "unlisten channel:$channel listening:$pid\n" if DEBUG;
   my $chan = $self->{chans}{$channel};
   @$chan = grep { $cb ne $_ } @$chan;
   return $self if @$chan;
@@ -41,7 +40,7 @@ sub unlisten {
   return $self;
 }
 
-sub _recv_notifications {
+sub _notifications {
   my $self = shift;
   my $result = $self->{db}->query(
     'select id, channel, payload from mojo_pubsub_notify where id > ?', $self->{last_id});
@@ -59,18 +58,26 @@ sub _db {
   my $self = shift;
 
   # Fork-safety
-  delete @$self{qw(chans pid)} and $self->{db} and $self->{db}->disconnect
-    unless ($self->{pid} //= $$) eq $$;
+  if (($self->{pid} //= $$) ne $$) {
+    my $pid = $self->{db}->pid if $self->{db};
+    warn '_DB forked pid:' . ($pid || 'N/A') . "\n" if DEBUG;
+    $self->{db}->disconnect if $pid;
+    delete @$self{qw(chans pid db)};
+  }
 
-  return $self->{db} if $self->{db};
+  if ($self->{db}) {
+    warn '_DB pid:' . $self->{db}->pid, "\n" if DEBUG;
+    return $self->{db};
+  }
 
   $self->mysql->migrations->from_data(__PACKAGE__, 'pubsub')->migrate;
 
   my $db = $self->{db} = $self->mysql->db;
+  warn '_DB pid:' . $self->{db}->pid, "\n" if DEBUG;
 
   if (defined $self->{last_id}) {
     # read unread notifications
-    $self->_recv_notifications;
+    $self->_notifications;
   }
   else {
     # get id of the last message
@@ -87,7 +94,7 @@ sub _db {
 
   # re-subscribe
   $db->query(
-    'replace into mojo_pubsub_subscribe(pid, channel) values (?, ?)', $db->pid, $_)
+    'replace mojo_pubsub_subscribe(pid, channel) values (?, ?)', $db->pid, $_)
     for keys %{$self->{chans}};
 
   weaken $db->{mysql};
@@ -103,13 +110,14 @@ sub _db {
       eval { $self->_db };
     }
     elsif ($self and $self->{db}) {
-      $self->_recv_notifications;
+      $self->_notifications;
       $db->query('update mojo_pubsub_subscribe set ts = current_timestamp where pid = ?', $db->pid);
       $db->query('select sleep(600)', $cb);
     }
   };
   $db->query('select sleep(600)', $cb);
 
+  warn '_DB reconnect pid:' . $self->{db}->pid, "\n" if DEBUG;
   $self->emit(reconnect => $db);
 
   return $db;
@@ -209,6 +217,13 @@ Notify a channel.
 
 Unsubscribe from a channel.
 
+=head1 DEBUGGING
+
+You can set the C<MOJO_PUBSUB_DEBUG> environment variable to get some
+advanced diagnostics information printed to C<STDERR>.
+
+  MOJO_PUBSUB_DEBUG=1
+
 =head1 SEE ALSO
 
 L<Mojo::mysql>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
@@ -259,14 +274,12 @@ begin
   repeat
     fetch subs_c into t_pid;
 
-    if not done
-    then
-      if exists (select 1
+    if not done and exists (
+      select 1
         from INFORMATION_SCHEMA.PROCESSLIST
         where ID = t_pid and STATE = 'User sleep')
-      then 
-        kill query t_pid;
-      end if;
+    then
+      kill query t_pid;
     end if;
 
   until done end repeat;
