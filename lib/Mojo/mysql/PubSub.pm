@@ -233,11 +233,12 @@ L<Mojo::mysql>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
 __DATA__
 
 @@ pubsub
--- 1 up
+-- 1 down
 drop table if exists mojo_pubsub_subscribe;
 drop table if exists mojo_pubsub_notify;
 drop trigger if exists mojo_pubsub_notify_kill;
 
+-- 1 up
 create table mojo_pubsub_subscribe(
   id integer auto_increment primary key,
   pid integer not null,
@@ -250,7 +251,7 @@ create table mojo_pubsub_subscribe(
 create table mojo_pubsub_notify(
   id integer auto_increment primary key,
   channel varchar(64) not null,
-  payload varchar(256),
+  payload text,
   ts timestamp not null default current_timestamp,
   key channel_idx(channel),
   key ts_idx(ts)
