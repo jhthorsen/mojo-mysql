@@ -163,7 +163,7 @@ all connections waiting for notification.
 C<PROCESS> privilege is needed for MySQL user to see other users processes.
 C<SUPER> privilege is needed to be able to execute C<KILL QUERY> for statements
 started by other users. 
-C<SUPERT> privilege may be needed to be able to define trigger.
+C<SUPER> privilege may be needed to be able to define trigger.
 
 If your applications use this module using different MySQL users it is important
 the migration script to be executed by user having C<SUPER> privilege on the database.
