@@ -74,56 +74,6 @@ is_deeply \@test, [], 'no messages';
   )->wait;
 };
 
-# Reconnect while not listening
-$mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
-@dbhs = @test = ();
-$mysql->pubsub->on(reconnect => sub { push @dbhs, pop->dbh });
-$mysql->pubsub->notify(pstest => 'fail');
-ok $dbhs[0], 'database handle';
-is_deeply \@test, [], 'no messages';
-{
-  local $dbhs[0]{Warn} = 0;
-  $mysql->pubsub->on(reconnect => sub { Mojo::IOLoop->stop });
-  $mysql->db->query('kill ?', $dbhs[0]{mysql_thread_id});
-  Mojo::IOLoop->start;
-  ok $dbhs[1], 'database handle';
-  isnt $dbhs[0], $dbhs[1], 'different database handles';
-  $mysql->pubsub->listen(pstest => sub { push @test, pop });
-  $mysql->pubsub->notify(pstest => 'works too');
-  Mojo::IOLoop->delay(
-    sub { Mojo::IOLoop->timer(0.05, shift->begin); },
-    sub { is_deeply \@test, ['works too'], 'right messages'; }
-  )->wait;
-};
-
-# Fork-safety
-$mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
-@dbhs = @test = ();
-$mysql->pubsub->on(reconnect => sub { push @dbhs, pop->dbh });
-$mysql->pubsub->listen(pstest => sub { push @test, pop });
-ok $dbhs[0], 'database handle';
-#ok $dbhs[0]->ping, 'connected';
-$mysql->pubsub->notify(pstest => 'first');
-  Mojo::IOLoop->delay(
-    sub { Mojo::IOLoop->timer(0.05, shift->begin); },
-    sub { is_deeply \@test, ['first'], 'right messages'; }
-  )->wait;
-
-done_testing();
-=cut
-{
-  local $$ = -23;
-  $mysql->pubsub->notify(pstest => 'second');
-  ok $dbhs[1], 'database handle';
-  #ok $dbhs[1]->ping, 'connected';
-  isnt $dbhs[0], $dbhs[1], 'different database handles';
-  #ok !$dbhs[0]->ping, 'not connected';
-  is_deeply \@test, ['first'], 'right messages';
-  $mysql->pubsub->listen(pstest => sub { push @test, pop });
-  $mysql->pubsub->notify(pstest => 'third');
-  #ok $dbhs[1]->ping, 'connected';
-  ok !$dbhs[2], 'no database handle';
-  is_deeply \@test, ['first', 'third'], 'right messages';
-};
+$mysql->migrations->name('pubsub')->from_data('Mojo::mysql::PubSub')->migrate(0);
 
 done_testing();
