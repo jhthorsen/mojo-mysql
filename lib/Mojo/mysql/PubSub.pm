@@ -70,9 +70,9 @@ sub _db {
     return $self->{db};
   }
 
-  $self->mysql->migrations->from_data(__PACKAGE__, 'pubsub')->migrate;
+  $self->mysql->migrations->name('pubsub')->from_data->migrate;
 
-  my $db = $self->{db} = $self->mysql->db;
+  $self->{db} = $self->mysql->db;
   warn '_DB pid:' . $self->{db}->pid, "\n" if DEBUG;
 
   if (defined $self->{last_id}) {
@@ -81,23 +81,23 @@ sub _db {
   }
   else {
     # get id of the last message
-    my $array = $db->query(
+    my $array = $self->{db}->query(
       'select id from mojo_pubsub_notify order by id desc limit 1')->array;
     $self->{last_id} = defined $array ? $array->[0] : 0;
   }
 
   # cleanup old subscriptions and notifications
-  $db->query(
+  $self->{db}->query(
     'delete from mojo_pubsub_notify where ts < date_add(current_timestamp, interval -10 minute)');
-  $db->query(
+  $self->{db}->query(
     'delete from mojo_pubsub_subscribe where ts < date_add(current_timestamp, interval -1 hour)');
 
   # re-subscribe
-  $db->query(
-    'replace mojo_pubsub_subscribe(pid, channel) values (?, ?)', $db->pid, $_)
+  $self->{db}->query(
+    'replace mojo_pubsub_subscribe(pid, channel) values (?, ?)', $self->{db}->pid, $_)
     for keys %{$self->{chans}};
 
-  weaken $db->{mysql};
+  weaken $self->{db}->{mysql};
   weaken $self;
 
   my $cb;
@@ -115,12 +115,12 @@ sub _db {
       $db->query('select sleep(600)', $cb);
     }
   };
-  $db->query('select sleep(600)', $cb);
+  $self->{db}->query('select sleep(600)', $cb);
 
   warn '_DB reconnect pid:' . $self->{db}->pid, "\n" if DEBUG;
-  $self->emit(reconnect => $db);
+  $self->emit(reconnect => $self->{db});
 
-  return $db;
+  return $self->{db};
 }
 
 1;
@@ -236,9 +236,11 @@ __DATA__
 -- 1 down
 drop table if exists mojo_pubsub_subscribe;
 drop table if exists mojo_pubsub_notify;
-drop trigger if exists mojo_pubsub_notify_kill;
 
 -- 1 up
+drop table if exists mojo_pubsub_subscribe;
+drop table if exists mojo_pubsub_notify;
+
 create table mojo_pubsub_subscribe(
   id integer auto_increment primary key,
   pid integer not null,
