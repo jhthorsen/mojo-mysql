@@ -7,6 +7,12 @@ use constant DEBUG => $ENV{MOJO_PUBSUB_DEBUG} || 0;
 
 has 'mysql';
 
+sub DESTROY {
+  my $self = shift;
+  return unless $self->{db} and $self->mysql;
+  $self->mysql->db->query('delete from mojo_pubsub_subscribe where pid = ?', $self->_subscriber_pid);
+}
+
 sub listen {
   my ($self, $channel, $cb) = @_;
   my $pid = $self->_subscriber_pid;
