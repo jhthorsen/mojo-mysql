@@ -1,11 +1,15 @@
 Revision history for Mojo::mysql
 
+0.12     Sat May  2 17:55:13 2015
+       * Added module Mojo::mysql::PubSub.
+       * Added pubsub attribute to Mojo::mysql.
+
 0.11     Mon Apr  6 03:38:31 2015
        * Fixed bug in Mojo::mysql::Migrations where migrations would sometimes be
          executed in the wrong order.
 
 0.10     Sun Apr  5 23:32:03 2015
-       * Fixed bug in Mojo::Pg::Migrations where the latest version could not always
+       * Fixed bug in Mojo::mysql::Migrations where the latest version could not always
          be determined correctly. (Hernan Lopes)
        * Updated blog example application from Mojo::Pg
 

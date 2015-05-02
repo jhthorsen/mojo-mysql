@@ -49,6 +49,18 @@ SYNOPSIS
         }
       )->wait;
 
+      # Send and receive notifications non-blocking
+      $mysql->pubsub->listen(foo => sub {
+        my ($pubsub, $payload) = @_;
+        say "foo: $payload";
+        $pubsub->notify(bar => $payload);
+      });
+      $mysql->pubsub->listen(bar => sub {
+        my ($pubsub, $payload) = @_;
+        say "bar: $payload";
+      });
+      $mysql->pubsub->notify(foo => 'MySQL rocks!');
+
       Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 
 DESCRIPTION
@@ -174,6 +186,23 @@ ATTRIBUTES
 
     Database password, defaults to an empty string.
 
+  pubsub
+      my $pubsub = $mysql->pubsub;
+      $mysql     = $mysql->pubsub(Mojo::mysql::PubSub->new);
+
+    Mojo::mysql::PubSub object you can use to send and receive notifications
+    very efficiently, by sharing a single database connection with many
+    consumers.
+
+      # Subscribe to a channel
+      $mysql->pubsub->listen(news => sub {
+        my ($pubsub, $payload) = @_;
+        say "Received: $payload";
+      });
+
+      # Notify a channel
+      $mysql->pubsub->notify(news => 'MySQL rocks!');
+
   username
       my $username = $mysql->username;
       $mysql       = $mysql->username('batman');
@@ -227,6 +256,8 @@ REFERENCE
     * Mojo::mysql::Database
 
     * Mojo::mysql::Migrations
+
+    * Mojo::mysql::PubSub
 
     * Mojo::mysql::Results
 
