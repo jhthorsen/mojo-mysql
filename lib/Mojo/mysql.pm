@@ -5,6 +5,7 @@ use Carp 'croak';
 use DBI;
 use Mojo::mysql::Database;
 use Mojo::mysql::Migrations;
+use Mojo::mysql::PubSub;
 use Mojo::URL;
 use Scalar::Util 'weaken';
 
@@ -25,6 +26,12 @@ has options => sub {
   }
 };
 has [qw(password username)] => '';
+has pubsub => sub {
+  my $pubsub = Mojo::mysql::PubSub->new(mysql => shift);
+  weaken $pubsub->{mysql};
+  return $pubsub;
+};
+
 
 our $VERSION = '0.11';
 
@@ -150,6 +157,18 @@ Mojo::mysql - Mojolicious and Async MySQL
       $results->hashes->map(sub { $_->{name} })->join("\n")->say;
     }
   )->wait;
+
+  # Send and receive notifications non-blocking
+  $mysql->pubsub->listen(foo => sub {
+    my ($pubsub, $payload) = @_;
+    say "foo: $payload";
+    $pubsub->notify(bar => $payload);
+  });
+  $mysql->pubsub->listen(bar => sub {
+    my ($pubsub, $payload) = @_;
+    say "bar: $payload";
+  });
+  $mysql->pubsub->notify(foo => 'MySQL rocks!');
 
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 
@@ -279,6 +298,23 @@ C<RaiseError> is enabled for blocking and disabled in event loop for non-blockin
 
 Database password, defaults to an empty string.
 
+=head2 pubsub
+
+  my $pubsub = $mysql->pubsub;
+  $mysql     = $mysql->pubsub(Mojo::mysql::PubSub->new);
+
+L<Mojo::mysql::PubSub> object you can use to send and receive notifications very
+efficiently, by sharing a single database connection with many consumers.
+
+  # Subscribe to a channel
+  $mysql->pubsub->listen(news => sub {
+    my ($pubsub, $payload) = @_;
+    say "Received: $payload";
+  });
+
+  # Notify a channel
+  $mysql->pubsub->notify(news => 'MySQL rocks!');
+
 =head2 username
 
   my $username = $mysql->username;
@@ -340,6 +376,8 @@ This is the class hierarchy of the L<Mojo::mysql> distribution.
 =item * L<Mojo::mysql::Database>
 
 =item * L<Mojo::mysql::Migrations>
+
+=item * L<Mojo::mysql::PubSub>
 
 =item * L<Mojo::mysql::Results>
 
