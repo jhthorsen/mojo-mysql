@@ -14,6 +14,7 @@ sub DESTROY {
   my $self = shift;
   return unless my $dbh   = $self->dbh;
   return unless my $mysql = $self->mysql;
+  return unless $self->{handle};
   $mysql->_enqueue($dbh, $self->{handle});
 }
 
