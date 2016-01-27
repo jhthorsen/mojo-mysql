@@ -11,8 +11,9 @@ has [qw(dbh mysql)];
 
 sub DESTROY {
   my $self = shift;
-  return unless my $dbh   = $self->dbh;
-  return unless my $mysql = $self->mysql;
+  my $waiting = $self->{waiting} || [];
+  $_->{cb}($self, 'Premature connection close', undef) for @$waiting;
+  return unless (my $mysql = $self->mysql) && (my $dbh = $self->dbh);
   $mysql->_enqueue($dbh, $self->{handle});
 }
 

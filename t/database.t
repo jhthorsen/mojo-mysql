@@ -119,4 +119,17 @@ Mojo::IOLoop->start;
 like $fail, qr/does_not_exist/, 'right error';
 is $result->errstr, $fail, 'same error';
 
+# Clean up non-blocking queries
+($fail, $result) = ();
+$db = $mysql->db;
+$db->query(
+  'select 1' => sub {
+    my ($db, $err, $results) = @_;
+    ($fail, $result) = ($err, $results);
+  }
+);
+$db->disconnect;
+undef $db;
+is $fail, 'Premature connection close', 'right error';
+
 done_testing();
