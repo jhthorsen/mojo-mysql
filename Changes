@@ -1,5 +1,8 @@
 Revision history for perl distribution Mojo-mysql
 
+0.13 Not Released
+ - Removed deprecrated do() method
+
 0.12 2015-05-02T17:55:13Z
  - Added module Mojo::mysql::PubSub.
  - Added pubsub attribute to Mojo::mysql.

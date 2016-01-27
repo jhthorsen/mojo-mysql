@@ -5,7 +5,6 @@ use DBD::mysql;
 use Mojo::IOLoop;
 use Mojo::mysql::Results;
 use Mojo::mysql::Transaction;
-use Mojo::Util 'deprecated';
 use Scalar::Util 'weaken';
 
 has [qw(dbh mysql)];
@@ -33,15 +32,6 @@ sub disconnect {
   $self->dbh->disconnect;
 }
 
-# DEPRECATED!
-sub do {
-  deprecated 'Mojo::mysql::Database::do is DEPRECATED'
-    . ' in favor of Mojo::mysql::Database::query';
-  my $self = shift;
-  $self->dbh->do(@_);
-  return $self;
-}
-
 sub pid { shift->dbh->{mysql_thread_id} }
 
 sub ping { shift->dbh->ping }
@@ -53,7 +43,7 @@ sub query {
   # Blocking
   unless ($cb) {
     my $sth = $self->dbh->prepare($query);
-    my $rv = $sth->execute(@_);
+    my $rv  = $sth->execute(@_);
     my $res = Mojo::mysql::Results->new(sth => $sth);
     $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
     return $res;
