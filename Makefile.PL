@@ -2,7 +2,7 @@
 use ExtUtils::MakeMaker;
 WriteMakefile(
   NAME          => 'Mojo::mysql',
-  AUTHOR        => 'Svetoslav Naydenov <harryl@cpan.org>',
+  AUTHOR        => 'Jan Henning Thorsen <jhthorsen@cpan.org>',
   LICENSE       => 'artistic_2',
   ABSTRACT_FROM => 'lib/Mojo/mysql.pm',
   VERSION_FROM  => 'lib/Mojo/mysql.pm',

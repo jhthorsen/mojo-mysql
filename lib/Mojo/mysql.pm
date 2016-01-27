@@ -17,13 +17,7 @@ has migrations      => sub {
   return $migrations;
 };
 has options => sub {
-  {
-    mysql_enable_utf8 => 1,
-    AutoCommit => 1,
-    AutoInactiveDestroy => 1,
-    PrintError => 0,
-    RaiseError => 1
-  }
+  {mysql_enable_utf8 => 1, AutoCommit => 1, AutoInactiveDestroy => 1, PrintError => 0, RaiseError => 1};
 };
 has [qw(password username)] => '';
 has pubsub => sub {
@@ -33,7 +27,7 @@ has pubsub => sub {
 };
 
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 sub db {
   my $self = shift;
@@ -87,6 +81,7 @@ sub _dequeue {
   # you, silently, but only if certain env vars are set
   # hint: force-set mysql_auto_reconnect or whatever it's called to 0
   $dbh->{mysql_auto_reconnect} = 0;
+
   # Maintain Commits with Mojo::mysql::Transaction
   $dbh->{AutoCommit} = 1;
 
