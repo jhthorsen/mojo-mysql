@@ -92,6 +92,28 @@ is $mysql2->migrations->migrate(0)->active, 0, 'active version is 0';
 eval { $mysql->migrations->migrate(23) };
 like $@, qr/Version 23 has no migration/, 'right error';
 
+# Version mismatch
+my $newer = <<EOF;
+-- 2 up
+create table migration_test_five (test int);
+-- 2 down
+drop table migration_test_five;
+EOF
+
+$mysql->migrations->name('migrations_test3')->from_string($newer);
+is $mysql->migrations->migrate->active, 2, 'active version is 2';
+
+$mysql->migrations->from_string(<<EOF);
+-- 1 up
+create table migration_test_five (test int);
+EOF
+
+eval { $mysql->migrations->migrate };
+like $@, qr/Active version 2 is greater than the latest version 1/, 'right error';
+eval { $mysql->migrations->migrate(0) };
+like $@, qr/Active version 2 is greater than the latest version 1/, 'right error';
+is $mysql->migrations->from_string($newer)->migrate(0)->active, 0, 'active version is 0';
+
 done_testing();
 
 __DATA__

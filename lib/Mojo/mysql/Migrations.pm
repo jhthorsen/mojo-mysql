@@ -15,8 +15,7 @@ sub active { $_[0]->_active($_[0]->mysql->db) }
 
 sub from_data {
   my ($self, $class, $name) = @_;
-  return $self->from_string(
-    data_section($class //= caller, $name // $self->name));
+  return $self->from_string(data_section($class //= caller, $name // $self->name));
 }
 
 sub from_file { shift->from_string(decode 'UTF-8', slurp pop) }
@@ -39,16 +38,22 @@ sub from_string {
     elsif ($sql =~ /^delimiter\s+(\S+)\s*(?:\n|\z)/ip) {
       ($new, $token, $delimiter) = (1, ${^MATCH}, $1);
     }
-    elsif ($sql =~ /^(\s+)/s                                # whitespace
-      or $sql =~ /^(\w+)/) {                                # general name
+    elsif (
+      $sql =~ /^(\s+)/s      # whitespace
+      or $sql =~ /^(\w+)/    # general name
+      )
+    {
       $token = $1;
     }
-    elsif ($sql =~ /^--.*(?:\n|\z)/p                        # double-dash comment
-      or $sql =~ /^\#.*(?:\n|\z)/p                          # hash comment
-      or $sql =~ /^\/\*(?:[^\*]|\*[^\/])*(?:\*\/|\*\z|\z)/p # C-style comment
-      or $sql =~ /^'(?:[^'\\]*|\\(?:.|\n)|'')*(?:'|\z)/p    # single-quoted literal text
-      or $sql =~ /^"(?:[^"\\]*|\\(?:.|\n)|"")*(?:"|\z)/p    # double-quoted literal text
-      or $sql =~ /^`(?:[^`]*|``)*(?:`|\z)/p) {              # schema-quoted literal text
+    elsif (
+      $sql =~ /^--.*(?:\n|\z)/p                                # double-dash comment
+      or $sql =~ /^\#.*(?:\n|\z)/p                             # hash comment
+      or $sql =~ /^\/\*(?:[^\*]|\*[^\/])*(?:\*\/|\*\z|\z)/p    # C-style comment
+      or $sql =~ /^'(?:[^'\\]*|\\(?:.|\n)|'')*(?:'|\z)/p       # single-quoted literal text
+      or $sql =~ /^"(?:[^"\\]*|\\(?:.|\n)|"")*(?:"|\z)/p       # double-quoted literal text
+      or $sql =~ /^`(?:[^`]*|``)*(?:`|\z)/p
+      )
+    {                                                          # schema-quoted literal text
       $token = ${^MATCH};
     }
     else {
@@ -60,32 +65,32 @@ sub from_string {
 
     if ($token =~ /^--\s+(\d+)\s*(up|down)/i) {
       my ($new_version, $new_way) = ($1, lc $2);
-      push @{$migrations->{$way}{$version} //= []}, $last
-        if $version and $last !~ /^\s*$/s;
+      push @{$migrations->{$way}{$version} //= []}, $last if $version and $last !~ /^\s*$/s;
       ($version, $way) = ($new_version, $new_way);
       ($new, $last, $delimiter) = (0, '', ';');
     }
 
     if ($new) {
-      push @{$migrations->{$way}{$version} //= []}, $last
-        if $version and $last !~ /^\s*$/s;
+      push @{$migrations->{$way}{$version} //= []}, $last if $version and $last !~ /^\s*$/s;
       ($new, $last) = (0, '');
     }
     else {
       $last .= $token;
     }
   }
-  push @{$migrations->{$way}{$version} //= []}, $last
-    if $version and $last !~ /^\s*$/s;
+  push @{$migrations->{$way}{$version} //= []}, $last if $version and $last !~ /^\s*$/s;
 
   return $self;
 }
 
-sub latest { (sort { $a <=> $b } keys %{shift->{migrations}{up}})[-1] || 0 }
+sub latest {
+  (sort { $a <=> $b } keys %{shift->{migrations}{up}})[-1] || 0;
+}
 
 sub migrate {
   my ($self, $target) = @_;
-  $target //= $self->latest;
+  my $latest = $self->latest;
+  $target //= $latest;
 
   # Unknown version
   my ($up, $down) = @{$self->{migrations}}{qw(up down)};
@@ -99,6 +104,9 @@ sub migrate {
   my $tx = $db->begin;
   return $self if (my $active = $self->_active($db, 1)) == $target;
 
+  # Newer version
+  croak "Active version $active is greater than the latest version $latest" if $active > $latest;
+
   # Up
   my @sql;
   if ($active < $target) {
@@ -106,6 +114,7 @@ sub migrate {
       push @sql, @{$up->{$_}} if $_ <= $target && $_ > $active;
     }
   }
+
   # Down
   else {
     foreach (reverse sort { $a <=> $b } keys %$down) {
@@ -113,7 +122,7 @@ sub migrate {
     }
   }
 
-  warn "-- Migrate ($active -> $target)\n" , join("\n", @sql), "\n" if DEBUG;
+  warn "-- Migrate ($active -> $target)\n", join("\n", @sql), "\n" if DEBUG;
   eval {
     $db->query($_) for @sql;
     $db->query("update mojo_migrations set version = ? where name = ?", $target, $self->name);
@@ -129,9 +138,9 @@ sub migrate {
 sub _active {
   my ($self, $db, $create) = @_;
 
-  my $name = $self->name;
+  my $name    = $self->name;
   my $results = eval { $db->query('select version from mojo_migrations where name = ?', $name) };
-  my $error = $@;
+  my $error   = $@;
   return 0 if !$create and !$results;
   if ($results and my $next = $results->array) { return $next->[0] }
 

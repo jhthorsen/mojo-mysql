@@ -2,6 +2,9 @@ Revision history for perl distribution Mojo-mysql
 
 0.13 Not Released
  - Removed deprecrated do() method
+ - Improved Mojo::mysql::Migrations to detect if the currently active version
+   is greater than the latest version.
+   https://github.com/kraih/mojo-pg/commit/92bc312e725042b748950b9c61319d0256d0004a
 
 0.12 2015-05-02T17:55:13Z
  - Added module Mojo::mysql::PubSub.
