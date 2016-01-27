@@ -12,6 +12,8 @@ sub arrays { Mojo::Collection->new(@{shift->sth->fetchall_arrayref}) }
 
 sub columns { shift->sth->{NAME} }
 
+sub finish { shift->sth->finish }
+
 sub hash { shift->sth->fetchrow_hashref }
 
 sub hashes { Mojo::Collection->new(@{shift->sth->fetchall_arrayref({})}) }
@@ -72,7 +74,8 @@ the following new ones.
 
   my $array = $results->array;
 
-Fetch one row and return it as an array reference.
+Fetch next row from L</"sth"> and return it as an array reference. Note that
+L</"finish"> needs to be called if you are not fetching all the possible rows.
 
   # Process one row at a time
   while (my $next = $results->array) {
@@ -95,11 +98,19 @@ array references.
 
 Return column names as an array reference.
 
+=head2 finish
+
+  $results->finish;
+
+Indicate that you are finished with L</"sth"> and will not be fetching all the
+remaining rows.
+
 =head2 hash
 
   my $hash = $results->hash;
 
-Fetch one row and return it as a hash reference.
+Fetch next row from L</"sth"> and return it as a hash reference. Note that
+L</"finish"> needs to be called if you are not fetching all the possible rows.
 
   # Process one row at a time
   while (my $next = $results->hash) {

@@ -2,6 +2,7 @@ Revision history for perl distribution Mojo-mysql
 
 0.13 Not Released
  - Removed deprecrated do() method
+ - Add finish() to Mojo::mysql::Results
  - Fix bug where non-blocking queries could get lost after the database
    connection got closed unexpectedly
    https://github.com/kraih/mojo-pg/commit/2165b8e1131f2a5044ec2aae1c0ba8a00232b7c8
