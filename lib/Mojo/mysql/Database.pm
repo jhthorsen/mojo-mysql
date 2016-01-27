@@ -28,6 +28,7 @@ sub begin {
 
 sub disconnect {
   my $self = shift;
+  $_->finish for @{$self->{async_sth} || []};
   $self->_unwatch;
   $self->dbh->disconnect;
 }
@@ -75,7 +76,6 @@ sub _unwatch {
   my $self = shift;
   return unless delete $self->{watching};
   Mojo::IOLoop->singleton->reactor->remove($self->{handle});
-
   $self->{async_sth} = [];
 }
 
