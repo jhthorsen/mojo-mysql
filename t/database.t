@@ -1,13 +1,10 @@
-use Mojo::Base -strict;
-
 BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
-
+use Mojo::Base -strict;
 use Test::More;
-
-plan skip_all => 'set TEST_ONLINE to enable this test' unless $ENV{TEST_ONLINE};
-
 use Mojo::IOLoop;
 use Mojo::mysql;
+
+plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 ok $mysql->db->ping, 'connected';
@@ -62,8 +59,8 @@ Mojo::IOLoop->delay(
   },
   sub {
     my ($delay, $err, $res) = @_;
-    $fail = $err;
-    $result = [ $res->hashes->first ];
+    $fail   = $err;
+    $result = [$res->hashes->first];
     $db->query('select 2 as two' => $delay->begin);
     $db->query('select 2 as two' => $delay->begin);
   },
@@ -86,7 +83,8 @@ is_deeply $result, [{one => 1}, {one => 1}, {two => 2}, {two => 2}, {three => 3}
 # Connection cache
 is $mysql->max_connections, 5, 'right default';
 my @pids = sort map { $_->pid } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db;
-is_deeply \@pids, [sort map { $_->pid } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db], 'same database pids';
+is_deeply \@pids, [sort map { $_->pid } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db],
+  'same database pids';
 my $pid = $mysql->max_connections(1)->db->pid;
 is $mysql->db->pid, $pid, 'same database pid';
 isnt $mysql->db->pid, $mysql->db->pid, 'different database pids';

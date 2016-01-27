@@ -1,14 +1,10 @@
-use Mojo::Base -strict;
-
 BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
-
-use Test::More;
-
-plan skip_all => 'set TEST_ONLINE to enable this test'
-  unless $ENV{TEST_ONLINE};
-
+use Mojo::Base -strict;
 use Mojo::IOLoop;
 use Mojo::mysql;
+use Test::More;
+
+plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 my (@pids, @test, $first, $second);
@@ -22,8 +18,7 @@ Mojo::IOLoop->delay(
   sub {
     Mojo::IOLoop->timer(0.05, shift->begin);
     is_deeply \@test, ['first'], 'right messages 1';
-    $mysql->db->query('insert into mojo_pubsub_notify(channel, payload) values (?, ?)',
-      'test', 'second');
+    $mysql->db->query('insert into mojo_pubsub_notify(channel, payload) values (?, ?)', 'test', 'second');
   },
   sub {
     Mojo::IOLoop->timer(0.05, shift->begin);
@@ -35,6 +30,7 @@ Mojo::IOLoop->delay(
     Mojo::IOLoop->timer(0.05, shift->begin);
     is_deeply \@test, ['first', 'second', 'third', 'fourth', 'fifth'], 'right messages 1-5';
     @test = ();
+
     # Second subscribe
     $second = $mysql->pubsub->listen(test => sub { push @test, pop });
     $mysql->pubsub->notify('test')->notify(test => 'first');

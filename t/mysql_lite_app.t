@@ -1,15 +1,11 @@
-use Mojo::Base -strict;
-
 BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
-
-use Test::More;
-
-plan skip_all => 'set TEST_ONLINE to enable this test'
-  unless $ENV{TEST_ONLINE};
-
+use Mojo::Base -strict;
 use Mojo::mysql;
 use Mojolicious::Lite;
 use Test::Mojo;
+use Test::More;
+
+plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 
 helper mysql => sub { state $mysql = Mojo::mysql->new($ENV{TEST_ONLINE}) };
 
@@ -41,14 +37,11 @@ $t->get_ok('/app_test')->status_is(404);
 # Blocking select (with connection reuse)
 $t->get_ok('/blocking')->status_is(200)->content_is('I ♥ Mojolicious!');
 my $pid = $t->tx->res->headers->header('X-PID');
-$t->get_ok('/blocking')->status_is(200)->header_is('X-PID', $pid)
-  ->content_is('I ♥ Mojolicious!');
+$t->get_ok('/blocking')->status_is(200)->header_is('X-PID', $pid)->content_is('I ♥ Mojolicious!');
 
 # Non-blocking select (with connection reuse)
-$t->get_ok('/non-blocking')->status_is(200)->header_is('X-PID', $pid)
-  ->content_is('I ♥ Mojolicious!');
-$t->get_ok('/non-blocking')->status_is(200)->header_is('X-PID', $pid)
-  ->content_is('I ♥ Mojolicious!');
+$t->get_ok('/non-blocking')->status_is(200)->header_is('X-PID', $pid)->content_is('I ♥ Mojolicious!');
+$t->get_ok('/non-blocking')->status_is(200)->header_is('X-PID', $pid)->content_is('I ♥ Mojolicious!');
 $t->app->mysql->migrations->migrate(0);
 
 done_testing();

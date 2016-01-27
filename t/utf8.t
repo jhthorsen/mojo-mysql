@@ -1,12 +1,9 @@
-use Mojo::Base -strict;
-
 BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
-
+use Mojo::Base -strict;
+use Mojo::mysql;
 use Test::More;
 
-plan skip_all => 'set TEST_ONLINE to enable this test' unless $ENV{TEST_ONLINE};
-
-use Mojo::mysql;
+plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 my $db    = $mysql->db;
