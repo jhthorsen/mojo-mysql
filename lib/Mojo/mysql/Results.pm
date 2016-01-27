@@ -35,6 +35,9 @@ sub err { shift->sth->err }
 sub errstr { shift->sth->errstr }
 
 sub state { shift->sth->state }
+
+sub DESTROY { $_[0]{sth}->finish if $_[0]{sth} }
+
 1;
 
 =encoding utf8

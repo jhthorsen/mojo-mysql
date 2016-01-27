@@ -43,7 +43,7 @@ sub query {
 
   # Blocking
   unless ($cb) {
-    my $sth = $self->dbh->prepare($query);
+    my $sth = $self->dbh->prepare_cached($query);
     my $rv  = $sth->execute(@_);
     my $res = Mojo::mysql::Results->new(sth => $sth);
     $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
@@ -65,7 +65,7 @@ sub _next {
   return unless my $next = $self->{waiting}[0];
   return if $next->{sth};
 
-  my $sth = $next->{sth} = $self->dbh->prepare($next->{query}, {async => 1});
+  my $sth = $next->{sth} = $self->dbh->prepare_cached($next->{query}, {async => 1});
   $sth->execute(@{$next->{args}});
 
   # keep reference to async handles to prevent being finished on result destroy while whatching fd
