@@ -16,6 +16,7 @@ sub commit {
 sub new {
   my $self = shift->SUPER::new(@_, rollback => 1);
   $self->{dbh} = $self->db->dbh;
+  $self->{dbh}->begin_work;
   return $self;
 }
 

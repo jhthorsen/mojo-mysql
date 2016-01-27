@@ -21,7 +21,6 @@ sub backlog { scalar @{shift->{waiting} || []} }
 
 sub begin {
   my $self = shift;
-  $self->dbh->begin_work;
   my $tx = Mojo::mysql::Transaction->new(db => $self);
   weaken $tx->{db};
   return $tx;
