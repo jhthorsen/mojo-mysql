@@ -77,7 +77,7 @@ DESCRIPTION
       use Mojo::mysql;
 
       helper mysql =>
-        sub { state $pg = Mojo::mysql->new('mysql://sri:s3cret@localhost/db') };
+        sub { state $mysql = Mojo::mysql->new('mysql://sri:s3cret@localhost/db') };
 
       get '/' => sub {
         my $c  = shift;
@@ -127,6 +127,15 @@ EVENTS
 
 ATTRIBUTES
     Mojo::mysql implements the following attributes.
+
+  auto_migrate
+      my $bool = $mysql->auto_migrate;
+      $mysql   = $mysql->auto_migrate($bool);
+
+    Automatically migrate to the latest database schema with "migrations",
+    as soon as the first database connection has been established.
+
+    Defaults to false.
 
   dsn
       my $dsn = $mysql->dsn;

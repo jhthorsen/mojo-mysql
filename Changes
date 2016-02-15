@@ -1,6 +1,6 @@
 Revision history for perl distribution Mojo-mysql
 
-0.14 Not Released
+0.14 2016-02-15T14:06:24+0100
  - Add Mojo::mysql::auto_migrate
 
 0.13 2016-01-27T21:05:37+0100
