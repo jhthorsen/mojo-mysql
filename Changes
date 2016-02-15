@@ -1,5 +1,8 @@
 Revision history for perl distribution Mojo-mysql
 
+0.14 Not Released
+ - Add Mojo::mysql::auto_migrate
+
 0.13 2016-01-27T21:05:37+0100
  - Remove deprecrated do() method
  - Add finish() to Mojo::mysql::Results
