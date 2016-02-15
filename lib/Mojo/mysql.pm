@@ -9,6 +9,7 @@ use Mojo::mysql::PubSub;
 use Mojo::URL;
 use Scalar::Util 'weaken';
 
+has auto_migrate    => 0;
 has dsn             => 'dbi:mysql:dbname=test';
 has max_connections => 5;
 has migrations      => sub {
@@ -84,6 +85,9 @@ sub _dequeue {
 
   # Maintain Commits with Mojo::mysql::Transaction
   $dbh->{AutoCommit} = 1;
+
+  ++$self->{migrated} and $self->migrations->migrate
+    if !$self->{migrated} and $self->auto_migrate;
 
   $self->emit(connection => $dbh);
   [$dbh];
@@ -181,7 +185,7 @@ gracefully by holding on to them only for short amounts of time.
   use Mojo::mysql;
 
   helper mysql =>
-    sub { state $pg = Mojo::mysql->new('mysql://sri:s3cret@localhost/db') };
+    sub { state $mysql = Mojo::mysql->new('mysql://sri:s3cret@localhost/db') };
 
   get '/' => sub {
     my $c  = shift;
@@ -234,6 +238,16 @@ Emitted when a new database connection has been established.
 =head1 ATTRIBUTES
 
 L<Mojo::mysql> implements the following attributes.
+
+=head2 auto_migrate
+
+  my $bool = $mysql->auto_migrate;
+  $mysql   = $mysql->auto_migrate($bool);
+
+Automatically migrate to the latest database schema with L</"migrations">, as
+soon as the first database connection has been established.
+
+Defaults to false.
 
 =head2 dsn
 
