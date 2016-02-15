@@ -1,16 +1,17 @@
 language: perl
+sudo: false
 perl:
   - "5.20"
   - "5.16"
   - "5.10"
 addons:
   mysql: "5.6"
+before_script:
+  - mysql -e 'create database myapp_test;'
 env:
   - "HARNESS_OPTIONS=j1 TEST_POD=1 TEST_ONLINE=mysql://root@/myapp_test"
 install:
   - "cpanm -n Test::Pod Test::Pod::Coverage"
   - "cpanm -n --installdeps ."
-before_script:
-  - mysql -e 'create database myapp_test;'
 notifications:
   email: false
