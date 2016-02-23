@@ -86,9 +86,7 @@ sub _dequeue {
   # Maintain Commits with Mojo::mysql::Transaction
   $dbh->{AutoCommit} = 1;
 
-  ++$self->{migrated} and $self->migrations->migrate
-    if !$self->{migrated} and $self->auto_migrate;
-
+  $self->migrations->migrate if $self->auto_migrate and !$self->{migrated}++;
   $self->emit(connection => $dbh);
   [$dbh];
 }
