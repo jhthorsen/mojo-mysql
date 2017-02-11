@@ -1,5 +1,10 @@
 Revision history for perl distribution Mojo-mysql
 
+1.00 Not Released
+ - Add support for generating queries with SQL::Abstract
+ - Add abstract attribute to Mojo::Pg
+ - Add delete, insert, select and update methods to Mojo::Pg::Database
+
 0.14 2016-02-15T14:06:24+0100
  - Add Mojo::mysql::auto_migrate
 

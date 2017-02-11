@@ -8,7 +8,9 @@ use Mojo::mysql::Migrations;
 use Mojo::mysql::PubSub;
 use Mojo::URL;
 use Scalar::Util 'weaken';
+use SQL::Abstract;
 
+has abstract => sub { SQL::Abstract->new };
 has auto_migrate    => 0;
 has dsn             => 'dbi:mysql:dbname=test';
 has max_connections => 5;
@@ -133,6 +135,12 @@ Mojo::mysql - Mojolicious and Async MySQL
   say $db->query('insert into names (name) values (?)', 'Daniel')
     ->last_insert_id;
 
+  # Use SQL::Abstract to generate queries for you
+  $db->insert('names', {name => 'Isabel'});
+  say $db->select('names', undef, {name => 'Isabel'})->hash->{id};
+  $db->update('names', {name => 'Bel'}, {name => 'Isabel'});
+  $db->delete('names', {name => 'Bel'});
+
   # Select one row at a time
   my $results = $db->query('select * from names');
   while (my $next = $results->hash) {
@@ -236,6 +244,16 @@ Emitted when a new database connection has been established.
 =head1 ATTRIBUTES
 
 L<Mojo::mysql> implements the following attributes.
+
+=head2 abstract
+
+  my $abstract = $pg->abstract;
+  $pg          = $pg->abstract(SQL::Abstract->new);
+
+L<SQL::Abstract> object used to generate CRUD queries for L<Mojo::Pg::Database>.
+
+  # Generate statements and bind values
+  my($stmt, @bind) = $pg->abstract->select('names');
 
 =head2 auto_migrate
 
@@ -371,6 +389,13 @@ Parse configuration from connection string.
 
 Construct a new L<Mojo::mysql> object and parse connection string with
 L</"from_string"> if necessary.
+
+=head1 DEBUGGING
+
+You can set the C<DBI_TRACE> environment variable to get some advanced
+diagnostics information printed to C<STDERR> by L<DBI>.
+
+  DBI_TRACE=1
 
 =head1 REFERENCE
 
