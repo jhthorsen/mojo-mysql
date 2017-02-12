@@ -48,7 +48,7 @@ Mojo::IOLoop->delay(
   }
 )->wait;
 ok !$fail, 'no error' or diag "err=$fail";
-is_deeply $result, [{one => 1}, {two => 2}, {two => 2}], 'right structure';
+is_deeply $result, [{one => 1}, {two => 2}, {two => 2}], 'concurrent non-blocking selects';
 
 # Sequential and Concurrent non-blocking selects
 ($fail, $result) = ();
@@ -117,7 +117,6 @@ $mysql->db->query(
 );
 Mojo::IOLoop->start;
 like $fail, qr/does_not_exist/, 'right error';
-is $result->errstr, $fail, 'same error';
 
 # Clean up non-blocking queries
 ($fail, $result) = ();
@@ -131,5 +130,20 @@ $db->query(
 $db->disconnect;
 undef $db;
 is $fail, 'Premature connection close', 'right error';
+
+# Error context
+my ($err, $res);
+eval { $mysql->db->query('select * from table_does_not_exist') };
+like $@, qr/database\.t line/, 'error context blocking';
+$mysql->db->query(
+  'select * from table_does_not_exist',
+  sub {
+    (my $db, $err, $res) = @_;
+    Mojo::IOLoop->stop;
+  }
+);
+
+Mojo::IOLoop->start;
+like $err, qr/database\.t line/, 'error context non-blocking';
 
 done_testing();

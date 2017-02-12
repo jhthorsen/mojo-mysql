@@ -68,7 +68,7 @@ Mojo::IOLoop->delay(
   }
 )->wait;
 like $err, qr/results_test/, 'has error';
-is $err, $res->errstr, 'same error';
+ok index($err, $res->errstr) == 0, 'same error';
 is length($res->state), 5, 'has state';
 
 done_testing;

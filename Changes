@@ -6,6 +6,7 @@ Revision history for perl distribution Mojo-mysql
  - Add delete, insert, select and update methods to Mojo::Pg::Database
  - Add database_class attribute to Mojo::mysql
  - Add results_class attribute to Mojo::mysql::Database
+ - Improved contextual caller information in query error messages
  - Compatible with Mojolicious 7.18
 
 0.14 2016-02-15T14:06:24+0100

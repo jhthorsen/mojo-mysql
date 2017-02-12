@@ -1,6 +1,7 @@
 package Mojo::mysql::Database;
 use Mojo::Base 'Mojo::EventEmitter';
 
+use Carp;
 use DBD::mysql;
 use Mojo::IOLoop;
 use Mojo::mysql::Results;
@@ -54,14 +55,15 @@ sub query {
   # Blocking
   unless ($cb) {
     my $sth = $self->dbh->prepare($query);
-    my $rv  = $sth->execute(@_);
+    local $sth->{HandleError} = sub { $_[0] = Carp::shortmess($_[0]); 0 };
+    my $rv = $sth->execute(@_);
     my $res = $self->results_class->new(sth => $sth);
     $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
     return $res;
   }
 
   # Non-blocking
-  push @{$self->{waiting}}, {args => [@_], cb => $cb, query => $query};
+  push @{$self->{waiting}}, {args => [@_], err => Carp::shortmess('__MSG__'), cb => $cb, query => $query};
   $self->$_ for qw(_next _watch);
 }
 
@@ -105,12 +107,14 @@ sub _watch {
 
       return unless my $waiting = $self->{waiting};
       return unless @$waiting and $waiting->[0]{sth} and $waiting->[0]{sth}->mysql_async_ready;
-      my ($sth, $cb) = @{shift @$waiting}{qw(sth cb)};
+      my ($cb, $err, $sth) = @{shift @$waiting}{qw(cb err sth)};
 
       # Do not raise exceptions inside the event loop
       my $rv = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
-      my $err = defined $rv ? undef : $dbh->errstr;
       my $res = $self->results_class->new(sth => $sth);
+
+      $err = undef if defined $rv;
+      $err =~ s!\b__MSG__\b!{$dbh->errstr}!e if defined $err;
       $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
 
       $self->$cb($err, $res);
