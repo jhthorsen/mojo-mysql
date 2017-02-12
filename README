@@ -27,6 +27,12 @@ SYNOPSIS
       say $db->query('insert into names (name) values (?)', 'Daniel')
         ->last_insert_id;
 
+      # Use SQL::Abstract to generate queries for you
+      $db->insert('names', {name => 'Isabel'});
+      say $db->select('names', undef, {name => 'Isabel'})->hash->{id};
+      $db->update('names', {name => 'Bel'}, {name => 'Isabel'});
+      $db->delete('names', {name => 'Bel'});
+
       # Select one row at a time
       my $results = $db->query('select * from names');
       while (my $next = $results->hash) {
@@ -128,6 +134,16 @@ EVENTS
 ATTRIBUTES
     Mojo::mysql implements the following attributes.
 
+  abstract
+      $abstract = $mysql->abstract;
+      $mysql    = $mysql->abstract(SQL::Abstract->new);
+
+    SQL::Abstract object used to generate CRUD queries for
+    Mojo::mysql::Database.
+
+      # Generate statements and bind values
+      my ($stmt, @bind) = $mysql->abstract->select('names');
+
   auto_migrate
       my $bool = $mysql->auto_migrate;
       $mysql   = $mysql->auto_migrate($bool);
@@ -136,6 +152,13 @@ ATTRIBUTES
     as soon as the first database connection has been established.
 
     Defaults to false.
+
+  database_class
+      $class = $mysql->database_class;
+      $mysql = $mysql->database_class("MyApp::Database");
+
+    Class to be used by "db", defaults to Mojo::mysql::Database. Note that
+    this class needs to have already been loaded before "db" is called.
 
   dsn
       my $dsn = $mysql->dsn;
@@ -256,6 +279,12 @@ METHODS
 
     Construct a new Mojo::mysql object and parse connection string with
     "from_string" if necessary.
+
+DEBUGGING
+    You can set the "DBI_TRACE" environment variable to get some advanced
+    diagnostics information printed to "STDERR" by DBI.
+
+      DBI_TRACE=1
 
 REFERENCE
     This is the class hierarchy of the Mojo::mysql distribution.
