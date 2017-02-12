@@ -1,4 +1,4 @@
-requires 'Mojolicious'   => '6.0';
+requires 'Mojolicious'   => '7.18';
 requires 'DBD::mysql'    => '4.019';
 requires 'SQL::Abstract' => '1.81';
 

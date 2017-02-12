@@ -2,9 +2,10 @@ package Mojo::mysql::Migrations;
 use Mojo::Base -base;
 
 use Carp 'croak';
-use Mojo::Loader 'data_section';
-use Mojo::Util qw(decode slurp);
 use Encode '_utf8_off';
+use Mojo::File;
+use Mojo::Loader 'data_section';
+use Mojo::Util 'decode';
 
 use constant DEBUG => $ENV{MOJO_MIGRATIONS_DEBUG} || 0;
 
@@ -18,7 +19,7 @@ sub from_data {
   return $self->from_string(data_section($class //= caller, $name // $self->name));
 }
 
-sub from_file { shift->from_string(decode 'UTF-8', slurp pop) }
+sub from_file { shift->from_string(decode 'UTF-8', Mojo::File->new(pop)->slurp) }
 
 sub from_string {
   my ($self, $sql) = @_;
