@@ -12,6 +12,7 @@ use SQL::Abstract;
 
 has abstract => sub { SQL::Abstract->new };
 has auto_migrate    => 0;
+has database_class  => 'Mojo::mysql::Database';
 has dsn             => 'dbi:mysql:dbname=test';
 has max_connections => 5;
 has migrations      => sub {
@@ -39,7 +40,7 @@ sub db {
   delete @$self{qw(pid queue)} unless ($self->{pid} //= $$) eq $$;
 
   my ($dbh, $handle) = @{$self->_dequeue};
-  return Mojo::mysql::Database->new(dbh => $dbh, handle => $handle, mysql => $self);
+  return $self->database_class->new(dbh => $dbh, handle => $handle, mysql => $self);
 }
 
 sub from_string {
@@ -247,13 +248,13 @@ L<Mojo::mysql> implements the following attributes.
 
 =head2 abstract
 
-  my $abstract = $pg->abstract;
-  $pg          = $pg->abstract(SQL::Abstract->new);
+  $abstract = $mysql->abstract;
+  $mysql    = $mysql->abstract(SQL::Abstract->new);
 
-L<SQL::Abstract> object used to generate CRUD queries for L<Mojo::Pg::Database>.
+L<SQL::Abstract> object used to generate CRUD queries for L<Mojo::mysql::Database>.
 
   # Generate statements and bind values
-  my($stmt, @bind) = $pg->abstract->select('names');
+  my ($stmt, @bind) = $mysql->abstract->select('names');
 
 =head2 auto_migrate
 
@@ -264,6 +265,14 @@ Automatically migrate to the latest database schema with L</"migrations">, as
 soon as the first database connection has been established.
 
 Defaults to false.
+
+=head2 database_class
+
+  $class = $mysql->database_class;
+  $mysql = $mysql->database_class("MyApp::Database");
+
+Class to be used by L</"db">, defaults to L<Mojo::mysql::Database>. Note that this
+class needs to have already been loaded before L</"db"> is called.
 
 =head2 dsn
 
