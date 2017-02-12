@@ -9,6 +9,7 @@ use Mojo::Util 'monkey_patch';
 use Scalar::Util 'weaken';
 
 has [qw(dbh mysql)];
+has results_class => 'Mojo::mysql::Results';
 
 for my $name (qw(delete insert select update)) {
   monkey_patch __PACKAGE__, $name, sub {
@@ -54,7 +55,7 @@ sub query {
   unless ($cb) {
     my $sth = $self->dbh->prepare($query);
     my $rv  = $sth->execute(@_);
-    my $res = Mojo::mysql::Results->new(sth => $sth);
+    my $res = $self->results_class->new(sth => $sth);
     $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
     return $res;
   }
@@ -109,7 +110,7 @@ sub _watch {
       # Do not raise exceptions inside the event loop
       my $rv = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
       my $err = defined $rv ? undef : $dbh->errstr;
-      my $res = Mojo::mysql::Results->new(sth => $sth);
+      my $res = $self->results_class->new(sth => $sth);
       $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
 
       $self->$cb($err, $res);
@@ -154,6 +155,14 @@ Database handle used for all queries.
   $db       = $db->mysql(Mojo::mysql->new);
 
 L<Mojo::mysql> object this database belongs to.
+
+=head2 results_class
+
+  $class = $db->results_class;
+  $db    = $db->results_class("MyApp::Results");
+
+Class to be used by L</"query">, defaults to L<Mojo::mysql::Results>. Note that
+this class needs to have already been loaded before L</"query"> is called.
 
 =head1 METHODS
 
