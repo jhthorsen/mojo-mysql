@@ -200,7 +200,7 @@ L<Mojo::mysql::Transaction/"commit"> bas been called before it is destroyed.
 
   my $results = $db->delete($table, \%where);
 
-Generate a C<DELETE> statement with L<Mojo::Pg/"abstract"> (usually an
+Generate a C<DELETE> statement with L<Mojo::mysql/"abstract"> (usually an
 L<SQL::Abstract> object) and execute it with L</"query">. You can also append a
 callback to perform operations non-blocking.
 
@@ -220,7 +220,7 @@ Disconnect database handle and prevent it from getting cached again.
 
   my $results = $db->insert($table, \@values || \%fieldvals, \%options);
 
-Generate an C<INSERT> statement with L<Mojo::Pg/"abstract"> (usually an
+Generate an C<INSERT> statement with L<Mojo::mysql/"abstract"> (usually an
 L<SQL::Abstract> object) and execute it with L</"query">. You can also append a
 callback to perform operations non-blocking.
 
@@ -272,7 +272,7 @@ Quote an identifier (table name etc.) for use in an SQL statement.
 
   my $results = $db->select($source, $fields, $where, $order);
 
-Generate a C<SELECT> statement with L<Mojo::Pg/"abstract"> (usually an
+Generate a C<SELECT> statement with L<Mojo::mysql/"abstract"> (usually an
 L<SQL::Abstract> object) and execute it with L</"query">. You can also append a
 callback to perform operations non-blocking.
 
@@ -286,7 +286,7 @@ callback to perform operations non-blocking.
 
   my $results = $db->update($table, \%fieldvals, \%where);
 
-Generate an C<UPDATE> statement with L<Mojo::Pg/"abstract"> (usually an
+Generate an C<UPDATE> statement with L<Mojo::mysql/"abstract"> (usually an
 L<SQL::Abstract> object) and execute it with L</"query">. You can also append a
 callback to perform operations non-blocking.
 
