@@ -73,6 +73,14 @@ sub from_string {
 
 sub new { @_ > 1 ? shift->SUPER::new->from_string(@_) : shift->SUPER::new }
 
+sub strict_mode {
+  my $self = ref $_[0] ? shift : shift->new(@_);
+  $self->{strict_mode} = $_[0] ? 1 : @_ ? 0 : 1;
+  warn "[Mojo::mysql] strict_mode($self->{strict_mode})\n" if $ENV{DBI_TRACE};
+  delete @$self{qw(pid queue)};
+  return $self;
+}
+
 sub _dequeue {
   my $self = shift;
   my $dbh;
@@ -89,6 +97,7 @@ sub _dequeue {
   # Maintain Commits with Mojo::mysql::Transaction
   $dbh->{AutoCommit} = 1;
 
+  $self->_set_strict_mode($dbh) if $self->{strict_mode};
   $self->migrations->migrate if $self->auto_migrate and !$self->{migrated}++;
   $self->emit(connection => $dbh);
   [$dbh];
@@ -99,6 +108,11 @@ sub _enqueue {
   my $queue = $self->{queue} ||= [];
   push @$queue, [$dbh, $handle] if $dbh->{Active};
   shift @{$self->{queue}} while @{$self->{queue}} > $self->max_connections;
+}
+
+sub _set_strict_mode {
+  $_[1]->do(q[SET SQL_MODE = CONCAT('ANSI,TRADITIONAL,ONLY_FULL_GROUP_BY,', @@sql_mode)]);
+  $_[1]->do(q[SET SQL_AUTO_IS_NULL = 0]);
 }
 
 1;
@@ -398,6 +412,28 @@ Parse configuration from connection string.
 
 Construct a new L<Mojo::mysql> object and parse connection string with
 L</"from_string"> if necessary.
+
+=head2 strict_mode
+
+  my $mysql = Mojo::mysql->strict_mode('mysql://user@/test');
+  my $mysql = $mysql->strict_mode($boolean);
+
+This method can act as both a constructor and a method. When called as a
+constructor, it will be the same as:
+
+  my $mysql = Mojo::mysql->new('mysql://user@/test')->strict_mode(1);
+
+Enabling strict mode will execute the following statement when a new connection
+is created:
+
+  SET SQL_MODE = CONCAT('ANSI,TRADITIONAL,ONLY_FULL_GROUP_BY,', @@sql_mode)
+  SET SQL_AUTO_IS_NULL = 0
+
+The idea is to set up a connection that makes it harder for MySQL to allow
+"invalid" data to be inserted.
+
+This method will not be removed, but the internal commands is subject to
+change.
 
 =head1 DEBUGGING
 
