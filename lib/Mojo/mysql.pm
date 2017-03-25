@@ -128,7 +128,7 @@ Mojo::mysql - Mojolicious and Async MySQL
   use Mojo::mysql;
 
   # Create a table
-  my $mysql = Mojo::mysql->new('mysql://username@/test');
+  my $mysql = Mojo::mysql->strict_mode('mysql://username@/test');
   $mysql->db->query(
     'create table names (id integer auto_increment primary key, name text)');
 
@@ -206,7 +206,7 @@ gracefully by holding on to them only for short amounts of time.
   use Mojo::mysql;
 
   helper mysql =>
-    sub { state $mysql = Mojo::mysql->new('mysql://sri:s3cret@localhost/db') };
+    sub { state $mysql = Mojo::mysql->strict_mode('mysql://sri:s3cret@localhost/db') };
 
   get '/' => sub {
     my $c  = shift;
