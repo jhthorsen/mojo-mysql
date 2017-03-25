@@ -5,7 +5,7 @@ SYNOPSIS
       use Mojo::mysql;
 
       # Create a table
-      my $mysql = Mojo::mysql->new('mysql://username@/test');
+      my $mysql = Mojo::mysql->strict_mode('mysql://username@/test');
       $mysql->db->query(
         'create table names (id integer auto_increment primary key, name text)');
 
@@ -83,7 +83,7 @@ DESCRIPTION
       use Mojo::mysql;
 
       helper mysql =>
-        sub { state $mysql = Mojo::mysql->new('mysql://sri:s3cret@localhost/db') };
+        sub { state $mysql = Mojo::mysql->strict_mode('mysql://sri:s3cret@localhost/db') };
 
       get '/' => sub {
         my $c  = shift;
@@ -279,6 +279,27 @@ METHODS
 
     Construct a new Mojo::mysql object and parse connection string with
     "from_string" if necessary.
+
+  strict_mode
+      my $mysql = Mojo::mysql->strict_mode('mysql://user@/test');
+      my $mysql = $mysql->strict_mode($boolean);
+
+    This method can act as both a constructor and a method. When called as a
+    constructor, it will be the same as:
+
+      my $mysql = Mojo::mysql->new('mysql://user@/test')->strict_mode(1);
+
+    Enabling strict mode will execute the following statement when a new
+    connection is created:
+
+      SET SQL_MODE = CONCAT('ANSI,TRADITIONAL,ONLY_FULL_GROUP_BY,', @@sql_mode)
+      SET SQL_AUTO_IS_NULL = 0
+
+    The idea is to set up a connection that makes it harder for MySQL to
+    allow "invalid" data to be inserted.
+
+    This method will not be removed, but the internal commands is subject to
+    change.
 
 DEBUGGING
     You can set the "DBI_TRACE" environment variable to get some advanced
