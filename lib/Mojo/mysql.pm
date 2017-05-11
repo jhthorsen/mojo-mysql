@@ -10,7 +10,12 @@ use Mojo::URL;
 use Scalar::Util 'weaken';
 use SQL::Abstract;
 
-has abstract => sub { SQL::Abstract->new };
+has abstract => sub {
+	SQL::Abstract->new(
+		quote_char => '`',
+		name_sep => '.',
+	);
+};
 has auto_migrate    => 0;
 has database_class  => 'Mojo::mysql::Database';
 has dsn             => 'dbi:mysql:dbname=test';
