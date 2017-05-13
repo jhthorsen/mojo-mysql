@@ -55,6 +55,7 @@ eval { Mojo::mysql->new('http://localhost:3000/test') };
 like $@, qr/Invalid MySQL connection string/, 'right error';
 
 # quote fieldnames correctly
-like $mysql->abstract->select("foo", ['binary']), qr{`binary}, 'quoted correct';
+like $mysql->abstract->select("foo", ['binary']), qr{`binary}, 'quoted correct binary';
+like $mysql->abstract->select("foo", ['foo.binary']), qr{`foo`.`binary}, 'quoted correct foo.binary';
 
 done_testing();
