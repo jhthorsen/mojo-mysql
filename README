@@ -116,9 +116,6 @@ DESCRIPTION
     has been forked, this allows multiple processes to share the same
     Mojo::mysql object safely.
 
-    Note that this whole distribution is EXPERIMENTAL and will change
-    without warning!
-
 EVENTS
     Mojo::mysql inherits all events from Mojo::EventEmitter and can emit the
     following new ones.
@@ -234,6 +231,8 @@ ATTRIBUTES
 
       # Notify a channel
       $mysql->pubsub->notify(news => 'MySQL rocks!');
+
+    Note that Mojo::mysql::PubSub should be considered an experiment!
 
   username
       my $username = $mysql->username;

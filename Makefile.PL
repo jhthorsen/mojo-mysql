@@ -15,6 +15,6 @@ WriteMakefile(
     },
   },
   BUILD_REQUIRES => {'Test::More' => '0.90'},
-  PREREQ_PM      => {'DBD::mysql' => '4.019', 'Mojolicious' => '7.18', 'SQL::Abstract' => '1.81'},
+  PREREQ_PM      => {'DBD::mysql' => '4.042', 'Mojolicious' => '7.18', 'SQL::Abstract' => '1.81'},
   test => {TESTS => (-e 'META.yml' ? 't/*.t' : 't/*.t xt/*.t')},
 );
