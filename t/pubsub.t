@@ -8,7 +8,16 @@ plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 my (@pids, @test, $first, $second);
-$mysql->pubsub->on(reconnect => sub { push @pids, pop->pid });
+
+{
+  my @warn;
+  local $SIG{__WARN__} = sub { push @warn, $_[0] };
+  $mysql->pubsub->on(reconnect => sub { push @pids, pop->pid });
+  like "@warn", qr{EXPERIMENTAL}, 'pubsub() will warn';
+}
+
+$ENV{MOJO_PUBSUB_EXPERIMENTAL} = 1;
+
 $first = $mysql->pubsub->listen(test => sub { push @test, pop });
 Mojo::IOLoop->delay(
   sub {

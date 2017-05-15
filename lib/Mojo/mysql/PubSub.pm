@@ -98,8 +98,7 @@ sub _subscriber_pid {
   }
 
   # re-subscribe
-  $self->{db}->query('replace mojo_pubsub_subscribe(pid, channel) values (?, ?)', $pid, $_)
-    for keys %{$self->{chans}};
+  $self->{db}->query('replace mojo_pubsub_subscribe(pid, channel) values (?, ?)', $pid, $_) for keys %{$self->{chans}};
 
   weaken $self->{db}->{mysql};
   weaken $self;
@@ -116,7 +115,7 @@ sub _subscriber_pid {
     elsif ($self and $self->{db}) {
       $self->_notifications;
       $db->query('update mojo_pubsub_subscribe set ts = current_timestamp where pid = ?', $pid);
-      $db->query('select sleep(600)', $cb);
+      $db->query('select sleep(600)',                                                     $cb);
     }
   };
   $self->{db}->query('select sleep(600)', $cb);
@@ -149,8 +148,9 @@ Mojo::mysql::PubSub - Publish/Subscribe
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql::PubSub> is implementation of the publish/subscribe
-pattern used by L<Mojo::mysql>.
+L<Mojo::mysql::PubSub> is implementation of the publish/subscribe pattern used
+by L<Mojo::mysql>. The implementation should be considered an experiment and
+might be removed without warning!
 
 Although MySQL does not have C<SUBSCRIBE/NOTIFY> like PostgreSQL and other RDBMs,
 this module implements similar feature.
@@ -167,7 +167,6 @@ C<SUPER> privilege may be needed to be able to define trigger.
 
 If your applications use this module using different MySQL users it is important
 the migration script to be executed by user having C<SUPER> privilege on the database.
-
 
 =head1 EVENTS
 

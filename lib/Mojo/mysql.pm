@@ -5,7 +5,6 @@ use Carp 'croak';
 use DBI;
 use Mojo::mysql::Database;
 use Mojo::mysql::Migrations;
-use Mojo::mysql::PubSub;
 use Mojo::URL;
 use Scalar::Util 'weaken';
 use SQL::Abstract;
@@ -25,7 +24,10 @@ has options => sub {
 };
 has [qw(password username)] => '';
 has pubsub => sub {
+  require Mojo::mysql::PubSub;
   my $pubsub = Mojo::mysql::PubSub->new(mysql => shift);
+  warn "Use of Mojo::mysql::PubSub is highly EXPERIMENTAL and should be considered an experiment"
+    unless $ENV{MOJO_PUBSUB_EXPERIMENTAL};
   weaken $pubsub->{mysql};
   return $pubsub;
 };
@@ -239,9 +241,6 @@ All cached database handles will be reset automatically if a new process has
 been forked, this allows multiple processes to share the same L<Mojo::mysql>
 object safely.
 
-Note that this whole distribution is EXPERIMENTAL and will change without
-warning!
-
 =head1 EVENTS
 
 L<Mojo::mysql> inherits all events from L<Mojo::EventEmitter> and can emit the
@@ -362,6 +361,8 @@ efficiently, by sharing a single database connection with many consumers.
 
   # Notify a channel
   $mysql->pubsub->notify(news => 'MySQL rocks!');
+
+Note that L<Mojo::mysql::PubSub> should be considered an experiment!
 
 =head2 username
 
