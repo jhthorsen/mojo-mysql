@@ -1,5 +1,8 @@
 Revision history for perl distribution Mojo-mysql
 
+1.02 Not Released
+ - Fix utf8 handling
+
 1.01 2017-03-25T08:24:29+0100
  - Add strict_mode() method and constructor #29
 
