@@ -144,7 +144,7 @@ sub _active {
 
   $db->query(
     'create table if not exists mojo_migrations (
-       name    varchar(255) unique not null,
+       name    varchar(128) unique not null,
        version bigint not null
      )'
   ) if $error;

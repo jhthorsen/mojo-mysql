@@ -1,7 +1,8 @@
 Revision history for perl distribution Mojo-mysql
 
 1.02 Not Released
- - Fix utf8 handling
+ - Fix utf8 handling in DBD::mysql 4.042
+ - Prevent warnings when creating the mojo_migrations table #26
  - Add proper quoting of table and column names #30
  - Add warning when using Mojo::mysql::PubSub
 
