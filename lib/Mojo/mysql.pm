@@ -20,7 +20,7 @@ has migrations      => sub {
   return $migrations;
 };
 has options => sub {
-  {mysql_enable_utf8 => 1, AutoCommit => 1, AutoInactiveDestroy => 1, PrintError => 0, RaiseError => 1};
+  {mysql_enable_utf8mb4 => 1, AutoCommit => 1, AutoInactiveDestroy => 1, PrintError => 0, RaiseError => 1};
 };
 has [qw(password username)] => '';
 has pubsub => sub {
@@ -327,7 +327,7 @@ Use this feature with caution and remember to always backup your database.
   my $options = $mysql->options;
   $mysql      = $mysql->options({mysql_use_result => 1});
 
-Options for database handles, defaults to activating C<mysql_enable_utf8>, C<AutoCommit>,
+Options for database handles, defaults to activating C<mysql_enable_utf8mb4>, C<AutoCommit>,
 C<AutoInactiveDestroy> as well as C<RaiseError> and deactivating C<PrintError>.
 Note that C<AutoCommit> and C<RaiseError> are considered mandatory, so
 deactivating them would be very dangerous.
