@@ -56,7 +56,8 @@ sub query {
   unless ($cb) {
     my $sth = $self->dbh->prepare($query);
     local $sth->{HandleError} = sub { $_[0] = Carp::shortmess($_[0]); 0 };
-    my $rv = $sth->execute(@_);
+    _bind_params($sth, @_);
+    my $rv = $sth->execute;
     my $res = $self->results_class->new(sth => $sth);
     $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
     return $res;
@@ -71,6 +72,23 @@ sub quote { shift->dbh->quote(shift) }
 
 sub quote_id { shift->dbh->quote_identifier(shift) }
 
+sub _bind_params {
+  my $sth = shift;
+  for my $i (0..$#_) {
+    my $param = $_[$i];
+    if (ref $param eq 'HASH') {
+      if (exists $param->{type} && exists $param->{value}) {
+        $sth->bind_param($i + 1, $param->{value}, $param->{type});
+      } else {
+        croak qq{Unknown parameter hashref (no "type"/"value")};
+      }
+    } else {
+      $sth->bind_param($i + 1, $param);
+    }
+  }
+  return $sth;
+}
+
 sub _next {
   my $self = shift;
 
@@ -78,7 +96,8 @@ sub _next {
   return if $next->{sth};
 
   my $sth = $next->{sth} = $self->dbh->prepare($next->{query}, {async => 1});
-  $sth->execute(@{$next->{args}});
+  _bind_params($sth, @{$next->{args}});
+  $sth->execute;
 
   # keep reference to async handles to prevent being finished on result destroy while whatching fd
   push @{$self->{async_sth} ||= []}, $sth;
@@ -255,6 +274,15 @@ results. You can also append a callback to perform operation non-blocking.
     ...
   });
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
+
+Hash reference arguments containing values named C<type> and C<value> can be
+used to bind specific L<DBI> data types (see L<DBI/"DBI Constants">) to
+placeholders. This is needed to pass binary data in parameters; see
+L<DBD::mysql/"mysql_enable_utf8"> for more information.
+
+  # Insert binary data
+  use DBI ':sql_types';
+  $db->query('insert into bar values (?)', {type => SQL_BLOB, value => $bytes});
 
 =head2 quote
 
