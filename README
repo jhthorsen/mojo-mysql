@@ -322,9 +322,11 @@ REFERENCE
     * Mojo::mysql::Transaction
 
 AUTHOR
-    Curt Hochwender, "hochwender@centurytel.net".
+    Curt Hochwender - "hochwender@centurytel.net".
 
-    Jan Henning Thorsen, "jhthorsen@cpan.org".
+    Dan Book - "dbook@cpan.org"
+
+    Jan Henning Thorsen - "jhthorsen@cpan.org".
 
     This code is mostly a rip-off from Sebastian Riedel's Mojo::Pg.
 

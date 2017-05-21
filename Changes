@@ -1,5 +1,9 @@
 Revision history for perl distribution Mojo-mysql
 
+1.03 2017-05-21T23:19:29+0200
+ - Add ability to set types of query parameters #31
+   Contributor: Dan Book
+
 1.02 2017-05-15T20:34:01+0200
  - Fix utf8 handling in DBD::mysql 4.042
  - Prevent warnings when creating the mojo_migrations table #26
