@@ -22,6 +22,10 @@ is_deeply $db->query('select * from results_test')->arrays->to_array, [[1, 'foo'
 is_deeply $db->query('select * from results_test')->hash, {id => 1, name => 'foo'}, 'right structure';
 is_deeply $db->query('select * from results_test')->hashes->to_array,
   [{id => 1, name => 'foo'}, {id => 2, name => 'bar'}], 'right structure';
+is_deeply $db->query('select * from results_test')->map_hashes('id'),
+  {1 => { id => 1, name => 'foo' }, 2 => { id => 2, name => 'bar' }}, 'right structure';
+is_deeply $db->query('select * from results_test')->map,
+  { 1 => 'foo', 2 => 'bar'}, 'right structure';
 is $mysql->db->query('select * from results_test')->text, "1  foo\n2  bar\n", 'right text';
 
 # Iterate

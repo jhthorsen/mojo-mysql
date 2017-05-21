@@ -18,6 +18,24 @@ sub hash { shift->sth->fetchrow_hashref }
 
 sub hashes { Mojo::Collection->new(@{shift->sth->fetchall_arrayref({})}) }
 
+sub map {
+  return { map @$_, @{ $_[0]->arrays } };
+}
+
+sub map_hashes {
+  my ($self, $keyname) = @_;
+  my $rows = $self->hashes;
+  my @keys;
+
+  $rows->map(sub {
+    push @keys, $_->{ $keyname };
+  });
+
+  my %return;
+  @return{@keys} = @$rows;
+  return \%return;
+}
+
 sub rows { shift->sth->rows }
 
 sub text { tablify shift->arrays }
