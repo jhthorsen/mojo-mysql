@@ -1,6 +1,7 @@
 BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
 use Mojo::Base -strict;
 use Test::More;
+use DBI ':sql_types';
 use Mojo::IOLoop;
 use Mojo::mysql;
 
@@ -93,6 +94,12 @@ $pid = $mysql->db->pid;
 is $mysql->db->pid, $pid, 'same database pid';
 $mysql->db->disconnect;
 isnt $mysql->db->pid, $pid, 'different database pid';
+
+# Binary data
+$db = $mysql->db;
+my $bytes = "\xF0\xF1\xF2\xF3";
+is_deeply $db->query('select binary ? as foo',
+  {type => SQL_BLOB, value => $bytes})->hash, {foo => $bytes}, 'right data';
 
 # Fork safety
 $pid = $mysql->db->pid;
