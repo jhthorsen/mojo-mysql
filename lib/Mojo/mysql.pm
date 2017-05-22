@@ -9,6 +9,8 @@ use Mojo::URL;
 use Scalar::Util 'weaken';
 use SQL::Abstract;
 
+our $VERSION = '1.03';
+
 has abstract => sub { SQL::Abstract->new(quote_char => chr(96), name_sep => '.') };
 has auto_migrate    => 0;
 has database_class  => 'Mojo::mysql::Database';
@@ -31,9 +33,6 @@ has pubsub => sub {
   weaken $pubsub->{mysql};
   return $pubsub;
 };
-
-
-our $VERSION = '1.03';
 
 sub db {
   my $self = shift;
