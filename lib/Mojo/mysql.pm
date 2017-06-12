@@ -337,6 +337,16 @@ C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/"be
 
 C<RaiseError> is enabled for blocking and disabled in event loop for non-blocking queries.
 
+Note about C<mysql_enable_utf8>:
+
+  The mysql_enable_utf8 sets the utf8 charset which only supports up to 3-byte
+  UTF-8 encodings. mysql_enable_utf8mb4 (as of DBD::mysql 4.032) properly
+  supports encoding unicode characters to up to 4 bytes, such as 𠜎. It means the
+  connection charset will be utf8mb4 (supported back to at least mysql 5.5) and
+  these unicode characters will be supported, but no other changes.
+
+See also L<https://github.com/jhthorsen/mojo-mysql/pull/32>
+
 =head2 password
 
   my $password = $mysql->password;
