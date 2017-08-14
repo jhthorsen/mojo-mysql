@@ -72,7 +72,7 @@ sub from_string {
   return $self->dsn($dsn);
 }
 
-sub new { @_ > 1 ? shift->SUPER::new->from_string(@_) : shift->SUPER::new }
+sub new { @_ == 2 ? shift->SUPER::new->from_string(@_) : shift->SUPER::new(@_) }
 
 sub strict_mode {
   my $self = ref $_[0] ? shift : shift->new(@_);

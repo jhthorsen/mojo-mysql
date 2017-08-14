@@ -2,6 +2,7 @@ Revision history for perl distribution Mojo-mysql
 
 1.04 Not Released
  - Documented "mysql_enable_utf8" v.s. "mysql_enable_utf8mb4" #32
+ - Can pass on attributes to new()
 
 1.03 2017-05-21T23:19:29+0200
  - Add ability to set types of query parameters #31

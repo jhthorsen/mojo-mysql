@@ -58,4 +58,7 @@ like $@, qr/Invalid MySQL connection string/, 'right error';
 like $mysql->abstract->select("foo", ['binary']),     qr{`binary},       'quoted correct binary';
 like $mysql->abstract->select("foo", ['foo.binary']), qr{`foo`.`binary}, 'quoted correct foo.binary';
 
+$mysql = Mojo::mysql->new(dsn => 'dbi:mysql:mysql_read_default_file=~/.cpanstats.cnf');
+is $mysql->dsn, 'dbi:mysql:mysql_read_default_file=~/.cpanstats.cnf', 'correct dsn';
+
 done_testing();
