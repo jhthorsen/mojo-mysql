@@ -418,10 +418,12 @@ Parse configuration from connection string.
 =head2 new
 
   my $mysql = Mojo::mysql->new;
+  my $mysql = Mojo::mysql->new(%attrs);
+  my $mysql = Mojo::mysql->new(\%attrs);
   my $mysql = Mojo::mysql->new('mysql://user@/test');
 
-Construct a new L<Mojo::mysql> object and parse connection string with
-L</"from_string"> if necessary.
+Construct a new L<Mojo::mysql> object either from L</ATTRIBUTES> and or parse
+connection string with L</"from_string"> if necessary.
 
 =head2 strict_mode
 
