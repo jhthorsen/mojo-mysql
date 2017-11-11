@@ -9,7 +9,7 @@ use Mojo::URL;
 use Scalar::Util 'weaken';
 use SQL::Abstract;
 
-our $VERSION = '1.04';
+our $VERSION = '1.05';
 
 has abstract => sub { SQL::Abstract->new(quote_char => chr(96), name_sep => '.') };
 has auto_migrate    => 0;
@@ -493,6 +493,8 @@ Curt Hochwender - C<hochwender@centurytel.net>.
 Dan Book - C<dbook@cpan.org>
 
 Jan Henning Thorsen - C<jhthorsen@cpan.org>.
+
+Mike Magowan
 
 This code is mostly a rip-off from Sebastian Riedel's L<Mojo::Pg>.
 
