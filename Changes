@@ -1,5 +1,8 @@
 Revision history for perl distribution Mojo-mysql
 
+1.05 2017-11-11T10:04:40+0800
+ - Add delete_p(), insert_p(), query_p(), select_p() and update_p()
+
 1.04 2017-08-14T19:22:33+0200
  - Documented "mysql_enable_utf8" v.s. "mysql_enable_utf8mb4" #32
  - Can pass on attributes to new()
