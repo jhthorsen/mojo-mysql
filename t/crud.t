@@ -4,7 +4,6 @@ use Test::More;
 use Mojo::IOLoop;
 use Mojo::Promise;
 use Mojo::mysql;
-use DDP;
 
 plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 
