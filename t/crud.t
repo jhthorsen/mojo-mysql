@@ -2,12 +2,14 @@ BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
 use Mojo::Base -strict;
 use Test::More;
 use Mojo::IOLoop;
+use Mojo::Promise;
 use Mojo::mysql;
+use DDP;
 
 plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 
-my $pg = Mojo::mysql->new($ENV{TEST_ONLINE});
-my $db = $pg->db;
+my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
+my $db = $mysql->db;
 
 ok $db->ping, 'connected';
 
@@ -56,6 +58,46 @@ is_deeply $db->select('crud_test', undef, undef, {-asc => 'id'})->hashes->to_arr
   'right structure';
 $db->delete('crud_test');
 is_deeply $db->select('crud_test')->hashes->to_array, [], 'right structure';
+
+# Promises
+$result = undef;
+my $curid = undef;
+$db->insert_p('crud_test', {name => 'promise'})
+  ->then(sub { $result = shift->last_insert_id })->wait;
+is $result, 3, 'right result';
+$curid = $result;
+$result = undef;
+$db->select_p('crud_test', ['id', 'name'], {name => 'promise'})
+  ->then(sub { $result = shift->hash })->wait;
+is_deeply $result, {name => 'promise', id => $curid}, 'right result';
+$result = undef;
+my $first  = $db->query_p("select * from crud_test where name = 'promise'");
+my $second = $db->query_p("update crud_test set name = 'another_promise' where name = 'promise'");
+my $third  = $db->select_p('crud_test', '*', {id => 3});
+Mojo::Promise->all($first, $second, $third)->then(
+  sub {
+    my ($first, $second, $third) = @_;
+    $result = [$first->[0]->hash, $second->[0]->affected_rows, $third->[0]->hash];
+  }
+)->wait;
+is $result->[0]{name}, 'promise', 'right result';
+is $result->[1], 1, 'right result';
+is $result->[2]{name}, 'another_promise', 'right result';
+$result = undef;
+$db->update_p(
+  'crud_test',
+  {name      => 'promise_two'},
+  {name      => 'another_promise'},
+)->then(sub { $result = shift->affected_rows })->wait;
+is $result, 1, 'right result';
+$db->delete_p('crud_test', {name => 'promise_two'})
+  ->then(sub { $result = shift->affected_rows })->wait;
+is $result, 1, 'right result';
+
+# Promises (rejected)
+my $fail;
+$db->query_p('does_not_exist')->catch(sub { $fail = shift })->wait;
+like $fail, qr/does_not_exist/, 'right error';
 
 # cleanup
 END { $db and $db->query('drop table if exists crud_test'); }
