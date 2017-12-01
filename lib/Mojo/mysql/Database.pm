@@ -6,7 +6,6 @@ use DBD::mysql;
 use Mojo::IOLoop;
 use Mojo::mysql::Results;
 use Mojo::mysql::Transaction;
-use Mojo::Promise;
 use Mojo::Util 'monkey_patch';
 use Scalar::Util 'weaken';
 
@@ -18,10 +17,6 @@ for my $name (qw(delete insert select update)) {
     my $self = shift;
     my @cb = ref $_[-1] eq 'CODE' ? pop : ();
     return $self->query($self->mysql->abstract->$name(@_), @cb);
-  };
-  monkey_patch __PACKAGE__, "${name}_p", sub {
-    my $self = shift;
-    return $self->query_p($self->mysql->abstract->$name(@_));
   };
 }
 
@@ -71,14 +66,6 @@ sub query {
   # Non-blocking
   push @{$self->{waiting}}, {args => [@_], err => Carp::shortmess('__MSG__'), cb => $cb, query => $query};
   $self->$_ for qw(_next _watch);
-}
-
-sub query_p {
-  my $self    = shift;
-  my $promise = Mojo::Promise->new;
-  $self->query(
-  @_ => sub { $_[1] ? $promise->reject($_[1]) : $promise->resolve($_[2]) });
-  return $promise;
 }
 
 sub quote { shift->dbh->quote(shift) }
@@ -242,21 +229,6 @@ callback to perform operations non-blocking.
   });
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 
-=head2 delete_p
-
-  my $promise = $db->delete_p($table, \%where, \%options);
-
-  Same as L</"delete">, but performs all operations non-blocking and returns a
-  L<Mojo::Promise> object instead of accepting a callback.
-
-  $db->delete_p('some_table')->then(sub {
-    my $results = shift;
-    ...
-  })->catch(sub {
-    my $err = shift;
-    ...
-  })->wait;
-
 =head2 disconnect
 
   $db->disconnect;
@@ -276,21 +248,6 @@ callback to perform operations non-blocking.
     ...
   });
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
-
-=head2 insert_p
-
-  my $promise = $db->insert_p($table, \@values || \%fieldvals, \%options);
-
-Same as L</"insert">, but performs all operations non-blocking and returns a
-L<Mojo::Promise> object instead of accepting a callback.
-
-  $db->insert_p(some_table => {foo => 'bar'})->then(sub {
-    my $results = shift;
-    ...
-  })->catch(sub {
-    my $err = shift;
-    ...
-  })->wait;
 
 =head2 pid
 
@@ -327,21 +284,6 @@ L<DBD::mysql/"mysql_enable_utf8"> for more information.
   use DBI ':sql_types';
   $db->query('insert into bar values (?)', {type => SQL_BLOB, value => $bytes});
 
-=head2 query_p
-
-  my $promise = $db->query_p('select * from foo');
-
-Same as L</"query">, but performs all operations non-blocking and returns a
-L<Mojo::Promise> object instead of accepting a callback.
-
-  $db->query_p('insert into foo values (?, ?, ?)' => @values)->then(sub {
-    my $results = shift;
-    ...
-  })->catch(sub {
-    my $err = shift;
-    ...
-  })->wait;
-
 =head2 quote
 
   my $escaped = $db->quote($str);
@@ -368,21 +310,6 @@ callback to perform operations non-blocking.
   });
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 
-=head2 select_p
-
-  my $promise = $db->select_p($source, $fields, $where, $order);
-
-Same as L</"select">, but performs all operations non-blocking and returns a
-L<Mojo::Promise> object instead of accepting a callback.
-
-  $db->select_p(some_table => ['foo'] => {bar => 'yada'})->then(sub {
-    my $results = shift;
-    ...
-  })->catch(sub {
-    my $err = shift;
-    ...
-  })->wait;
-
 =head2 update
 
   my $results = $db->update($table, \%fieldvals, \%where);
@@ -396,21 +323,6 @@ callback to perform operations non-blocking.
     ...
   });
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
-
-=head2 update_p
-
-  my $promise = $db->update_p($table, \%fieldvals, \%where, \%options);
-
-Same as L</"update">, but performs all operations non-blocking and returns a
-L<Mojo::Promise> object instead of accepting a callback.
-
-  $db->update_p(some_table => {foo => 'baz'} => {foo => 'bar'})->then(sub {
-    my $results = shift;
-    ...
-  })->catch(sub {
-    my $err = shift;
-    ...
-  })->wait;
 
 =head1 SEE ALSO
 

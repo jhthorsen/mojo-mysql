@@ -9,7 +9,7 @@ use Mojo::URL;
 use Scalar::Util 'weaken';
 use SQL::Abstract;
 
-our $VERSION = '1.05';
+our $VERSION = '1.04';
 
 has abstract => sub { SQL::Abstract->new(quote_char => chr(96), name_sep => '.') };
 has auto_migrate    => 0;
@@ -178,18 +178,6 @@ Mojo::mysql - Mojolicious and Async MySQL
       $results->hashes->map(sub { $_->{name} })->join("\n")->say;
     }
   )->wait;
-
-  # Concurrent non-blocking queries (synchronized with promises)
-  my $now   = $db->query_p('select now() as now');
-  my $names = $db->query_p('select * from names');
-  Mojo::Promise->all($now, $names)->then(sub {
-    my ($now, $names) = @_;
-    say $now->[0]->hash->{now};
-    say $_->{name} for $names->[0]->hashes->each;
-  })->catch(sub {
-    my $err = shift;
-    warn "Something went wrong: $err";
-  })->wait;
 
   # Send and receive notifications non-blocking
   $mysql->pubsub->listen(foo => sub {
@@ -493,8 +481,6 @@ Curt Hochwender - C<hochwender@centurytel.net>.
 Dan Book - C<dbook@cpan.org>
 
 Jan Henning Thorsen - C<jhthorsen@cpan.org>.
-
-Mike Magowan
 
 This code is mostly a rip-off from Sebastian Riedel's L<Mojo::Pg>.
 
