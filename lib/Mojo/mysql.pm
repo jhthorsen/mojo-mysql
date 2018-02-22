@@ -49,7 +49,7 @@ sub from_string {
 
   # Protocol
   return $self unless $str;
-  my $url = Mojo::URL->new($str);
+  my $url = UNIVERSAL::isa($str, "Mojo::URL") ? $str : Mojo::URL->new($str);
   croak qq{Invalid MySQL connection string "$str"} unless $url->protocol eq 'mysql';
 
   # Database
