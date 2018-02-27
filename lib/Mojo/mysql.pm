@@ -9,7 +9,7 @@ use Mojo::URL;
 use Scalar::Util 'weaken';
 use SQL::Abstract;
 
-our $VERSION = '1.05';
+our $VERSION = '1.06';
 
 has abstract => sub { SQL::Abstract->new(quote_char => chr(96), name_sep => '.') };
 has auto_migrate    => 0;

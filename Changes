@@ -1,5 +1,9 @@
 Revision history for perl distribution Mojo-mysql
 
+1.06 2018-02-27T19:32:40+0100
+ - Changed from_string() to also accept Mojo::URL objects #36
+   Contributor: Karl Rune Nilsen
+
 1.05 2017-11-11T10:04:40+0800
  - Add delete_p(), insert_p(), query_p(), select_p() and update_p()
 
