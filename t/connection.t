@@ -42,6 +42,15 @@ is $mysql->password, 'y2',                                          'right passw
 $options = {mysql_enable_utf8 => 1, AutoCommit => 1, AutoInactiveDestroy => 1, PrintError => 1, RaiseError => 0};
 is_deeply $mysql->options, $options, 'right options';
 
+# Mojo::URL object with credentials
+my $url_obj = Mojo::URL->new('mysql://x2:y3@/test5?PrintError=1');
+$mysql = Mojo::mysql->new($url_obj);
+is $mysql->dsn,      'dbi:mysql:dbname=test5', 'right data source with Mojo::URL object';
+is $mysql->username, 'x2',                     'right username';
+is $mysql->password, 'y3',                     'right password';
+$options = {mysql_enable_utf8 => 1, AutoCommit => 1, AutoInactiveDestroy => 1, PrintError => 1, RaiseError => 1};
+is_deeply $mysql->options, $options, 'right options';
+
 # Connection string with lots of zeros
 $mysql = Mojo::mysql->new('mysql://0:0@/0?RaiseError=0');
 is $mysql->dsn,      'dbi:mysql:dbname=0', 'right data source';
