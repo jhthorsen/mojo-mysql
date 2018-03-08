@@ -56,7 +56,7 @@ sub from_string {
   my $dsn = 'dbi:mysql:dbname=' . $url->path->parts->[0];
 
   # Host and port
-  if (my $host = $url->host) { $dsn .= ";host=$host" }
+  if (my $host = $url->host) { $dsn .= -r $host ? ";mysql_socket=$host" : ";host=$host" }
   if (my $port = $url->port) { $dsn .= ";port=$port" }
 
   # Username and password

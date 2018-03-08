@@ -1,6 +1,7 @@
 use Mojo::Base -strict;
 use Test::More;
 use Mojo::mysql;
+use Mojo::Util 'url_escape';
 
 # Defaults
 my $mysql = Mojo::mysql->new;
@@ -35,10 +36,12 @@ $options = {mysql_enable_utf8 => 1, AutoCommit => 1, AutoInactiveDestroy => 1, P
 is_deeply $mysql->options, $options, 'right options';
 
 # Connection string with unix domain socket and options
-$mysql = Mojo::mysql->new('mysql://x1:y2@%2ftmp%2fmysql.sock/test4?PrintError=1&RaiseError=0');
-is $mysql->dsn,      'dbi:mysql:dbname=test4;host=/tmp/mysql.sock', 'right data source';
-is $mysql->username, 'x1',                                          'right username';
-is $mysql->password, 'y2',                                          'right password';
+my $dummy_socket = __FILE__;
+note "mysql_socket=$dummy_socket";
+$mysql = Mojo::mysql->new("mysql://x1:y2\@@{[url_escape $dummy_socket]}/test4?PrintError=1&RaiseError=0");
+is $mysql->dsn,      "dbi:mysql:dbname=test4;mysql_socket=$dummy_socket", 'right data source';
+is $mysql->username, 'x1',                                                'right username';
+is $mysql->password, 'y2',                                                'right password';
 $options = {mysql_enable_utf8 => 1, AutoCommit => 1, AutoInactiveDestroy => 1, PrintError => 1, RaiseError => 0};
 is_deeply $mysql->options, $options, 'right options';
 

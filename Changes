@@ -1,5 +1,8 @@
 Revision history for perl distribution Mojo-mysql
 
+1.07 Not Released
+ - Fix using "mysql_socket" instead of "host" when connecting to a unix socket #34
+
 1.06 2018-02-27T19:32:40+0100
  - Changed from_string() to also accept Mojo::URL objects #36
    Contributor: Karl Rune Nilsen
