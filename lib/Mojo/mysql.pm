@@ -3,6 +3,7 @@ use Mojo::Base 'Mojo::EventEmitter';
 
 use Carp 'croak';
 use DBI;
+use File::Spec::Functions 'file_name_is_absolute';
 use Mojo::mysql::Database;
 use Mojo::mysql::Migrations;
 use Mojo::URL;
@@ -56,7 +57,7 @@ sub from_string {
   my $dsn = 'dbi:mysql:dbname=' . $url->path->parts->[0];
 
   # Host and port
-  if (my $host = $url->host) { $dsn .= -r $host ? ";mysql_socket=$host" : ";host=$host" }
+  if (my $host = $url->host) { $dsn .= file_name_is_absolute($host) ? ";mysql_socket=$host" : ";host=$host" }
   if (my $port = $url->port) { $dsn .= ";port=$port" }
 
   # Username and password

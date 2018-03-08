@@ -36,8 +36,7 @@ $options = {mysql_enable_utf8 => 1, AutoCommit => 1, AutoInactiveDestroy => 1, P
 is_deeply $mysql->options, $options, 'right options';
 
 # Connection string with unix domain socket and options
-my $dummy_socket = __FILE__;
-note "mysql_socket=$dummy_socket";
+my $dummy_socket = File::Spec->rel2abs(__FILE__);
 $mysql = Mojo::mysql->new("mysql://x1:y2\@@{[url_escape $dummy_socket]}/test4?PrintError=1&RaiseError=0");
 is $mysql->dsn,      "dbi:mysql:dbname=test4;mysql_socket=$dummy_socket", 'right data source';
 is $mysql->username, 'x1',                                                'right username';
