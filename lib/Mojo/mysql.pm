@@ -73,7 +73,9 @@ sub from_string {
   return $self->dsn($dsn);
 }
 
-sub new { @_ == 2 ? shift->SUPER::new->from_string(@_) : shift->SUPER::new(@_) }
+sub new {
+  @_ > 2 || ref $_[-1] eq 'HASH' ? shift->SUPER::new(@_) : shift->SUPER::new->from_string(@_);
+}
 
 sub strict_mode {
   my $self = ref $_[0] ? shift : shift->new(@_);
