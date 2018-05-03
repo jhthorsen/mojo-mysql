@@ -72,4 +72,7 @@ like $mysql->abstract->select("foo", ['foo.binary']), qr{`foo`.`binary}, 'quoted
 $mysql = Mojo::mysql->new(dsn => 'dbi:mysql:mysql_read_default_file=~/.cpanstats.cnf');
 is $mysql->dsn, 'dbi:mysql:mysql_read_default_file=~/.cpanstats.cnf', 'correct dsn';
 
+$mysql = Mojo::mysql->new({dsn => 'dbi:mysql:mysql_read_default_file=~/.cpanstats.cnf'});
+is $mysql->dsn, 'dbi:mysql:mysql_read_default_file=~/.cpanstats.cnf', 'correct dsn';
+
 done_testing();
