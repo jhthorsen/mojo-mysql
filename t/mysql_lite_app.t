@@ -20,11 +20,12 @@ get '/blocking' => sub {
 
 get '/non-blocking' => sub {
   my $c = shift;
-  $c->mysql->db->query(
+  my $class;
+  $class = ref $c->mysql->db->query(
     'select * from app_test' => sub {
       my ($db, $err, $results) = @_;
       $c->res->headers->header('X-PID' => $db->pid);
-      $c->render(text => $results->hash->{stuff});
+      $c->render(text => sprintf '%s=%s', $class, $results->hash->{stuff});
     }
   );
 };
@@ -40,8 +41,10 @@ my $pid = $t->tx->res->headers->header('X-PID');
 $t->get_ok('/blocking')->status_is(200)->header_is('X-PID', $pid)->content_is('I ♥ Mojolicious!');
 
 # Non-blocking select (with connection reuse)
-$t->get_ok('/non-blocking')->status_is(200)->header_is('X-PID', $pid)->content_is('I ♥ Mojolicious!');
-$t->get_ok('/non-blocking')->status_is(200)->header_is('X-PID', $pid)->content_is('I ♥ Mojolicious!');
+$t->get_ok('/non-blocking')->status_is(200)->header_is('X-PID', $pid)
+  ->content_is('Mojo::mysql::Database=I ♥ Mojolicious!');
+$t->get_ok('/non-blocking')->status_is(200)->header_is('X-PID', $pid)
+  ->content_is('Mojo::mysql::Database=I ♥ Mojolicious!');
 $t->app->mysql->migrations->migrate(0);
 
 done_testing();

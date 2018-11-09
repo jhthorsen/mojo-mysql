@@ -71,6 +71,7 @@ sub query {
   # Non-blocking
   push @{$self->{waiting}}, {args => [@_], err => Carp::shortmess('__MSG__'), cb => $cb, query => $query};
   $self->$_ for qw(_next _watch);
+  return $self;
 }
 
 sub query_p {
