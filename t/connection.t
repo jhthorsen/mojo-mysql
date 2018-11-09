@@ -11,6 +11,10 @@ is $mysql->password, '',                      'no password';
 my $options = {mysql_enable_utf8 => 1, AutoCommit => 1, AutoInactiveDestroy => 1, PrintError => 0, RaiseError => 1};
 is_deeply $mysql->options, $options, 'right options';
 
+# Without database name
+my $mysql = Mojo::mysql->new('mysql://root@');
+is $mysql->dsn, 'dbi:mysql', 'right data source';
+
 # Minimal connection string with database
 $mysql = Mojo::mysql->new('mysql:///test1');
 is $mysql->dsn,      'dbi:mysql:dbname=test1', 'right data source';

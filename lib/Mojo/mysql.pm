@@ -53,8 +53,10 @@ sub from_string {
   my $url = UNIVERSAL::isa($str, "Mojo::URL") ? $str : Mojo::URL->new($str);
   croak qq{Invalid MySQL connection string "$str"} unless $url->protocol eq 'mysql';
 
+  my $dsn = 'dbi:mysql';
+
   # Database
-  my $dsn = 'dbi:mysql:dbname=' . $url->path->parts->[0];
+  $dsn .= ':dbname=' . $url->path->parts->[0] if defined $url->path->parts->[0];
 
   # Host and port
   if (my $host = $url->host) { $dsn .= file_name_is_absolute($host) ? ";mysql_socket=$host" : ";host=$host" }
