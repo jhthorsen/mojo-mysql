@@ -76,8 +76,7 @@ sub query {
 sub query_p {
   my $self    = shift;
   my $promise = Mojo::Promise->new;
-  $self->query(
-  @_ => sub { $_[1] ? $promise->reject($_[1]) : $promise->resolve($_[2]) });
+  $self->query(@_ => sub { $_[1] ? $promise->reject($_[1]) : $promise->resolve($_[2]) });
   return $promise;
 }
 
@@ -87,15 +86,17 @@ sub quote_id { shift->dbh->quote_identifier(shift) }
 
 sub _bind_params {
   my $sth = shift;
-  for my $i (0..$#_) {
+  for my $i (0 .. $#_) {
     my $param = $_[$i];
     if (ref $param eq 'HASH') {
       if (exists $param->{type} && exists $param->{value}) {
         $sth->bind_param($i + 1, $param->{value}, $param->{type});
-      } else {
+      }
+      else {
         croak qq{Unknown parameter hashref (no "type"/"value")};
       }
-    } else {
+    }
+    else {
       $sth->bind_param($i + 1, $param);
     }
   }

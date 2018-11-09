@@ -12,7 +12,7 @@ use SQL::Abstract;
 
 our $VERSION = '1.07';
 
-has abstract => sub { SQL::Abstract->new(quote_char => chr(96), name_sep => '.') };
+has abstract        => sub { SQL::Abstract->new(quote_char => chr(96), name_sep => '.') };
 has auto_migrate    => 0;
 has database_class  => 'Mojo::mysql::Database';
 has dsn             => 'dbi:mysql:dbname=test';
