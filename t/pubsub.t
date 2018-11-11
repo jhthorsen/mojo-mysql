@@ -1,13 +1,12 @@
 BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
 use Mojo::Base -strict;
-use Mojo::IOLoop;
 use Mojo::mysql;
 use Test::More;
 
 plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
-my (@pids, @test, $first, $second);
+my (@pids, @payload);
 
 {
   my @warn;
@@ -18,53 +17,46 @@ my (@pids, @test, $first, $second);
 
 $ENV{MOJO_PUBSUB_EXPERIMENTAL} = 1;
 
-$first = $mysql->pubsub->listen(test => sub { push @test, pop });
-Mojo::IOLoop->delay(
-  sub {
-    Mojo::IOLoop->timer(0.05, shift->begin);
-    $mysql->pubsub->notify(test => 'first');
-  },
-  sub {
-    Mojo::IOLoop->timer(0.05, shift->begin);
-    is_deeply \@test, ['first'], 'right messages 1';
-    $mysql->db->query('insert into mojo_pubsub_notify(channel, payload) values (?, ?)', 'test', 'second');
-  },
-  sub {
-    Mojo::IOLoop->timer(0.05, shift->begin);
-    is_deeply \@test, ['first', 'second'], 'right messages 1-2';
-    $mysql->db->query('insert into mojo_pubsub_notify(channel, payload) values (?, ?), (?, ?), (?, ?)',
-      'test', 'third', 'test', 'fourth', 'test', 'fifth');
-  },
-  sub {
-    Mojo::IOLoop->timer(0.05, shift->begin);
-    is_deeply \@test, ['first', 'second', 'third', 'fourth', 'fifth'], 'right messages 1-5';
-    @test = ();
+$mysql->pubsub->notify(test => 'skipped_message');
+my $sa = $mysql->pubsub->listen(test => sub { push @payload, a => pop });
+$mysql->pubsub->notify(test => 'm1');
+wait_for(1 => 'one subscriber');
+is_deeply \@payload, [a => 'm1'], 'right message m1';
 
-    # Second subscribe
-    $second = $mysql->pubsub->listen(test => sub { push @test, pop });
-    $mysql->pubsub->notify('test')->notify(test => 'first');
-  },
-  sub {
-    Mojo::IOLoop->timer(0.05, shift->begin);
-    is_deeply \@test, ['', '', 'first', 'first'], 'right messages dual';
-    $mysql->pubsub->unlisten(test => $first)->notify(test => 'second');
-  },
-  sub {
-    Mojo::IOLoop->timer(0.05, shift->begin);
-    is_deeply \@test, ['', '', 'first', 'first', 'second'], 'right messages single';
+$mysql->db->query('insert into mojo_pubsub_notify (channel, payload) values (?, ?)', 'test', 'm2');
+wait_for(1 => 'one subscriber');
+is_deeply \@payload, [a => 'm2'], 'right message m2';
 
-    @test = ();
-    $mysql->pubsub->{db}->{dbh}->{Warn} = 0;
-    $mysql->db->query('kill ?', $pids[0]);
-    $mysql->pubsub->notify(test => 'works');
-  },
-  sub {
-    ok $pids[1], 'second database pid';
-    isnt $pids[0], $pids[1], 'different database pids';
-    is_deeply \@test, ['works'], 'right message after reconnect';
-  }
-)->wait;
+$mysql->db->query('insert into mojo_pubsub_notify (channel, payload) values (?, ?), (?, ?), (?, ?), (?, ?)',
+  'test', 'm3', 'test', 'm4', 'skipped_channel', 'x1', 'test', 'm5');
+wait_for(3 => 'skipped channel');
+is_deeply \@payload, [map { (a => "m$_") } 3 .. 5], 'right messages 3..5';
+
+my $sb = $mysql->pubsub->listen(test => sub { push @payload, b => pop });
+$mysql->pubsub->notify(test => undef)->notify(test => 'd2');
+wait_for(4, 'two subscribers');
+is_deeply \@payload, [map { (a => $_, b => $_) } ('', 'd2')], 'right messages undef + d2';
+
+$mysql->pubsub->unlisten(test => $sa)->notify(test => 'u1');
+wait_for(1 => 'unlisten');
+is_deeply \@payload, [b => 'u1'], 'right message after unlisten';
+
+$mysql->pubsub->{db}{dbh}{Warn} = 0;
+$mysql->db->query('kill ?', $pids[0]);
+$mysql->pubsub->notify(test => 'k1');
+wait_for(1 => 'reconnect');
+isnt $pids[0], $pids[1], 'different database pids';
+is_deeply \@payload, [b => 'k1'], 'right message after reconnect';
 
 $mysql->migrations->name('pubsub')->from_data('Mojo::mysql::PubSub')->migrate(0);
 
-done_testing();
+done_testing;
+
+sub wait_for {
+  my ($n, $descr) = @_;
+  note "[$n] $descr";
+  @payload = ();
+  my $tid = Mojo::IOLoop->recurring(0.05 => sub { @payload == $n * 2 and Mojo::IOLoop->stop });
+  Mojo::IOLoop->start;
+  Mojo::IOLoop->remove($tid);
+}

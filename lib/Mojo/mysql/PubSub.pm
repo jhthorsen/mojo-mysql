@@ -9,121 +9,105 @@ has 'mysql';
 
 sub DESTROY {
   my $self = shift;
-  return unless $self->{db} and $self->mysql;
-  $self->mysql->db->query('delete from mojo_pubsub_subscribe where pid = ?', $self->_subscriber_pid);
+  return unless $self->{wait_db} and $self->mysql;
+  $self->mysql->db->query('delete from mojo_pubsub_subscribe where pid = ?', $self->{wait_db}->pid);
 }
 
 sub listen {
   my ($self, $channel, $cb) = @_;
-  my $pid = $self->_subscriber_pid;
-  warn "listen channel:$channel subscriber:$pid\n" if DEBUG;
-  $self->mysql->db->query('replace mojo_pubsub_subscribe(pid, channel, ts) values (?, ?, current_timestamp)',
-    $pid, $channel);
+  my $sync_db  = $self->mysql->db;
+  my $wait_pid = $self->_wait_db($sync_db)->pid;
+  warn qq|[PubSub] (@{[$wait_pid]}) listen "$channel"\n| if DEBUG;
+  $sync_db->query('replace mojo_pubsub_subscribe (pid, channel, ts) values (?, ?, current_timestamp)',
+    $wait_pid, $channel);
   push @{$self->{chans}{$channel}}, $cb;
   return $cb;
 }
 
 sub notify {
   my ($self, $channel, $payload) = @_;
-  my $db = $self->mysql->db;
-  $payload //= '';
-  warn "notify channel:$channel $payload\n" if DEBUG;
-  $self->_init($db) unless $self->{init}++;
-  $db->query('insert into mojo_pubsub_notify(channel, payload) values (?, ?)', $channel, $payload);
+  my $sync_db = $self->mysql->db;
+  warn qq|[PubSub] channel:$channel <<< "@{[$payload // '']}"\n| if DEBUG;
+  $self->_init($sync_db) unless $self->{init};
+  $sync_db->query('insert into mojo_pubsub_notify (channel, payload) values (?, ?)', $channel, $payload // '');
   return $self;
 }
 
 sub unlisten {
   my ($self, $channel, $cb) = @_;
-  my $pid = $self->_subscriber_pid;
-  warn "unlisten channel:$channel subscriber:$pid\n" if DEBUG;
+
   my $chan = $self->{chans}{$channel};
   @$chan = grep { $cb ne $_ } @$chan;
   return $self if @$chan;
-  $self->mysql->db->query('delete from mojo_pubsub_subscribe where pid = ? and channel = ?', $pid, $channel);
+
+  my $sync_db  = $self->mysql->db;
+  my $wait_pid = $self->_wait_db($sync_db)->pid;
+  warn qq|[PubSub] ($wait_pid) unlisten "$channel"\n| if DEBUG;
+  $sync_db->query('delete from mojo_pubsub_subscribe where pid = ? and channel = ?', $wait_pid, $channel);
   delete $self->{chans}{$channel};
   return $self;
 }
 
-sub _notifications {
-  my $self = shift;
-  my $result = $self->{db}->query('select id, channel, payload from mojo_pubsub_notify where id > ?', $self->{last_id});
+sub _init {
+  my ($self, $sync_db) = @_;
+  $self->mysql->migrations->name('pubsub')->from_data->migrate;
+  $sync_db->query('delete from mojo_pubsub_notify where ts < date_add(current_timestamp, interval -10 minute)');
+  $sync_db->query('delete from mojo_pubsub_subscribe where ts < date_add(current_timestamp, interval -1 hour)');
+  $self->{init} = 1;
+}
 
+sub _notifications {
+  my ($self, $sync_db) = @_;
+  my $result
+    = $sync_db->query('select id, channel, payload from mojo_pubsub_notify where id > ? order by id', $self->{last_id});
   while (my $row = $result->array) {
     my ($id, $channel, $payload) = @$row;
     $self->{last_id} = $id;
     next unless exists $self->{chans}{$channel};
-    warn "received $id on $channel: $payload\n" if DEBUG;
+    warn qq/[PubSub] channel:$channel >>> "$payload"\n/ if DEBUG;
     for my $cb (@{$self->{chans}{$channel}}) { $self->$cb($payload) }
   }
 }
 
-sub _init {
-  my ($self, $db) = @_;
-
-  $self->mysql->migrations->name('pubsub')->from_data->migrate;
-
-  # cleanup old subscriptions and notifications
-  $db->query('delete from mojo_pubsub_notify where ts < date_add(current_timestamp, interval -10 minute)');
-  $db->query('delete from mojo_pubsub_subscribe where ts < date_add(current_timestamp, interval -1 hour)');
-}
-
-sub _subscriber_pid {
-  my $self = shift;
+sub _wait_db {
+  my ($self, $sync_db) = @_;
 
   # Fork-safety
-  if (($self->{pid} //= $$) ne $$) {
-    my $pid = $self->{db}->pid if $self->{db};
-    warn 'forked subscriber pid:' . ($pid || 'N/A') . "\n" if DEBUG;
-    $self->{db}->disconnect if $pid;
-    delete @$self{qw(chans init pid db)};
-  }
+  delete @$self{qw(wait_db chans pid)} if ($self->{pid} //= $$) ne $$;
 
-  return $self->{db}->pid if $self->{db};
+  return $self->{wait_db} if $self->{wait_db};
 
-  $self->{db} = $self->mysql->db;
-  my $pid = $self->{db}->pid;
+  $self->_init($sync_db) unless $self->{init};
+  my $wait_db = $self->{wait_db} = $self->mysql->db;
+  $sync_db->query('replace mojo_pubsub_subscribe (pid, channel) values (?, ?)', $wait_db->pid, $_)
+    for keys %{$self->{chans}};
 
-  $self->_init($self->{db}) unless $self->{init}++;
-
-  if (defined $self->{last_id}) {
-
-    # read unread notifications
-    $self->_notifications;
+  if ($self->{last_id}) {
+    $self->_notifications($sync_db);
   }
   else {
-    # get id of the last message
-    my $array = $self->{db}->query('select id from mojo_pubsub_notify order by id desc limit 1')->array;
-    $self->{last_id} = defined $array ? $array->[0] : 0;
+    my $last = $sync_db->query('select id from mojo_pubsub_notify order by id desc limit 1')->array;
+    $self->{last_id} = defined $last ? $last->[0] : 0;
   }
 
-  # re-subscribe
-  $self->{db}->query('replace mojo_pubsub_subscribe(pid, channel) values (?, ?)', $pid, $_) for keys %{$self->{chans}};
-
-  weaken $self->{db}->{mysql};
+  weaken $wait_db->{mysql};
   weaken $self;
-
   my $cb;
   $cb = sub {
-    my ($db, $err, $result) = @_;
-    if ($err) {
-      warn "wake up error: $err" if DEBUG;
-      eval { $db->disconnect };
-      delete $self->{db};
-      eval { $self->_subscriber_pid };
-    }
-    elsif ($self and $self->{db}) {
-      $self->_notifications;
-      $db->query('update mojo_pubsub_subscribe set ts = current_timestamp where pid = ?', $pid);
-      $db->query('select sleep(600)',                                                     $cb);
-    }
+    my ($db, $err, $res) = @_;
+    return unless $self;
+    warn qq|[PubSub] (@{[$db->pid]}) sleep(600) @{[$err ? "!!! $err" : $res->array->[0]]}\n| if DEBUG;
+    my $sync_db = $self->mysql->db;
+    return (delete $self->{wait_db}, $self->_wait_db($sync_db)) if $err;
+    $res->finish;
+    $db->query('select sleep(600)', $cb);
+    $sync_db->query('update mojo_pubsub_subscribe set ts = current_timestamp where pid = ?', $db->pid);
+    $self->_notifications($self->mysql->db);
   };
-  $self->{db}->query('select sleep(600)', $cb);
 
-  warn "reconnect subscriber pid: $pid\n" if DEBUG;
-  $self->emit(reconnect => $self->{db});
-
-  return $pid;
+  warn qq|[PubSub] (@{[$wait_db->pid]}) reconnect\n| if DEBUG;
+  $self->emit(reconnect => $wait_db);
+  return $wait_db->query('select sleep(600)', $cb);
 }
 
 1;
@@ -253,7 +237,7 @@ drop table mojo_pubsub_notify;
 drop table if exists mojo_pubsub_subscribe;
 drop table if exists mojo_pubsub_notify;
 
-create table mojo_pubsub_subscribe(
+create table mojo_pubsub_subscribe (
   id integer auto_increment primary key,
   pid integer not null,
   channel varchar(64) not null,
@@ -262,7 +246,7 @@ create table mojo_pubsub_subscribe(
   key ts_idx(ts)
 );
 
-create table mojo_pubsub_notify(
+create table mojo_pubsub_notify (
   id integer auto_increment primary key,
   channel varchar(64) not null,
   payload text,
