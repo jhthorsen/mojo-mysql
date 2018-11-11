@@ -15,25 +15,18 @@ is_deeply $mysql->db->query('select 1 as one, 2 as two, 3 as three')->hash, {one
   'right structure';
 
 # Non-blocking select
-my ($fail, $result);
+my ($err, $res);
 my $db = $mysql->db;
 is $db->backlog, 0, 'no operations waiting';
-$db->query(
-  'select 1 as one, 2 as two, 3 as three' => sub {
-    my ($db, $err, $results) = @_;
-    $fail   = $err;
-    $result = $results->hash;
-    Mojo::IOLoop->stop;
-  }
-);
+$db->query('select 1 as one, 2 as two, 3 as three' => sub { ($err, $res) = ($_[1], $_[2]->hash); Mojo::IOLoop->stop; });
 is $db->backlog, 1, 'one operation waiting';
 Mojo::IOLoop->start;
 is $db->backlog, 0, 'no operations waiting';
-ok !$fail, 'no error' or diag "err=$fail";
-is_deeply $result, {one => 1, two => 2, three => 3}, 'right structure';
+ok !$err, 'no error' or diag "err=$err";
+is_deeply $res, {one => 1, two => 2, three => 3}, 'right structure';
 
 # Concurrent non-blocking selects
-($fail, $result) = ();
+($err, $res) = ();
 Mojo::IOLoop->delay(
   sub {
     my $delay = shift;
@@ -44,42 +37,40 @@ Mojo::IOLoop->delay(
   },
   sub {
     my ($delay, $err_one, $one, $err_two, $two, $err_again, $again) = @_;
-    $fail = $err_one || $err_two || $err_again;
-    $result = [$one->hashes->first, $two->hashes->first, $again->hashes->first];
+    $err = $err_one || $err_two || $err_again;
+    $res = [$one->hashes->first, $two->hashes->first, $again->hashes->first];
   }
 )->wait;
-ok !$fail, 'no error' or diag "err=$fail";
-is_deeply $result, [{one => 1}, {two => 2}, {two => 2}], 'concurrent non-blocking selects';
+ok !$err, 'no error' or diag "err=$err";
+is_deeply $res, [{one => 1}, {two => 2}, {two => 2}], 'concurrent non-blocking selects';
 
 # Sequential and Concurrent non-blocking selects
-($fail, $result) = ();
+($err, $res) = (0, []);
 Mojo::IOLoop->delay(
   sub {
-    my $delay = shift;
-    $db->query('select 1 as one' => $delay->begin);
+    $db->query('select 1 as one' => $_[0]->begin);
   },
   sub {
-    my ($delay, $err, $res) = @_;
-    $fail   = $err;
-    $result = [$res->hashes->first];
-    $db->query('select 2 as two' => $delay->begin);
-    $db->query('select 2 as two' => $delay->begin);
+    $err ||= $_[1];
+    push @$res, $_[2]->hashes->first;
+    $db->query('select 2 as two' => $_[0]->begin);
+    $db->query('select 2 as two' => $_[0]->begin);
   },
   sub {
     my ($delay, $err_two, $two, $err_again, $again) = @_;
-    push @$result, $db->query('select 1 as one')->hashes->first;
-    $fail ||= $err_two || $err_again;
-    push @$result, $two->hashes->first, $again->hashes->first;
+    push @$res, $db->query('select 1 as one')->hashes->first;
+    $err ||= $err_two || $err_again;
+    push @$res, $two->hashes->first, $again->hashes->first;
     $db->query('select 3 as three' => $delay->begin);
   },
   sub {
     my ($delay, $err_three, $three) = @_;
-    $fail ||= $err_three;
-    push @$result, $three->hashes->first;
+    $err ||= $err_three;
+    push @$res, $three->hashes->first;
   }
 )->wait;
-ok !$fail, 'no error' or diag "err=$fail";
-is_deeply $result, [{one => 1}, {one => 1}, {two => 2}, {two => 2}, {three => 3}], 'right structure';
+ok !$err, 'no error' or diag "err=$err";
+is_deeply $res, [{one => 1}, {one => 1}, {two => 2}, {two => 2}, {three => 3}], 'right structure';
 
 # Connection cache
 is $mysql->max_connections, 5, 'right default';
@@ -98,8 +89,8 @@ isnt $mysql->db->pid, $pid, 'different database pid';
 # Binary data
 $db = $mysql->db;
 my $bytes = "\xF0\xF1\xF2\xF3";
-is_deeply $db->query('select binary ? as foo',
-  {type => SQL_BLOB, value => $bytes})->hash, {foo => $bytes}, 'right data';
+is_deeply $db->query('select binary ? as foo', {type => SQL_BLOB, value => $bytes})->hash, {foo => $bytes},
+  'right data';
 
 # Fork safety
 $pid = $mysql->db->pid;
@@ -110,36 +101,24 @@ $pid = $mysql->db->pid;
 
 # Blocking error
 eval { $mysql->db->query('does_not_exist') };
-like $@, qr/does_not_exist/, 'right error';
+like $@, qr/does_not_exist/, 'does_not_exist sync';
 
 # Non-blocking error
-($fail, $result) = ();
-$mysql->db->query(
-  'does_not_exist' => sub {
-    my ($db, $err, $results) = @_;
-    $fail   = $err;
-    $result = $results;
-    Mojo::IOLoop->stop;
-  }
-);
+($err, $res) = ();
+$mysql->db->query('does_not_exist' => sub { ($err, $res) = @_[1, 2]; Mojo::IOLoop->stop; });
 Mojo::IOLoop->start;
-like $fail, qr/does_not_exist/, 'right error';
+like $err, qr/does_not_exist/, 'does_not_exist async';
 
 # Clean up non-blocking queries
-($fail, $result) = ();
+($err, $res) = ();
 $db = $mysql->db;
-$db->query(
-  'select 1' => sub {
-    my ($db, $err, $results) = @_;
-    ($fail, $result) = ($err, $results);
-  }
-);
+$db->query('select 1' => sub { ($err, $res) = @_[1, 2] });
 $db->disconnect;
 undef $db;
-is $fail, 'Premature connection close', 'right error';
+is $err, 'Premature connection close', 'Premature connection close';
 
 # Error context
-my ($err, $res);
+($err, $res) = ();
 eval { $mysql->db->query('select * from table_does_not_exist') };
 like $@, qr/database\.t line/, 'error context blocking';
 $mysql->db->query(

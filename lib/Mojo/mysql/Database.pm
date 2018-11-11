@@ -44,7 +44,6 @@ sub begin {
 
 sub disconnect {
   my $self = shift;
-  $_->finish for @{$self->{async_sth} || []};
   $self->_unwatch;
   $self->dbh->disconnect;
 }
@@ -63,7 +62,7 @@ sub query {
     local $sth->{HandleError} = sub { $_[0] = Carp::shortmess($_[0]); 0 };
     _bind_params($sth, @_);
     my $rv = $sth->execute;
-    my $res = $self->results_class->new(sth => $sth);
+    my $res = $self->results_class->new(db => $self, sth => $sth);
     $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
     return $res;
   }
@@ -121,6 +120,7 @@ sub _next {
 sub _unwatch {
   my $self = shift;
   Mojo::IOLoop->singleton->reactor->remove(delete $self->{handle}) if $self->{handle};
+  $_->finish for grep { !$_->{private_mojo_results} } @{$self->{async_sth}};
   $self->{async_sth} = [];
 }
 
@@ -140,7 +140,7 @@ sub _watch {
 
       # Do not raise exceptions inside the event loop
       my $rv = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
-      my $res = $self->results_class->new(sth => $sth);
+      my $res = $self->results_class->new(db => $self, sth => $sth);
 
       $err = undef if defined $rv;
       $err =~ s!\b__MSG__\b!{$dbh->errstr}!e if defined $err;

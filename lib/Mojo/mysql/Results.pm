@@ -4,7 +4,7 @@ use Mojo::Base -base;
 use Mojo::Collection;
 use Mojo::Util 'tablify';
 
-has 'sth';
+has [qw(db sth)];
 
 sub array { shift->sth->fetchrow_arrayref }
 
@@ -17,6 +17,12 @@ sub finish { shift->sth->finish }
 sub hash { shift->sth->fetchrow_hashref }
 
 sub hashes { Mojo::Collection->new(@{shift->sth->fetchall_arrayref({})}) }
+
+sub new {
+  my $self = shift->SUPER::new(@_);
+  ($self->{sth}{private_mojo_results} //= 0)++;
+  return $self;
+}
 
 sub rows { shift->sth->rows }
 
@@ -35,6 +41,13 @@ sub err { shift->sth->err }
 sub errstr { shift->sth->errstr }
 
 sub state { shift->sth->state }
+
+sub DESTROY {
+  my $self = shift;
+  return unless my $sth = $self->{sth};
+  $sth->finish unless --$sth->{private_mojo_results};
+}
+
 1;
 
 =encoding utf8
@@ -57,6 +70,13 @@ L<Mojo::mysql::Database>.
 =head1 ATTRIBUTES
 
 L<Mojo::mysql::Results> implements the following attributes.
+
+=head2 db
+
+  my $db   = $results->db;
+  $results = $results->db(Mojo::mysql::Database->new);
+
+L<Mojo::mysql::Database> object these results belong to.
 
 =head2 sth
 
@@ -126,6 +146,13 @@ references.
 
   # Process all rows at once
   say $results->hashes->reduce(sub { $a->{money} + $b->{money} });
+
+=head2 new
+
+  my $results = Mojo::mysql::Results->new(db => $db, sth => $sth);
+  my $results = Mojo::mysql::Results->new({db => $db, sth => $sth});
+
+Construct a new L<Mojo::mysql::Results> object.
 
 =head2 rows
 
