@@ -120,21 +120,16 @@ sub _next {
 
 sub _unwatch {
   my $self = shift;
-  return unless delete $self->{watching};
-  Mojo::IOLoop->singleton->reactor->remove($self->{handle});
+  Mojo::IOLoop->singleton->reactor->remove(delete $self->{handle}) if $self->{handle};
   $self->{async_sth} = [];
 }
 
 sub _watch {
   my $self = shift;
-
-  return if $self->{watching} || $self->{watching}++;
+  return if $self->{handle};
 
   my $dbh = $self->dbh;
-  $self->{handle} ||= do {
-    open my $FH, '<&', $dbh->mysql_fd or die "Dup mysql_fd: $!";
-    $FH;
-  };
+  open $self->{handle}, '<&', $dbh->mysql_fd or die "Dup mysql_fd: $!" unless $self->{handle};
   Mojo::IOLoop->singleton->reactor->io(
     $self->{handle} => sub {
       my $reactor = shift;
