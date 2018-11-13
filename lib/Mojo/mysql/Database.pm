@@ -84,6 +84,10 @@ sub quote { shift->dbh->quote(shift) }
 
 sub quote_id { shift->dbh->quote_identifier(shift) }
 
+sub tables {
+  shift->query('show tables')->arrays->reduce(sub { push @$a, $b->[0]; $a }, []);
+}
+
 sub _bind_params {
   my $sth = shift;
   for my $i (0 .. $#_) {
@@ -408,6 +412,12 @@ L<Mojo::Promise> object instead of accepting a callback.
     my $err = shift;
     ...
   })->wait;
+
+=head2 tables
+
+  my $tables = $db->tables;
+
+Return an array reference with table names for this database.
 
 =head1 SEE ALSO
 

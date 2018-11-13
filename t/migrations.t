@@ -17,11 +17,10 @@ is $mysql->migrations->latest, 0,            'latest version is 0';
 is $mysql->migrations->active, 0,            'active version is 0';
 
 # Create migrations table
-my $result = eval { $mysql->db->query('select * from mojo_migrations limit 1') };
-ok !$result, 'migrations table does not exist';
+ok !(grep {/mojo_migrations/} @{$mysql->db->tables}), 'migrations table does not exist';
 
 is $mysql->migrations->migrate->active, 0, 'active version is 0';
-ok $mysql->db->query('select * from mojo_migrations limit 1')->array->[0], 'migrations table exists';
+ok !!(grep {/mojo_migrations/} @{$mysql->db->tables}), 'migrations table exists';
 
 # Migrations from DATA section
 is $mysql->migrations->from_data->latest, 0, 'latest version is 0';
@@ -102,11 +101,9 @@ delete from migration_test_six;
 EOF
 $mysql->auto_migrate(1)->db;
 is $mysql->migrations->active, 6, 'active version is 6';
-is_deeply $mysql->db->query('select * from migration_test_six')->hashes,
-  [{foo => 'works!'}], 'right structure';
+is_deeply $mysql->db->query('select * from migration_test_six')->hashes, [{foo => 'works!'}], 'right structure';
 is $mysql->migrations->migrate(5)->active, 5, 'active version is 5';
-is_deeply $mysql->db->query('select * from migration_test_six')->hashes, [],
-  'right structure';
+is_deeply $mysql->db->query('select * from migration_test_six')->hashes, [], 'right structure';
 is $mysql->migrations->migrate(0)->active, 0, 'active version is 0';
 
 # Unknown version
@@ -135,7 +132,7 @@ eval { $mysql->migrations->migrate(0) };
 like $@, qr/Active version 2 is greater than the latest version 1/, 'right error';
 is $mysql->migrations->from_string($newer)->migrate(0)->active, 0, 'active version is 0';
 
-done_testing();
+done_testing;
 
 __DATA__
 @@ test1
