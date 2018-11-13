@@ -7,8 +7,12 @@ plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 my $db    = $mysql->db;
 
-$db->query('create table if not exists mojo_json_test (id int(10), name varchar(60), j json)');
-$db->query('insert into mojo_json_test (id, name, j) values (?, ?, ?)', $$, $0, {json => {foo => 42}});
+eval {
+  $db->query('create table if not exists mojo_json_test (id int(10), name varchar(60), j json)');
+  $db->query('insert into mojo_json_test (id, name, j) values (?, ?, ?)', $$, $0, {json => {foo => 42}});
+} or do {
+  plan skip_all => $@;
+};
 
 is $db->query('select json_type(j) from mojo_json_test')->array->[0],             'OBJECT', 'json_type';
 is $db->query('select json_extract(j, "$.foo") from mojo_json_test')->array->[0], '42',     'json_extract';
