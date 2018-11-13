@@ -4,6 +4,7 @@ use Mojo::Base 'Mojo::EventEmitter';
 use Carp;
 use DBD::mysql;
 use Mojo::IOLoop;
+use Mojo::JSON 'to_json';
 use Mojo::mysql::Results;
 use Mojo::mysql::Transaction;
 use Mojo::Promise;
@@ -92,17 +93,17 @@ sub _bind_params {
   my $sth = shift;
   for my $i (0 .. $#_) {
     my $param = $_[$i];
+    my %attrs;
     if (ref $param eq 'HASH') {
-      if (exists $param->{type} && exists $param->{value}) {
-        $sth->bind_param($i + 1, $param->{value}, $param->{type});
+      if (exists $param->{json}) {
+        $param = to_json $param->{json};
       }
-      else {
-        croak qq{Unknown parameter hashref (no "type"/"value")};
+      elsif (exists $param->{type} && exists $param->{value}) {
+        ($param, $attrs{TYPE}) = @$param{qw(value type)};
       }
     }
-    else {
-      $sth->bind_param($i + 1, $param);
-    }
+
+    $sth->bind_param($i + 1, $param, \%attrs);
   }
   return $sth;
 }
@@ -309,6 +310,8 @@ Check database connection.
 
   my $results = $db->query('select * from foo');
   my $results = $db->query('insert into foo values (?, ?, ?)', @values);
+  my $results = $db->query('insert into foo values (?)', {json => {bar => 'baz'}});
+  my $results = $db->query('insert into foo values (?)', {type => SQL_INTEGER, value => 42});
 
 Execute a blocking statement and return a L<Mojo::mysql::Results> object with the
 results. You can also append a callback to perform operation non-blocking.
@@ -318,6 +321,14 @@ results. You can also append a callback to perform operation non-blocking.
     ...
   });
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
+
+Hash reference arguments containing a value named C<json>, will be encoded to
+JSON text with L<Mojo::JSON/"to_json">. To accomplish the reverse, you can use
+the method L<Mojo::mysql::Results/"expand">, which automatically decodes data back
+to Perl data structures.
+
+  $db->query('insert into foo values (x) values (?)', {json => {bar => 'baz'}});
+  $db->query('select * from foo')->expand->hash->{x}{bar}; # baz
 
 Hash reference arguments containing values named C<type> and C<value> can be
 used to bind specific L<DBI> data types (see L<DBI/"DBI Constants">) to
