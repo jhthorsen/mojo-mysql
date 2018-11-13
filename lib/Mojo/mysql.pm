@@ -484,6 +484,9 @@ You can set the C<DBI_TRACE> environment variable to get some advanced
 diagnostics information printed to C<STDERR> by L<DBI>.
 
   DBI_TRACE=1
+  DBI_TRACE=15
+  DBI_TRACE=15=dbitrace.log
+  DBI_TRACE=SQL
 
 =head1 REFERENCE
 
