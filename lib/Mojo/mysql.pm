@@ -113,7 +113,9 @@ sub _enqueue {
   my ($self, $dbh, $handle) = @_;
   my $queue = $self->{queue} ||= [];
   push @$queue, [$dbh, $handle] if $dbh->{Active};
-  shift @{$self->{queue}} while @{$self->{queue}} > $self->max_connections;
+
+  # The database handle needs to be destroyed before the file handle
+  shift(@{$self->{queue}})->[0] = undef while @{$self->{queue}} > $self->max_connections;
 }
 
 sub _set_strict_mode {
