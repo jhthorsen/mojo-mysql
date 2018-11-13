@@ -1,12 +1,12 @@
 Revision history for perl distribution Mojo-mysql
 
-1.08 Not Released
- - Add tables method to Mojo::mysql::Database
- - Add close_idle_connections to Mojo::mysql
- - Add support for working with JSON
- - Made database name optional
+1.08 2018-11-13T17:31:49+0900
  - Fix query() with callback returns $self
  - Fix Gathering async_query_in_flight results for the wrong handle bug
+ - Add close_idle_connections to Mojo::mysql
+ - Add support for working with JSON
+ - Add tables method to Mojo::mysql::Database
+ - Change database name is optional in constructor #38
 
 1.07 2018-05-03T12:25:08+0200
  - Fix using "mysql_socket" instead of "host" when connecting to a unix socket #34
