@@ -35,6 +35,15 @@ has pubsub => sub {
   return $pubsub;
 };
 
+sub close_idle_connections {
+  my ($self, $keep) = (shift, $_[0] || 0);
+  my $queue = $self->{queue} || [];
+
+  # The database handle needs to be destroyed before the file handle
+  shift(@$queue)->[0] = undef while @$queue > $keep;
+  return $self;
+}
+
 sub db {
   my $self = shift;
 
@@ -83,7 +92,7 @@ sub strict_mode {
   my $self = ref $_[0] ? shift : shift->new(@_);
   $self->{strict_mode} = $_[0] ? 1 : @_ ? 0 : 1;
   warn "[Mojo::mysql] strict_mode($self->{strict_mode})\n" if $ENV{DBI_TRACE};
-  delete @$self{qw(pid queue)};
+  $self->close_idle_connections;
   return $self;
 }
 
@@ -91,7 +100,7 @@ sub _dequeue {
   my $self = shift;
   my $dbh;
 
-  while (my $c = shift @{$self->{queue} || []}) { return $c if $c->[0]->ping }
+  while (my $c = shift @{$self->{queue}}) { return $c if $c->[0]->ping }
   $dbh = DBI->connect(map { $self->$_ } qw(dsn username password options));
 
   # <mst> batman's probably going to have more "fun" than you have ...
@@ -111,11 +120,8 @@ sub _dequeue {
 
 sub _enqueue {
   my ($self, $dbh, $handle) = @_;
-  my $queue = $self->{queue} ||= [];
-  push @$queue, [$dbh, $handle] if $dbh->{Active};
-
-  # The database handle needs to be destroyed before the file handle
-  shift(@{$self->{queue}})->[0] = undef while @{$self->{queue}} > $self->max_connections;
+  push @{$self->{queue}}, [$dbh, $handle] if $dbh->{Active};
+  $self->close_idle_connections($self->max_connections);
 }
 
 sub _set_strict_mode {
@@ -296,6 +302,12 @@ Automatically migrate to the latest database schema with L</"migrations">, as
 soon as the first database connection has been established.
 
 Defaults to false.
+
+=head2 close_idle_connections
+
+  $mysql = $mysql->close_idle_connections;
+
+Close all connections that are not currently active.
 
 =head2 database_class
 

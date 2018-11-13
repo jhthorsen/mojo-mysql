@@ -85,6 +85,9 @@ $pid = $mysql->db->pid;
 is $mysql->db->pid, $pid, 'same database pid';
 $mysql->db->disconnect;
 isnt $mysql->db->pid, $pid, 'different database pid';
+my $dbh = $mysql->db->dbh;
+is $mysql->db->dbh, $dbh, 'same database handle';
+isnt $mysql->close_idle_connections->db->dbh, $dbh, 'different database handles';
 
 # Binary data
 $db = $mysql->db;
