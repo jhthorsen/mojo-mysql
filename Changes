@@ -1,6 +1,6 @@
 Revision history for perl distribution Mojo-mysql
 
-1.09 Not Released
+1.09 2018-11-27T09:32:01+0900
  - Fix MariaDB/MySQL incompatibility #41
    Contributor: Rolf Stöckli
  - Fix documentation mismatch regarding "mysql_client_found_rows" #42
