@@ -1,5 +1,9 @@
 Revision history for perl distribution Mojo-mysql
 
+1.09 Not Released
+ - Fix MariaDB/MySQL incompatibility #41
+   Contributor: Rolf Stöckli
+
 1.08 2018-11-13T17:31:49+0900
  - Fix query() with callback returns $self
  - Fix Gathering async_query_in_flight results for the wrong handle bug
