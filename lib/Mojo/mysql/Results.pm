@@ -232,13 +232,12 @@ Handle multiple results.
 
   my $affected = $results->affected_rows;
 
-Number of affected rows by the query.
-The number reported is dependant from C<found_rows> option in L<Mojo::mysql>.
-For example
+Number of affected rows by the query. The number reported is dependant from
+C<mysql_client_found_rows> option in L<Mojo::mysql>. For example
 
   UPDATE $table SET id = 1 WHERE id = 1
 
-would return 1 if C<found_rows> is set, and 0 otherwise.
+would return 1 if C<mysql_client_found_rows> is set, and 0 otherwise.
 
 =head2 last_insert_id
 

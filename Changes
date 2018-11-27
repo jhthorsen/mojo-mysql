@@ -3,6 +3,8 @@ Revision history for perl distribution Mojo-mysql
 1.09 Not Released
  - Fix MariaDB/MySQL incompatibility #41
    Contributor: Rolf Stöckli
+ - Fix documentation mismatch regarding "mysql_client_found_rows" #42
+   Contributor: Yuriy Zhilovets
 
 1.08 2018-11-13T17:31:49+0900
  - Fix query() with callback returns $self
