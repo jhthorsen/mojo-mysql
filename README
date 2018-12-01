@@ -27,7 +27,7 @@ SYNOPSIS
       say $db->query('insert into names (name) values (?)', 'Daniel')
         ->last_insert_id;
 
-      # Use SQL::Abstract to generate queries for you
+      # Use SQL::Abstract::mysql to generate queries for you
       $db->insert('names', {name => 'Isabel'});
       say $db->select('names', undef, {name => 'Isabel'})->hash->{id};
       $db->update('names', {name => 'Bel'}, {name => 'Isabel'});
@@ -145,9 +145,9 @@ ATTRIBUTES
 
   abstract
       $abstract = $mysql->abstract;
-      $mysql    = $mysql->abstract(SQL::Abstract->new);
+      $mysql    = $mysql->abstract(SQL::Abstract::mysql->new);
 
-    SQL::Abstract object used to generate CRUD queries for
+    SQL::Abstract::mysql object used to generate CRUD queries for
     Mojo::mysql::Database.
 
       # Generate statements and bind values
