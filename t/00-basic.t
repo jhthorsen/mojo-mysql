@@ -31,7 +31,7 @@ for my $file (@files) {
   $module =~ s,/,::,g;
   ok eval "use $module; 1", "use $module" or diag $@;
   Test::Pod::pod_file_ok($file);
-  Test::Pod::Coverage::pod_coverage_ok($module, {also_private => [qr/^[A-Z_]+$/],});
+  Test::Pod::Coverage::pod_coverage_ok($module, {also_private => [qr/^[A-Z_]+$/, 'puke'],});
 }
 
 Test::CPAN::Changes::changes_file_ok();

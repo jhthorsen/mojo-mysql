@@ -122,11 +122,21 @@ SQL::Abstract::mysql - MySQL / MariaDB
 L<SQL::Abstract::mysql> extends L<SQL::Abstract> with a few MySQL / MariaDB features
 used by L<Mojo::mysql>. It was inspired by L<SQL::Abstract::Pg>.
 
-=head1 INSERT
+=head1 CONSTRUCTOR
+
+=head2 new
+
+  my $abstract = SQL::Abstract::mysql->new;
+
+=head1 METHODS
+
+L<SQL::Abstract::mysql> inherits all methods from L<SQL::Abstract>.
+
+=head2 insert
 
   $abstract->insert($table, \@values || \%fieldvals, \%options);
 
-=head2 ON CONFLICT
+=head3 ON CONFLICT
 
 The C<on_conflict> option can be used to generate C<INSERT IGNORE>, C<REPLACE> and
 C<INSERT ... ON DUPLICATE KEY UPDATE> queries.
@@ -142,12 +152,12 @@ to pass C<UPDATE> with conflict targets are supported.
   # "insert into t (id, a) values (123, 'b') on duplicate key update c='d'"
   $abstract->insert('t', {id => 123, a => 'b'}, {on_conflict => {c => 'd'}});
 
-=head1 SELECT
+=head2 select
 
   $abstract->select($source, $fields, $where, $order);
   $abstract->select($source, $fields, $where, \%options);
 
-=head2 AS
+=head3 AS
 
 The C<$fields> argument accepts array references containing array
 references with field names and aliases, as well as array references containing
@@ -166,7 +176,7 @@ literal SQL with bind values.
   # "select 'test' as foo, bar from some_table"
   $abstract->select('some_table', [\['? as foo', 'test'], 'bar']);
 
-=head2 JOIN
+=head3 JOIN
 
 The C<$source> argument accepts array references containing not only
 table names, but also array references with tables to generate C<JOIN> clauses
@@ -184,7 +194,7 @@ for.
   # "select * from foo left join bar on (bar.foo_id = foo.id)"
   $abstract->select(['foo', [-left => 'bar', foo_id => 'id']]);
 
-=head2 ORDER BY
+=head3 ORDER BY
 
 In addition to the C<$order> argument accepted by L<SQL::Abstract> you can
 pass a hash reference with various options. This includes C<order_by>,
@@ -193,7 +203,7 @@ which takes the same values as the C<$order> argument.
   # "select * from some_table order by foo desc"
   $abstract->select('some_table', '*', undef, {order_by => {-desc => 'foo'}});
 
-=head2 LIMIT / OFFSET
+=head3 LIMIT / OFFSET
 
 The C<limit> and C<offset> options can be used to generate C<SELECT> queries
 with C<LIMIT> and C<OFFSET> clauses.
@@ -207,7 +217,7 @@ with C<LIMIT> and C<OFFSET> clauses.
   # "select * from some_table limit 10 offset 5"
   $abstract->select('some_table', '*', undef, {limit => 10, offset => 5});
 
-=head2 GROUP BY
+=head3 GROUP BY
 
 The C<group_by> option can be used to generate C<SELECT> queries with
 C<GROUP BY> clauses. So far array references to pass a list of fields and scalar
@@ -219,7 +229,7 @@ references to pass literal SQL are supported.
   # "select * from some_table group by foo, bar"
   $abstract->select('some_table', '*', undef, {group_by => \'foo, bar'});
 
-=head2 HAVING
+=head3 HAVING
 
 The C<having> option can be used to generate C<SELECT> queries with C<HAVING>
 clauses, which takes the same values as the C<$where> argument.
@@ -227,7 +237,7 @@ clauses, which takes the same values as the C<$where> argument.
   # "select * from t group by a having b = 'c'"
   $abstract->select('t', '*', undef, {group_by => ['a'], having => {b => 'c'}});
 
-=head2 FOR
+=head3 FOR
 
 The C<for> option can be used to generate C<SELECT> queries with C<FOR UPDATE>
 or C<LOCK IN SHARE MODE> clauses.
@@ -245,10 +255,6 @@ pass literal SQL are supported.
 
   # "select * from some_table for update skip locked"
   $abstract->select('some_table', '*', undef, {for => \'update skip locked'});
-
-=head1 METHODS
-
-L<SQL::Abstract::mysql> inherits all methods from L<SQL::Abstract>.
 
 =head1 SEE ALSO
 
