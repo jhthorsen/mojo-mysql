@@ -133,7 +133,7 @@ Mojo::mysql::PubSub - Publish/Subscribe
 =head1 DESCRIPTION
 
 L<Mojo::mysql::PubSub> is implementation of the publish/subscribe pattern used
-by L<Mojo::mysql>. The implementation should be considered an experiment and
+by L<Mojo::mysql>. The implementation should be considered an EXPERIMENT and
 might be removed without warning!
 
 Although MySQL does not have C<SUBSCRIBE/NOTIFY> like PostgreSQL and other RDBMs,

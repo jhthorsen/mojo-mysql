@@ -49,7 +49,7 @@ sub disconnect {
   $self->dbh->disconnect;
 }
 
-sub pid { shift->dbh->{mysql_thread_id} }
+sub pid { $_[0]->mysql->handle_attr($_[0]->dbh, 'thread_id') }
 
 sub ping { shift->dbh->ping }
 
@@ -121,7 +121,9 @@ sub _next {
   return unless my $next = $self->{waiting}[0];
   return if $next->{sth};
 
-  my $sth = $next->{sth} = $self->dbh->prepare($next->{query}, {async => 1});
+  my $dbh  = $self->dbh;
+  my $flag = lc $dbh->{Driver}{Name} eq 'mariadb' ? 'mariadb_async' : 'async';
+  my $sth  = $next->{sth} = $self->dbh->prepare($next->{query}, {$flag => 1});
   _bind_params($sth, @{$next->{args}});
   $sth->execute;
 }
@@ -134,16 +136,20 @@ sub _watch {
   my $self = shift;
   return if $self->{handle};
 
-  my $dbh = $self->dbh;
-  open $self->{handle}, '<&', $dbh->mysql_fd or die "Dup mysql_fd: $!";
+  my $dbh           = $self->dbh;
+  my $driver        = lc $dbh->{Driver}{Name};
+  my $ready_method  = "${driver}_async_ready";
+  my $result_method = "${driver}_async_result";
+  my $fd            = $driver eq 'mariadb' ? $dbh->mariadb_sockfd : $dbh->mysql_fd;
+  open $self->{handle}, '<&', $fd or die "Could not dup $driver fd: $!";
   Mojo::IOLoop->singleton->reactor->io(
     $self->{handle} => sub {
       return unless my $waiting = $self->{waiting};
-      return unless @$waiting and $waiting->[0]{sth} and $waiting->[0]{sth}->mysql_async_ready;
+      return unless @$waiting and $waiting->[0]{sth} and $waiting->[0]{sth}->$ready_method;
       my ($cb, $err, $sth) = @{shift @$waiting}{qw(cb err sth)};
 
       # Do not raise exceptions inside the event loop
-      my $rv = do { local $sth->{RaiseError} = 0; $sth->mysql_async_result; };
+      my $rv = do { local $sth->{RaiseError} = 0; $sth->$result_method };
       my $res = $self->results_class->new(db => $self, sth => $sth);
 
       $err = undef if defined $rv;
