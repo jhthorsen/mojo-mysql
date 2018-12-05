@@ -141,8 +141,15 @@ Mojo::mysql - Mojolicious and Async MySQL
 
   use Mojo::mysql;
 
-  # Create a table
+  # Connect to a local database
   my $mysql = Mojo::mysql->strict_mode('mysql://username@/test');
+
+  # Connect to a remote database
+  my $mysql = Mojo::mysql->strict_mode('mysql://username:password@hostname/test');
+  # MySQL >= 8.0:
+  my $mysql = Mojo::mysql->strict_mode('mysql://username:password@hostname/test;mysql_ssl=1');
+
+  # Create a table
   $mysql->db->query(
     'create table names (id integer auto_increment primary key, name text)');
 
