@@ -4,17 +4,14 @@ use Test::More;
 
 plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 
-# Clean up before start
+# Create table
 
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 my $db    = $mysql->db;
-$db->query('drop table if exists mojo_mysql1, mojo_mysql2');
-
-# Create tables
-
 my $dbname = 'mojo_mysql1';
+
 $db->query(<<EOF);
-create table mojo_mysql1 (
+create table if not exists mojo_mysql1 (
   id int not null,
   f1 varchar(20),
   f2 varchar(20),
@@ -22,6 +19,7 @@ create table mojo_mysql1 (
   primary key (id)
 );
 EOF
+$db->query('truncate table mojo_mysql1');
 
 # Insert values
 
@@ -54,5 +52,7 @@ $conflict->{f1} = 'another conflict';
 my $msg='we had a conflict';
 is $db->insert($dbname, $conflict, {on_conflict => {f3 => $msg}})->rows, 2, 'update';
 is_deeply $db->select($dbname, ['f1', 'f3'])->hash, {f1 => 'one conflict', f3 => $msg}, 'value updated';
+
+$db->query('drop table mojo_mysql1') unless $ENV{TEST_KEEP_DB};
 
 done_testing();

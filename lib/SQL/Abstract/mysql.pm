@@ -35,10 +35,6 @@ sub insert {
   return wantarray ? ($sql, @bind) : $sql;
 }
 
-sub new {
-  return shift->SUPER::new(quote_char => chr(96), name_sep => '.');
-}
-
 sub _order_by {
   my ($self, $options) = @_;
 
@@ -112,8 +108,12 @@ SQL::Abstract::mysql - MySQL / MariaDB
 =head1 SYNOPSIS
 
   use SQL::Abstract::mysql;
+  my $abstract = SQL::Abstract::mysql->new(quote_char => chr(96), name_sep => '.');
+  # The same as
+  use Mojo::mysql;
+  my $mysql = Mojo::mysql->new;
+  my $abstract = $mysql->abstract;
 
-  my $abstract = SQL::Abstract::mysql->new;
   say $abstract->insert('some_table', \%some_values, \%some_options);
   say $abstract->select('some_table');
 

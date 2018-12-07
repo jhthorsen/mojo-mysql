@@ -1,11 +1,12 @@
 use Mojo::Base -strict;
 
 use Test::More;
-use SQL::Abstract::mysql;
+use Mojo::mysql;
 
 # Basics
 
-my $abstract = SQL::Abstract::mysql->new;
+my $mysql    = Mojo::mysql->new;
+my $abstract = $mysql->abstract;
 is_deeply [$abstract->insert('foo', {bar => 'baz'})], ['INSERT INTO `foo` ( `bar`) VALUES ( ? )', 'baz'], 'right query';
 is_deeply [$abstract->select('foo', '*')], ['SELECT * FROM `foo`'], 'right query';
 is_deeply [$abstract->select(['foo', 'bar', 'baz'])], ['SELECT * FROM `foo`, `bar`, `baz`'], 'right query';
@@ -31,24 +32,19 @@ is_deeply \@sql, ['INSERT INTO `foo` ( `bar`) VALUES ( ? ) ON DUPLICATE KEY UPDA
 
 # on conflict (unsupported value)
 
-eval { $abstract->insert('foo', {bar => 'baz'}, {on_conflict => 'do something'})};
+eval { $abstract->insert('foo', {bar => 'baz'}, {on_conflict => 'do something'}) };
 like $@, qr/on_conflict value "do something" is not allowed/, 'right error';
 
-eval { $abstract->insert('foo', {bar => 'baz'}, {on_conflict => undef})};
+eval { $abstract->insert('foo', {bar => 'baz'}, {on_conflict => undef}) };
 like $@, qr/on_conflict value "" is not allowed/, 'right error';
 
 # ORDER BY
 
 @sql = $abstract->select('foo', '*', {bar => 'baz'}, {-desc => 'yada'});
-is_deeply \@sql,
-  ['SELECT * FROM `foo` WHERE ( `bar` = ? ) ORDER BY `yada` DESC', 'baz'],
-  'right query';
+is_deeply \@sql, ['SELECT * FROM `foo` WHERE ( `bar` = ? ) ORDER BY `yada` DESC', 'baz'], 'right query';
 
-@sql = $abstract->select('foo', '*', {bar => 'baz'},
-  {order_by => {-desc => 'yada'}});
-is_deeply \@sql,
-  ['SELECT * FROM `foo` WHERE ( `bar` = ? ) ORDER BY `yada` DESC', 'baz'],
-  'right query';
+@sql = $abstract->select('foo', '*', {bar => 'baz'}, {order_by => {-desc => 'yada'}});
+is_deeply \@sql, ['SELECT * FROM `foo` WHERE ( `bar` = ? ) ORDER BY `yada` DESC', 'baz'], 'right query';
 
 # LIMIT, OFFSET
 
@@ -65,21 +61,11 @@ is_deeply \@sql, ['SELECT * FROM `foo` GROUP BY `bar`, `baz`'], 'right query';
 
 # HAVING
 
-@sql = $abstract->select('foo', '*', undef,
-  {group_by => ['bar'], having => {baz => 'yada'}});
-is_deeply \@sql,
-  ['SELECT * FROM `foo` GROUP BY `bar` HAVING `baz` = ?', 'yada'],
-  'right query';
+@sql = $abstract->select('foo', '*', undef, {group_by => ['bar'], having => {baz => 'yada'}});
+is_deeply \@sql, ['SELECT * FROM `foo` GROUP BY `bar` HAVING `baz` = ?', 'yada'], 'right query';
 
-@sql = $abstract->select(
-  'foo', '*',
-  {bar      => {'>' => 'baz'}},
-  {group_by => ['bar'], having => {baz => {'<' => 'bar'}}}
-);
-$result = [
-  'SELECT * FROM `foo` WHERE ( `bar` > ? ) GROUP BY `bar` HAVING `baz` < ?',
-  'baz', 'bar'
-];
+@sql = $abstract->select('foo', '*', {bar => {'>' => 'baz'}}, {group_by => ['bar'], having => {baz => {'<' => 'bar'}}});
+$result = ['SELECT * FROM `foo` WHERE ( `bar` > ? ) GROUP BY `bar` HAVING `baz` < ?', 'baz', 'bar'];
 is_deeply \@sql, $result, 'right query';
 
 # GROUP BY (unsupported value)
