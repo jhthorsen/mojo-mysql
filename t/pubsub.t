@@ -3,7 +3,7 @@ use Mojo::Base -strict;
 use Mojo::mysql;
 use Test::More;
 
-plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
+plan skip_all => 'TEST_PUBSUB=1 TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_PUBSUB} && $ENV{TEST_ONLINE};
 
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 my (@pids, @payload);
