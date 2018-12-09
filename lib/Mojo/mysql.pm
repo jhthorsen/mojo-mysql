@@ -146,7 +146,7 @@ Mojo::mysql - Mojolicious and Async MySQL
 
   # Connect to a remote database
   my $mysql = Mojo::mysql->strict_mode('mysql://username:password@hostname/test');
-  # MySQL >= 8.0:
+  # MySQL >= 8.0, initial connection for username:
   my $mysql = Mojo::mysql->strict_mode('mysql://username:password@hostname/test;mysql_ssl=1');
 
   # Create a table
