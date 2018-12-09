@@ -140,8 +140,8 @@ L<SQL::Abstract::mysql> inherits all methods from L<SQL::Abstract>.
 
 The C<on_conflict> option can be used to generate C<INSERT IGNORE>, C<REPLACE> and
 C<INSERT ... ON DUPLICATE KEY UPDATE> queries.
-So far C<''> to pass C<INSERT IGNORE>, C<'replace'> to pass C<REPLACE> and hash references
-to pass C<UPDATE> with conflict targets are supported.
+So far C<'ignore'> to pass C<INSERT IGNORE>, C<'replace'> to pass C<REPLACE> and
+hash references to pass C<UPDATE> with conflict targets are supported.
 
   # "insert ignore into t (id, a) values (123, 'b')"
   $abstract->insert('t', {id => 123, a => 'b'}, {on_conflict => 'ignore'});
