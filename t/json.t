@@ -9,6 +9,7 @@ my $db    = $mysql->db;
 
 eval {
   $db->query('create table if not exists mojo_json_test (id int(10), name varchar(60), j json)');
+  $db->query('truncate table mojo_json_test');
   $db->query('insert into mojo_json_test (id, name, j) values (?, ?, ?)', $$, $0, {json => {foo => 42}});
 } or do {
   plan skip_all => $@;
@@ -26,6 +27,6 @@ is_deeply $db->query('select name from mojo_json_test where name like "%supergir
 is_deeply $db->query('select name from mojo_json_test where name like "%supergirl%"')->expand(1)->hash,
   {name => {nick => 'supergirl'}}, 'name as hash';
 
-$db->query('drop table mojo_json_test');
+$db->query('drop table mojo_json_test') unless $ENV{TEST_KEEP_DB};
 
 done_testing;
