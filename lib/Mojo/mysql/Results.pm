@@ -21,12 +21,6 @@ sub hash { ($_[0]->_expand($_[0]->sth->fetchrow_hashref))[0] }
 
 sub hashes { _c($_[0]->_expand(@{$_[0]->sth->fetchall_arrayref({})})) }
 
-sub new {
-  my $self = shift->SUPER::new(@_);
-  ($self->{sth}{private_mojo_results} //= 0)++;
-  return $self;
-}
-
 sub rows { shift->sth->rows }
 
 sub text { tablify shift->arrays }
@@ -80,8 +74,8 @@ sub _expand {
 
 sub DESTROY {
   my $self = shift;
-  return unless my $sth = $self->{sth};
-  $sth->finish unless --$sth->{private_mojo_results};
+  return unless my $db = $self->{db} and my $sth = $self->{sth};
+  push @{$db->{done_sth}}, $sth;
 }
 
 1;

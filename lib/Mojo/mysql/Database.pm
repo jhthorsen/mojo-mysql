@@ -28,9 +28,8 @@ for my $name (qw(delete insert select update)) {
 
 sub DESTROY {
   my $self = shift;
-  my $waiting = $self->{waiting} || [];
-  $_->{cb}($self, 'Premature connection close', undef) for @$waiting;
-  return unless (my $mysql = $self->mysql) && (my $dbh = $self->dbh);
+  $self->_cleanup_sth;
+  return unless (my $mysql = $self->mysql) and (my $dbh = $self->dbh);
   $mysql->_enqueue($dbh, $self->{handle});
 }
 
@@ -45,6 +44,7 @@ sub begin {
 
 sub disconnect {
   my $self = shift;
+  $self->_cleanup_sth;
   $self->_unwatch;
   $self->dbh->disconnect;
 }
@@ -59,6 +59,7 @@ sub query {
 
   # Blocking
   unless ($cb) {
+    Carp::confess('Cannot perform blocking query, while waiting for async response') if $self->backlog;
     my $sth = $self->dbh->prepare($query);
     local $sth->{HandleError} = sub { $_[0] = Carp::shortmess($_[0]); 0 };
     _bind_params($sth, @_);
@@ -108,6 +109,12 @@ sub _bind_params {
   return $sth;
 }
 
+sub _cleanup_sth {
+  my $self = shift;
+  delete $self->{done_sth};
+  $_->{cb}($self, 'Premature connection close', undef) for @{delete $self->{waiting} || []};
+}
+
 sub _next {
   my $self = shift;
 
@@ -117,16 +124,10 @@ sub _next {
   my $sth = $next->{sth} = $self->dbh->prepare($next->{query}, {async => 1});
   _bind_params($sth, @{$next->{args}});
   $sth->execute;
-
-  # keep reference to async handles to prevent being finished on result destroy while whatching fd
-  push @{$self->{async_sth} ||= []}, $sth;
 }
 
 sub _unwatch {
-  my $self = shift;
-  Mojo::IOLoop->singleton->reactor->remove(delete $self->{handle}) if $self->{handle};
-  $_->finish for grep { !$_->{private_mojo_results} } @{$self->{async_sth}};
-  $self->{async_sth} = [];
+  Mojo::IOLoop->singleton->reactor->remove(delete $_[0]->{handle}) if $_[0]->{handle};
 }
 
 sub _watch {
@@ -134,11 +135,9 @@ sub _watch {
   return if $self->{handle};
 
   my $dbh = $self->dbh;
-  open $self->{handle}, '<&', $dbh->mysql_fd or die "Dup mysql_fd: $!" unless $self->{handle};
+  open $self->{handle}, '<&', $dbh->mysql_fd or die "Dup mysql_fd: $!";
   Mojo::IOLoop->singleton->reactor->io(
     $self->{handle} => sub {
-      my $reactor = shift;
-
       return unless my $waiting = $self->{waiting};
       return unless @$waiting and $waiting->[0]{sth} and $waiting->[0]{sth}->mysql_async_ready;
       my ($cb, $err, $sth) = @{shift @$waiting}{qw(cb err sth)};

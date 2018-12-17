@@ -42,7 +42,7 @@ Mojo::IOLoop->delay(
   }
 )->wait;
 ok !$err, 'no error' or diag "err=$err";
-is_deeply $res, [{one => 1}, {two => 2}, {two => 2}], 'concurrent non-blocking selects';
+is_deeply $res, [{one => 1}, {two => 2}, {two => 2}], 'concurrent non-blocking selects' or diag explain $res;
 
 note 'Sequential and Concurrent non-blocking selects';
 ($err, $res) = (0, []);
@@ -134,5 +134,39 @@ $mysql->db->query(
 
 Mojo::IOLoop->start;
 like $err, qr/database\.t line/, 'error context non-blocking';
+
+note 'Avoid Gathering async_query_in_flight warning';
+$mysql->max_connections(20);
+$db = $mysql->db;
+my @results = ($db->query('select 1'));
+my @warnings;
+
+local $SIG{__WARN__} = sub { push @warnings, $_[0] =~ /DBD::mysql/ ? Carp::longmess($_[0]) : $_[0] };
+Mojo::IOLoop->delay(
+  sub {
+    my $delay = shift;
+    $db->query('select 2', $delay->begin);
+    $db->query('select 3', sub { }); # Results in "Gathering async_query_in_flight results for the wrong handle" warning
+    $db->query('select 4', $delay->begin);
+  },
+  sub {
+    my $delay = shift;
+    push @results, grep {$_} @_;
+    Mojo::IOLoop->stop;
+  },
+)->catch(sub {
+  diag pop;
+});
+Mojo::IOLoop->start;
+delete $SIG{__WARN__};
+
+is_deeply [map { $_->array->[0] } reverse @results], [4, 2, 1], 'select 1, 2, 4';
+is join('', @warnings), '', 'no warnings';
+
+note 'Avoid "Calling a synchronous function on an asynchronous handle"';
+my $p = $db->query_p('select 11');
+eval { $db->query('select 22') };
+like $@, qr{Cannot perform blocking query, while waiting for async response},
+  'Cannot perform blocking and non-blocking at the same time';
 
 done_testing;
