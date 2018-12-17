@@ -7,22 +7,22 @@ use Test::More;
 
 plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 
-# Clean up before start
+note 'Clean up before start';
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 $mysql->db->query('drop table if exists mojo_migrations');
 
-# Defaults
+note 'Defaults';
 is $mysql->migrations->name,   'migrations', 'right name';
 is $mysql->migrations->latest, 0,            'latest version is 0';
 is $mysql->migrations->active, 0,            'active version is 0';
 
-# Create migrations table
+note 'Create migrations table';
 ok !(grep {/mojo_migrations/} @{$mysql->db->tables}), 'migrations table does not exist';
 
 is $mysql->migrations->migrate->active, 0, 'active version is 0';
 ok !!(grep {/mojo_migrations/} @{$mysql->db->tables}), 'migrations table exists';
 
-# Migrations from DATA section
+note 'Migrations from DATA section';
 is $mysql->migrations->from_data->latest, 0, 'latest version is 0';
 is $mysql->migrations->from_data(__PACKAGE__)->latest, 0, 'latest version is 0';
 is $mysql->migrations->name('test1')->from_data->latest, 10, 'latest version is 10';
@@ -30,7 +30,7 @@ is $mysql->migrations->name('test2')->from_data->latest, 2,  'latest version is 
 is $mysql->migrations->name('migrations')->from_data(__PACKAGE__, 'test1')->latest, 10, 'latest version is 10';
 is $mysql->migrations->name('test2')->from_data(__PACKAGE__)->latest, 2, 'latest version is 2';
 
-# Different syntax variations
+note 'Different syntax variations';
 $mysql->migrations->name('migrations_test')->from_string(<<EOF);
 -- 1 up
 create table if not exists migration_test_one (foo varchar(255));
@@ -71,7 +71,7 @@ is $mysql->migrations->migrate->active, 10, 'active version is 10';
 is_deeply $mysql->db->query('select * from migration_test_two')->hash, {bar => 'works too'}, 'right structure';
 is $mysql->migrations->migrate(0)->active, 0, 'active version is 0';
 
-# Bad and concurrent migrations
+note 'Bad and concurrent migrations';
 my $mysql2 = Mojo::mysql->new($ENV{TEST_ONLINE});
 $mysql2->migrations->name('migrations_test2')->from_file(catfile($FindBin::Bin, 'migrations', 'test.sql'));
 is $mysql2->migrations->latest, 4, 'latest version is 4';
@@ -87,7 +87,7 @@ is_deeply $mysql2->db->query('select * from migration_test_three')->hashes->to_a
 is $mysql->migrations->migrate(0)->active,  0, 'active version is 0';
 is $mysql2->migrations->migrate(0)->active, 0, 'active version is 0';
 
-# Migrate automatically
+note 'Migrate automatically';
 $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 $mysql->migrations->name('migrations_test')->from_string(<<EOF);
 -- 5 up
@@ -106,11 +106,11 @@ is $mysql->migrations->migrate(5)->active, 5, 'active version is 5';
 is_deeply $mysql->db->query('select * from migration_test_six')->hashes, [], 'right structure';
 is $mysql->migrations->migrate(0)->active, 0, 'active version is 0';
 
-# Unknown version
+note 'Unknown version';
 eval { $mysql->migrations->migrate(23) };
 like $@, qr/Version 23 has no migration/, 'right error';
 
-# Version mismatch
+note 'Version mismatch';
 my $newer = <<EOF;
 -- 2 up
 create table migration_test_five (test int);

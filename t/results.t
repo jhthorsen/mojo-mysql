@@ -14,7 +14,7 @@ $db->query(
 );
 $db->query('insert into results_test (name) values (?)', $_) for qw(foo bar);
 
-# Result methods
+note 'Result methods';
 is_deeply $db->query('select * from results_test')->rows, 2, 'two rows';
 is_deeply $db->query('select * from results_test')->columns, ['id', 'name'], 'right structure';
 is_deeply $db->query('select * from results_test')->array,   [1,    'foo'],  'right structure';
@@ -24,13 +24,13 @@ is_deeply $db->query('select * from results_test')->hashes->to_array,
   [{id => 1, name => 'foo'}, {id => 2, name => 'bar'}], 'right structure';
 is $mysql->db->query('select * from results_test')->text, "1  foo\n2  bar\n", 'right text';
 
-# Iterate
+note 'Iterate';
 my $results = $db->query('select * from results_test');
 is_deeply $results->array, [1, 'foo'], 'right structure';
 is_deeply $results->array, [2, 'bar'], 'right structure';
 is $results->array, undef, 'no more results';
 
-# Non-blocking query where not all results have been fetched
+note 'Non-blocking query where not all results have been fetched';
 my ($fail, $result);
 Mojo::IOLoop->delay(
   sub {
@@ -60,7 +60,7 @@ Mojo::IOLoop->delay(
 ok !$fail, 'no error';
 is_deeply $result, [['foo'], ['foo'], ['foo']], 'right structure';
 
-# Transactions
+note 'Transactions';
 {
   my $tx = $db->begin;
   $db->query("insert into results_test (name) values ('tx1')");

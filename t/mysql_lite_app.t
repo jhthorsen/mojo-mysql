@@ -32,15 +32,15 @@ get '/non-blocking' => sub {
 
 my $t = Test::Mojo->new;
 
-# Make sure migrations are not served as static files
+note 'Make sure migrations are not served as static files';
 $t->get_ok('/app_test')->status_is(404);
 
-# Blocking select (with connection reuse)
+note 'Blocking select (with connection reuse)';
 $t->get_ok('/blocking')->status_is(200)->content_is('I ♥ Mojolicious!');
 my $pid = $t->tx->res->headers->header('X-PID');
 $t->get_ok('/blocking')->status_is(200)->header_is('X-PID', $pid)->content_is('I ♥ Mojolicious!');
 
-# Non-blocking select (with connection reuse)
+note 'Non-blocking select (with connection reuse)';
 $t->get_ok('/non-blocking')->status_is(200)->header_is('X-PID', $pid)
   ->content_is('Mojo::mysql::Database=I ♥ Mojolicious!');
 $t->get_ok('/non-blocking')->status_is(200)->header_is('X-PID', $pid)

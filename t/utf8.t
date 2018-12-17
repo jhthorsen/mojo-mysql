@@ -16,7 +16,7 @@ $db->query(
 $db->query('truncate table results_test');
 $db->query('insert into results_test (name) values (?)', $_) for qw(☺ ☻);
 
-# Result methods
+note 'Result methods';
 is_deeply $db->query('select * from results_test')->rows, 2, 'two rows';
 is_deeply $db->query('select * from results_test')->columns, ['id', 'name'], 'right structure';
 is_deeply $db->query('select * from results_test')->array,   [1,    '☺'],  'right structure';

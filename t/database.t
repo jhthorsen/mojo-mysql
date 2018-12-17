@@ -10,11 +10,11 @@ plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 ok $mysql->db->ping, 'connected';
 
-# Blocking select
+note 'Blocking select';
 is_deeply $mysql->db->query('select 1 as one, 2 as two, 3 as three')->hash, {one => 1, two => 2, three => 3},
   'right structure';
 
-# Non-blocking select
+note 'Non-blocking select';
 my ($err, $res);
 my $db = $mysql->db;
 is $db->backlog, 0, 'no operations waiting';
@@ -25,7 +25,7 @@ is $db->backlog, 0, 'no operations waiting';
 ok !$err, 'no error' or diag "err=$err";
 is_deeply $res, {one => 1, two => 2, three => 3}, 'right structure';
 
-# Concurrent non-blocking selects
+note 'Concurrent non-blocking selects';
 ($err, $res) = ();
 Mojo::IOLoop->delay(
   sub {
@@ -44,7 +44,7 @@ Mojo::IOLoop->delay(
 ok !$err, 'no error' or diag "err=$err";
 is_deeply $res, [{one => 1}, {two => 2}, {two => 2}], 'concurrent non-blocking selects';
 
-# Sequential and Concurrent non-blocking selects
+note 'Sequential and Concurrent non-blocking selects';
 ($err, $res) = (0, []);
 Mojo::IOLoop->delay(
   sub {
@@ -72,7 +72,7 @@ Mojo::IOLoop->delay(
 ok !$err, 'no error' or diag "err=$err";
 is_deeply $res, [{one => 1}, {one => 1}, {two => 2}, {two => 2}, {three => 3}], 'right structure';
 
-# Connection cache
+note 'Connection cache';
 is $mysql->max_connections, 5, 'right default';
 my @pids = sort map { $_->pid } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db;
 is_deeply \@pids, [sort map { $_->pid } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db],
@@ -89,30 +89,30 @@ my $dbh = $mysql->db->dbh;
 is $mysql->db->dbh, $dbh, 'same database handle';
 isnt $mysql->close_idle_connections->db->dbh, $dbh, 'different database handles';
 
-# Binary data
+note 'Binary data';
 $db = $mysql->db;
 my $bytes = "\xF0\xF1\xF2\xF3";
 is_deeply $db->query('select binary ? as foo', {type => SQL_BLOB, value => $bytes})->hash, {foo => $bytes},
   'right data';
 
-# Fork safety
+note 'Fork safety';
 $pid = $mysql->db->pid;
 {
   local $$ = -23;
   isnt $mysql->db->pid, $pid, 'different database handles';
 };
 
-# Blocking error
+note 'Blocking error';
 eval { $mysql->db->query('does_not_exist') };
 like $@, qr/does_not_exist/, 'does_not_exist sync';
 
-# Non-blocking error
+note 'Non-blocking error';
 ($err, $res) = ();
 $mysql->db->query('does_not_exist' => sub { ($err, $res) = @_[1, 2]; Mojo::IOLoop->stop; });
 Mojo::IOLoop->start;
 like $err, qr/does_not_exist/, 'does_not_exist async';
 
-# Clean up non-blocking queries
+note 'Clean up non-blocking queries';
 ($err, $res) = ();
 $db = $mysql->db;
 $db->query('select 1' => sub { ($err, $res) = @_[1, 2] });
@@ -120,7 +120,7 @@ $db->disconnect;
 undef $db;
 is $err, 'Premature connection close', 'Premature connection close';
 
-# Error context
+note 'Error context';
 ($err, $res) = ();
 eval { $mysql->db->query('select * from table_does_not_exist') };
 like $@, qr/database\.t line/, 'error context blocking';
