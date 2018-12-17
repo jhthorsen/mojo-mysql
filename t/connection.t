@@ -79,4 +79,4 @@ is $mysql->dsn, 'dbi:mysql:mysql_read_default_file=~/.cpanstats.cnf', 'correct d
 $mysql = Mojo::mysql->new({dsn => 'dbi:mysql:mysql_read_default_file=~/.cpanstats.cnf'});
 is $mysql->dsn, 'dbi:mysql:mysql_read_default_file=~/.cpanstats.cnf', 'correct dsn';
 
-done_testing();
+done_testing;

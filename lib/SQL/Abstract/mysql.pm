@@ -97,17 +97,19 @@ sub _order_by {
 
   return $sql, @bind;
 }
+
 1;
 
 =encoding utf8
 
 =head1 NAME
 
-SQL::Abstract::mysql - MySQL / MariaDB
+SQL::Abstract::mysql - Generate SQL from Perl data structures for MySQL and MariaDB
 
 =head1 SYNOPSIS
 
   use SQL::Abstract::mysql;
+
   my $abstract = SQL::Abstract::mysql->new(quote_char => chr(96), name_sep => '.');
   # The same as
   use Mojo::mysql;
@@ -119,14 +121,8 @@ SQL::Abstract::mysql - MySQL / MariaDB
 
 =head1 DESCRIPTION
 
-L<SQL::Abstract::mysql> extends L<SQL::Abstract> with a few MySQL / MariaDB features
-used by L<Mojo::mysql>. It was inspired by L<SQL::Abstract::Pg>.
-
-=head1 CONSTRUCTOR
-
-=head2 new
-
-  my $abstract = SQL::Abstract::mysql->new;
+L<SQL::Abstract::mysql> extends L<SQL::Abstract> with a few MySQL / MariaDB
+features used by L<Mojo::mysql>. It was inspired by L<SQL::Abstract::Pg>.
 
 =head1 METHODS
 
@@ -134,7 +130,9 @@ L<SQL::Abstract::mysql> inherits all methods from L<SQL::Abstract>.
 
 =head2 insert
 
-  $abstract->insert($table, \@values || \%fieldvals, \%options);
+  my ($stmt, @bind) = $abstract->insert($table, \@values || \%fieldvals, \%options);
+
+This method extends L<SQL::Abstract/insert> with the following functionality:
 
 =head3 ON CONFLICT
 
@@ -154,15 +152,17 @@ hash references to pass C<UPDATE> with conflict targets are supported.
 
 =head2 select
 
-  $abstract->select($source, $fields, $where, $order);
-  $abstract->select($source, $fields, $where, \%options);
+  my ($stmt, @bind) = $abstract->select($source, $fields, $where, $order);
+  my ($stmt, @bind) = $abstract->select($source, $fields, $where, \%options);
+
+This method extends L<SQL::Abstract/select> with the following functionality:
 
 =head3 AS
 
-The C<$fields> argument accepts array references containing array
-references with field names and aliases, as well as array references containing
-scalar references to pass literal SQL and array reference references to pass
-literal SQL with bind values.
+The C<$fields> argument accepts array references containing array references
+with field names and aliases, as well as array references containing scalar
+references to pass literal SQL and array reference references to pass literal
+SQL with bind values.
 
   # "select foo as bar from some_table"
   $abstract->select('some_table', [[foo => 'bar']]);
@@ -178,9 +178,8 @@ literal SQL with bind values.
 
 =head3 JOIN
 
-The C<$source> argument accepts array references containing not only
-table names, but also array references with tables to generate C<JOIN> clauses
-for.
+The C<$source> argument accepts array references containing not only table
+names, but also array references with tables to generate C<JOIN> clauses for.
 
   # "select * from foo join bar on (bar.foo_id = foo.id)"
   $abstract->select(['foo', ['bar', foo_id => 'id']]);
@@ -196,9 +195,9 @@ for.
 
 =head3 ORDER BY
 
-In addition to the C<$order> argument accepted by L<SQL::Abstract> you can
-pass a hash reference with various options. This includes C<order_by>,
-which takes the same values as the C<$order> argument.
+In addition to the C<$order> argument accepted by L<SQL::Abstract> you can pass
+a hash reference with various options. This includes C<order_by>, which takes
+the same values as the C<$order> argument.
 
   # "select * from some_table order by foo desc"
   $abstract->select('some_table', '*', undef, {order_by => {-desc => 'foo'}});
@@ -219,8 +218,8 @@ with C<LIMIT> and C<OFFSET> clauses.
 
 =head3 GROUP BY
 
-The C<group_by> option can be used to generate C<SELECT> queries with
-C<GROUP BY> clauses. So far array references to pass a list of fields and scalar
+The C<group_by> option can be used to generate C<SELECT> queries with C<GROUP
+BY> clauses. So far array references to pass a list of fields and scalar
 references to pass literal SQL are supported.
 
   # "select * from some_table group by foo, bar"
@@ -240,9 +239,8 @@ clauses, which takes the same values as the C<$where> argument.
 =head3 FOR
 
 The C<for> option can be used to generate C<SELECT> queries with C<FOR UPDATE>
-or C<LOCK IN SHARE MODE> clauses.
-So far the scalar values C<update> and C<share> and scalar references to
-pass literal SQL are supported.
+or C<LOCK IN SHARE MODE> clauses.  So far the scalar values C<update> and
+C<share> and scalar references to pass literal SQL are supported.
 
   # "select * from some_table for update"
   $abstract->select('some_table', '*', undef, {for => 'update'});

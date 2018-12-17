@@ -135,4 +135,4 @@ $mysql->db->query(
 Mojo::IOLoop->start;
 like $err, qr/database\.t line/, 'error context non-blocking';
 
-done_testing();
+done_testing;

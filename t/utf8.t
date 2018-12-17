@@ -28,4 +28,4 @@ is $mysql->db->query('select * from results_test')->text, "1  ☺\n2  ☻\n", 'r
 
 $db->query('drop table results_test');
 
-done_testing();
+done_testing;

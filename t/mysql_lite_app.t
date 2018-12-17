@@ -47,7 +47,7 @@ $t->get_ok('/non-blocking')->status_is(200)->header_is('X-PID', $pid)
   ->content_is('Mojo::mysql::Database=I ♥ Mojolicious!');
 $t->app->mysql->migrations->migrate(0);
 
-done_testing();
+done_testing;
 
 __DATA__
 @@ app_test

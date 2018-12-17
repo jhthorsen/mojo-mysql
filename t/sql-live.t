@@ -4,12 +4,11 @@ use Test::More;
 
 plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 
-# Create table
-
-my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
-my $db    = $mysql->db;
+my $mysql  = Mojo::mysql->new($ENV{TEST_ONLINE});
+my $db     = $mysql->db;
 my $dbname = 'mojo_mysql1';
 
+note 'Create table';
 $db->query(<<EOF);
 create table if not exists mojo_mysql1 (
   id int not null,
@@ -21,8 +20,7 @@ create table if not exists mojo_mysql1 (
 EOF
 $db->query('truncate table mojo_mysql1');
 
-# Insert values
-
+note 'Insert values';
 my @testdata = (
   {id => 1, f1 => 'one first',  f2 => 'two first',  f3 => 'three first'},
   {id => 2, f1 => 'one second', f2 => 'two second', f3 => 'three second'},
@@ -35,8 +33,7 @@ for my $data (@testdata) {
 
 is $db->select($dbname)->rows, scalar(@testdata), 'size of db';
 
-# On conflict
-
+note 'On conflict';
 my $conflict = {id => 1, f1 => 'one conflict'};
 
 eval { $db->insert($dbname, $conflict); };
@@ -49,10 +46,11 @@ is $db->select($dbname)->rows, scalar(@testdata), 'size of db';
 is $db->select($dbname, 'f1', {id => 1})->hash->{f1}, 'one conflict', 'value replaced';
 
 $conflict->{f1} = 'another conflict';
-my $msg='we had a conflict';
+my $msg = 'we had a conflict';
 is $db->insert($dbname, $conflict, {on_conflict => {f3 => $msg}})->rows, 2, 'update';
 is_deeply $db->select($dbname, ['f1', 'f3'])->hash, {f1 => 'one conflict', f3 => $msg}, 'value updated';
 
+note 'Cleanup';
 $db->query('drop table mojo_mysql1') unless $ENV{TEST_KEEP_DB};
 
-done_testing();
+done_testing;

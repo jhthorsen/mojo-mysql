@@ -87,4 +87,4 @@ is_deeply $db->query('select * from results_test where name = ?', 'tx3')->hashes
 
 $db->query('drop table results_test');
 
-done_testing();
+done_testing;

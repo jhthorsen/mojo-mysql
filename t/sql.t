@@ -94,4 +94,4 @@ like $@, qr/for value "update skip locked" is not allowed/, 'right error';
 eval { $abstract->select('foo', '*', undef, {for => []}) };
 like $@, qr/ARRAYREF/, 'right error';
 
-done_testing();
+done_testing;

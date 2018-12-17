@@ -1,5 +1,9 @@
 Revision history for perl distribution Mojo-mysql
 
+1.10 Not Released
+ - Add SQL::Abstract::mysql
+   Contributor: Rolf Stöckli
+
 1.09 2018-11-27T09:32:01+0900
  - Fix MariaDB/MySQL incompatibility #41
    Contributor: Rolf Stöckli
