@@ -1,6 +1,6 @@
 Revision history for perl distribution Mojo-mysql
 
-1.10 Not Released
+1.10 2018-12-18T07:25:14+0900
  - Add SQL::Abstract::mysql
    Contributor: Rolf Stöckli
 

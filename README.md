@@ -36,7 +36,7 @@ Mojo::mysql - Mojolicious and Async MySQL
     say $db->query('insert into names (name) values (?)', 'Daniel')
       ->last_insert_id;
 
-    # Use SQL::Abstract to generate queries for you
+    # Use SQL::Abstract::mysql to generate queries for you
     $db->insert('names', {name => 'Isabel'});
     say $db->select('names', undef, {name => 'Isabel'})->hash->{id};
     $db->update('names', {name => 'Bel'}, {name => 'Isabel'});
@@ -158,9 +158,9 @@ Emitted when a new database connection has been established.
 ## abstract
 
     $abstract = $mysql->abstract;
-    $mysql    = $mysql->abstract(SQL::Abstract->new);
+    $mysql    = $mysql->abstract(SQL::Abstract::mysql->new);
 
-[SQL::Abstract](https://metacpan.org/pod/SQL::Abstract) object used to generate CRUD queries for [Mojo::mysql::Database](https://metacpan.org/pod/Mojo::mysql::Database).
+[SQL::Abstract::mysql](https://metacpan.org/pod/SQL::Abstract::mysql) object used to generate CRUD queries for [Mojo::mysql::Database](https://metacpan.org/pod/Mojo::mysql::Database).
 
     # Generate statements and bind values
     my ($stmt, @bind) = $mysql->abstract->select('names');
