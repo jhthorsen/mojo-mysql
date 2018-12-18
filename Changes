@@ -1,5 +1,8 @@
 Revision history for perl distribution Mojo-mysql
 
+1.11 2018-12-18T19:27:08+0900
+ - Avoid "Gathering async_query_in_flight results for the wrong handle" warning
+
 1.10 2018-12-18T07:25:14+0900
  - Add SQL::Abstract::mysql
    Contributor: Rolf Stöckli
