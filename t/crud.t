@@ -22,7 +22,7 @@ $db->query(
 note 'Create';
 $db->insert('crud_test', {name => 'foo'});
 is_deeply $db->select('crud_test')->hashes->to_array, [{id => 1, name => 'foo'}], 'right structure';
-is $db->mysql->handle_attr($db->insert('crud_test', {name => 'bar'})->sth, 'insertid'), 2, 'right value';
+is $db->mysql->_handle_attr($db->insert('crud_test', {name => 'bar'})->sth, 'insertid'), 2, 'right value';
 is_deeply $db->select('crud_test')->hashes->to_array, [{id => 1, name => 'foo'}, {id => 2, name => 'bar'}],
   'right structure';
 

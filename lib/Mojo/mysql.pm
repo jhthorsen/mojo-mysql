@@ -92,14 +92,6 @@ sub from_string {
   return $self;
 }
 
-sub handle_attr {
-  my ($self, $handle) = (shift, shift);
-  my $key = $self->dsn =~ m!^dbi:(\w+):! ? lc "$1_$_[0]" : "mysql_$_[0]";
-  return $handle->{$key} if @_ == 1;
-  $handle->{$key} = $_[1];
-  $handle;
-}
-
 sub new {
   @_ > 2 || ref $_[-1] eq 'HASH' ? shift->SUPER::new(@_) : shift->SUPER::new->from_string(@_);
 }
@@ -123,7 +115,7 @@ sub _dequeue {
   # especially once he discovers that DBD::mysql randomly reconnects under
   # you, silently, but only if certain env vars are set
   # hint: force-set mysql_auto_reconnect or whatever it's called to 0
-  $self->handle_attr($dbh, auto_reconnect => 0);
+  $self->_handle_attr($dbh, auto_reconnect => 0);
 
   # Maintain Commits with Mojo::mysql::Transaction
   $dbh->{AutoCommit} = 1;
@@ -138,6 +130,14 @@ sub _enqueue {
   my ($self, $dbh, $handle) = @_;
   push @{$self->{queue}}, [$dbh, $handle] if $dbh->{Active};
   $self->close_idle_connections($self->max_connections);
+}
+
+sub _handle_attr {
+  my ($self, $handle) = (shift, shift);
+  my $key = $self->dsn =~ m!^dbi:(\w+):! ? lc "$1_$_[0]" : "mysql_$_[0]";
+  return $handle->{$key} if @_ == 1;
+  $handle->{$key} = $_[1];
+  $handle;
 }
 
 sub _set_strict_mode {
@@ -456,14 +456,6 @@ Parse configuration from connection string.
 
   # Username, database and additional options
   $mysql->from_string('mysql://batman@/db5?PrintError=1&RaiseError=0');
-
-=head2 handle_attr
-
-  $value = $self->handle_attr($dbh, "thread_id");
-  $value = $self->handle_attr($sth, "client_found_rows");
-  $self->handle_attr($sth, "client_found_rows");
-
-This method is EXPERIMENTAL and could be removed in future releases.
 
 =head2 new
 

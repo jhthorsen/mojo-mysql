@@ -49,7 +49,7 @@ sub disconnect {
   $self->dbh->disconnect;
 }
 
-sub pid { $_[0]->mysql->handle_attr($_[0]->dbh, 'thread_id') }
+sub pid { $_[0]->mysql->_handle_attr($_[0]->dbh, 'thread_id') }
 
 sub ping { shift->dbh->ping }
 

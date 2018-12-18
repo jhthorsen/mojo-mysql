@@ -29,9 +29,9 @@ sub more_results { shift->sth->more_results }
 
 sub affected_rows { shift->{affected_rows} }
 
-sub warnings_count { $_[0]->db->mysql->handle_attr($_[0]->sth, 'warning_count') }
+sub warnings_count { $_[0]->db->mysql->_handle_attr($_[0]->sth, 'warning_count') }
 
-sub last_insert_id { $_[0]->db->mysql->handle_attr($_[0]->sth, 'insertid') }
+sub last_insert_id { $_[0]->db->mysql->_handle_attr($_[0]->sth, 'insertid') }
 
 sub err { shift->sth->err }
 
@@ -56,7 +56,7 @@ sub _expand {
   # Only expand json columns
   my ($idx, $name) = @$self{qw(idx name)};
   unless ($idx) {
-    my $types = $self->db->mysql->handle_attr($self->sth, 'type');
+    my $types = $self->db->mysql->_handle_attr($self->sth, 'type');
     my @idx = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
     ($idx, $name) = @$self{qw(idx name)} = (\@idx, [@{$self->columns}[@idx]]);
   }
