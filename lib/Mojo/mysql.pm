@@ -96,14 +96,6 @@ sub from_string {
   return $self;
 }
 
-sub handle_attr {
-  my ($self, $handle) = (shift, shift);
-  my $key = $self->dsn =~ m!^dbi:(\w+):! ? lc "$1_$_[0]" : "mysql_$_[0]";
-  return $handle->{$key} if @_ == 1;
-  $handle->{$key} = $_[1];
-  $handle;
-}
-
 sub new {
   @_ > 2 || ref $_[-1] eq 'HASH' ? shift->SUPER::new(@_) : shift->SUPER::new->from_string(@_);
 }
@@ -114,6 +106,14 @@ sub strict_mode {
   warn "[Mojo::mysql] strict_mode($self->{strict_mode})\n" if $ENV{DBI_TRACE};
   $self->close_idle_connections;
   return $self;
+}
+
+sub _dbi_attr {
+  my ($self, $handle) = (shift, shift);
+  my $key = $self->dsn =~ m!^dbi:(\w+):! ? lc "$1_$_[0]" : "mysql_$_[0]";
+  return $handle->{$key} if @_ == 1;
+  $handle->{$key} = $_[1];
+  $handle;
 }
 
 sub _dequeue {
@@ -127,7 +127,7 @@ sub _dequeue {
   # especially once he discovers that DBD::mysql randomly reconnects under
   # you, silently, but only if certain env vars are set
   # hint: force-set mysql_auto_reconnect or whatever it's called to 0
-  $self->handle_attr($dbh, auto_reconnect => 0);
+  $self->_dbi_attr($dbh, auto_reconnect => 0);
 
   # Maintain Commits with Mojo::mysql::Transaction
   $dbh->{AutoCommit} = 1;
@@ -457,14 +457,6 @@ Parse configuration from connection string.
 
   # Username, database and additional options
   $mysql->from_string('mysql://batman@/db5?PrintError=1&RaiseError=0');
-
-=head2 handle_attr
-
-  $value = $self->handle_attr($dbh, "thread_id");
-  $value = $self->handle_attr($sth, "client_found_rows");
-  $self->handle_attr($sth, "client_found_rows");
-
-This method is EXPERIMENTAL and could be removed in future releases.
 
 =head2 new
 

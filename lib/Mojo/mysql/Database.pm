@@ -16,7 +16,7 @@ has results_class => 'Mojo::mysql::Results';
 for my $name (qw(delete insert select update)) {
   monkey_patch __PACKAGE__, $name, sub {
     my $self = shift;
-    my @cb = ref $_[-1] eq 'CODE' ? pop : ();
+    my @cb   = ref $_[-1] eq 'CODE' ? pop : ();
     return $self->query($self->mysql->abstract->$name(@_), @cb);
   };
   monkey_patch __PACKAGE__, "${name}_p", sub {
@@ -36,7 +36,7 @@ sub backlog { scalar @{shift->{waiting} || []} }
 
 sub begin {
   my $self = shift;
-  my $tx = Mojo::mysql::Transaction->new(db => $self);
+  my $tx   = Mojo::mysql::Transaction->new(db => $self);
   weaken $tx->{db};
   return $tx;
 }
@@ -48,7 +48,7 @@ sub disconnect {
   $self->dbh->disconnect;
 }
 
-sub pid { $_[0]->mysql->handle_attr($_[0]->dbh, 'thread_id') }
+sub pid { $_[0]->mysql->_dbi_attr($_[0]->dbh, 'thread_id') }
 
 sub ping { shift->dbh->ping }
 
@@ -62,7 +62,7 @@ sub query {
     my $sth = $self->dbh->prepare($query);
     local $sth->{HandleError} = sub { $_[0] = Carp::shortmess($_[0]); 0 };
     _bind_params($sth, @_);
-    my $rv = $sth->execute;
+    my $rv  = $sth->execute;
     my $res = $self->results_class->new(db => $self, sth => $sth);
     $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
     return $res;
