@@ -76,7 +76,7 @@ sub from_string {
   if (my $host = $url->host) { $dsn .= file_name_is_absolute($host) ? ";mysql_socket=$host" : ";host=$host" }
   if (my $port = $url->port) { $dsn .= ";port=$port" }
 
-  # Need to set the dsn before settings options
+  # Need to set the dsn before reading options
   $self->dsn($dsn);
 
   # Username and password
@@ -151,7 +151,7 @@ sub _set_strict_mode {
 
 =head1 NAME
 
-Mojo::mysql - Mojolicious and Async MySQL and MariaDB
+Mojo::mysql - Mojolicious and Async MySQL/MariaDB
 
 =head1 SYNOPSIS
 
@@ -165,7 +165,7 @@ Mojo::mysql - Mojolicious and Async MySQL and MariaDB
   # MySQL >= 8.0:
   my $mysql = Mojo::mysql->strict_mode('mysql://username:password@hostname/test;mysql_ssl=1');
 
-  # Connect to MariaDB instead of mysql
+  # Use DBD::MariaDB instead of DBD::mysql
   my $mysql = Mojo::mysql->strict_mode('mariadb://username@/test');
 
   # Create a table
@@ -234,9 +234,14 @@ Mojo::mysql - Mojolicious and Async MySQL and MariaDB
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql> is a tiny wrapper around L<DBD::mysql> that makes
-L<MySQL|http://www.mysql.org> and L<MariaDB|https://mariadb.org/> a lot of fun
-to use with the L<Mojolicious|http://mojolicio.us> real-time web framework.
+L<Mojo::mysql> is a tiny wrapper around L<DBD::mysql> and L<DBD::MariaDB> that
+makes L<MySQL|http://www.mysql.org> and L<MariaDB|https://mariadb.org/> a lot
+of fun to use with the L<Mojolicious|http://mojolicio.us> real-time web
+framework.
+
+The two DBD drivers are compatible with both MySQL and MariaDB, but they offer
+different L</options>. L<DBD::MariaDB> should have better unicode support
+though and might become the default in the future.
 
 Database and handles are cached automatically, so they can be reused
 transparently to increase performance. And you can handle connection timeouts
@@ -371,10 +376,10 @@ Use this feature with caution and remember to always backup your database.
   my $options = $mysql->options;
   $mysql      = $mysql->options({mysql_use_result => 1});
 
-Options for database handles, defaults to activating C<mysql_enable_utf8>, C<AutoCommit>,
-C<AutoInactiveDestroy> as well as C<RaiseError> and deactivating C<PrintError>.
-Note that C<AutoCommit> and C<RaiseError> are considered mandatory, so
-deactivating them would be very dangerous.
+Options for database handles, defaults to activating C<mysql_enable_utf8> (only
+for L<DBD::mysql>), C<AutoCommit>, C<AutoInactiveDestroy> as well as
+C<RaiseError> and deactivating C<PrintError>. C<AutoCommit> and C<RaiseError>
+are considered mandatory, so deactivating them would be very dangerous.
 
 C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead connections.
 
@@ -382,7 +387,7 @@ C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/"be
 
 C<RaiseError> is enabled for blocking and disabled in event loop for non-blocking queries.
 
-Note about C<mysql_enable_utf8>:
+About C<mysql_enable_utf8>:
 
   The mysql_enable_utf8 sets the utf8 charset which only supports up to 3-byte
   UTF-8 encodings. mysql_enable_utf8mb4 (as of DBD::mysql 4.032) properly
@@ -468,7 +473,7 @@ This method is EXPERIMENTAL and could be removed in future releases.
 Construct a new L<Mojo::mysql> object either from L</ATTRIBUTES> and or parse
 connection string with L</"from_string"> if necessary.
 
-Connecting to MariaDB requires the optional module L<DBD::MariaDB> to be
+Using the "mariadb" scheme requires the optional module L<DBD::MariaDB> to be
 installed.
 
 =head2 strict_mode
