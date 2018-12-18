@@ -2,7 +2,6 @@ package Mojo::mysql::Database;
 use Mojo::Base 'Mojo::EventEmitter';
 
 use Carp;
-use DBD::mysql;
 use Mojo::IOLoop;
 use Mojo::JSON 'to_json';
 use Mojo::mysql::Results;
