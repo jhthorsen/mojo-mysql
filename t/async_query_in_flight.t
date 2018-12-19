@@ -10,6 +10,8 @@ my $n         = $ENV{TEST_FOR};
 my $order     = '';
 my @err;
 
+ok $mysql->db, 'check db connection';
+
 Mojo::IOLoop->recurring(
   0.01,
   sub {
