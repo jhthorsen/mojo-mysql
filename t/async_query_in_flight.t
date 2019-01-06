@@ -35,7 +35,7 @@ Mojo::IOLoop->recurring(
 
         Mojo::IOLoop->stop unless --$in_flight;
       }
-    );
+    )->catch(sub { push @err, pop; Mojo::IOLoop->stop; });
   }
 );
 
