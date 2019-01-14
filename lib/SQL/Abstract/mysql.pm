@@ -1,7 +1,19 @@
 package SQL::Abstract::mysql;
 use Mojo::Base 'SQL::Abstract';
 
+use Mojo::JSON 'encode_json';
+
 BEGIN { *puke = \&SQL::Abstract::puke }
+
+sub new {
+  my $self = shift->SUPER::new(@_);
+
+  # -e and -ne op
+  push @{$self->{unary_ops}}, {regex => qr/^e$/, handler => '_where_op_EXISTS',},
+    {regex => qr/^ne$/, handler => '_where_op_NOT_EXISTS',};
+
+  return $self;
+}
 
 sub insert {
   my $self    = shift;
@@ -33,6 +45,36 @@ sub insert {
   $sql = join ' ', $self->_sqlcase("$command into"), $table, $sql;
 
   return wantarray ? ($sql, @bind) : $sql;
+}
+
+sub _insert_value {
+  my ($self, $column, $v) = @_;
+
+  if (ref $v eq 'HASH') {
+
+    # THINK: anything useful to do with a HASHREF ? (SQL::Abstract)
+    # ANSWER: Of course, insert JSON!
+    $v = encode_json($v);
+  }
+  return $self->SUPER::_insert_value($column, $v);
+}
+
+sub _json_extract {
+  my ($self, $label, $alias) = @_;
+  return $self->SUPER::_quote($label) unless $label =~ /->/;
+
+  my ($field, $unquote, $path) = $label =~ /(.+)->([>]?)(.+)/;
+  $field = $self->SUPER::_quote($field);
+
+  my $rv = "JSON_EXTRACT($field,'\$.$path')";
+  $rv = "JSON_UNQUOTE($rv)" if $unquote;
+
+  if ($alias) {
+    $path =~ /(\w+)$/;
+    $rv .= " AS $self->{quote_char}$1$self->{quote_char}";
+  }
+
+  return $rv;
 }
 
 sub _order_by {
@@ -98,6 +140,95 @@ sub _order_by {
   return $sql, @bind;
 }
 
+sub _order_by_chunks {
+  my ($self, $arg) = @_;
+  if ($arg =~ /->/) {
+    return $self->_json_extract($arg);
+  }
+  else {
+    return $self->SUPER::_order_by_chunks($arg);
+  }
+}
+
+sub _select_fields {
+  my ($self, $fields) = @_;
+  return $fields unless ref $fields eq 'ARRAY';
+
+  if (grep /->/, @$fields) {
+    return join ',', map { $self->_json_extract($_, 1) } @$fields;
+  }
+  else {
+    return join ',', map { $self->_quote($_) } @$fields;
+  }
+}
+
+sub _update_set_values {
+  my ($self, $data) = @_;
+
+  for my $k (sort grep /->/, keys %$data) {
+    my ($label, $path) = $k =~ /(.+)->(.*)/;
+    my $origin = $self->_quote($label);
+    puke "you can\'t update $label and its values in the same query"
+      unless ($data->{$label}->[0] || 'json') =~ /^json/i;
+    if (defined $data->{$k}) {
+      if ($data->{$label}->[0]) {
+        puke "you can\'t update and remove values of $label in the same query"
+          unless $data->{$label}->[0] =~ /^json_set/i;
+      }
+      else {
+        $data->{$label}->[0] = $path ? $self->_sqlcase('json_set(') . "$origin)" : '?';
+      }
+      my $placeholder;
+      if (ref $data->{$k}) {
+        $data->{$k} = encode_json($data->{$k});
+        $placeholder = $self->_sqlcase('cast(? as json)');
+      }
+      else {
+        $placeholder = '?';
+      }
+
+      $data->{$label}->[0] =~ s/\)$/,'\$.$path',$placeholder)/ if $path;
+      push @{$data->{$label}}, $data->{$k};
+    }
+    else {
+      if ($data->{$label}->[0]) {
+        puke "you can\'t update and remove values of $label in the same query"
+          unless $data->{$label}->[0] =~ /^json_remove/i;
+      }
+      else {
+        $data->{$label}->[0] = $self->_sqlcase('json_remove(') . "$origin)";
+      }
+      $data->{$label}->[0] =~ s/\)$/,'\$.$path')/;
+    }
+    delete $data->{$k};
+  }
+
+  return $self->SUPER::_update_set_values($data);
+}
+
+sub _where_hashpair_SCALAR {
+  my ($self, $k, $v) = @_;
+
+  if ($k =~ /->/) {
+    $k = \$self->_json_extract($k);
+  }
+
+  return $self->SUPER::_where_hashpair_SCALAR($k, $v);
+}
+
+sub _where_op_EXISTS {
+  my ($self, $op, $v) = @_;
+
+  $v =~ /(.+)->(.+)/ or puke "-$op => $v doesn't work, use $op => $v->key1.key2 instead";
+
+  return $self->_sqlcase('json_contains_path(') . $self->_quote($1) . ",'one','\$.$2')";
+}
+
+sub _where_op_NOT_EXISTS {
+  my $self = shift;
+  return $self->_sqlcase('not ') . $self->_where_op_EXISTS(@_);
+}
+
 1;
 
 =encoding utf8
@@ -111,18 +242,27 @@ SQL::Abstract::mysql - Generate SQL from Perl data structures for MySQL and Mari
   use SQL::Abstract::mysql;
 
   my $abstract = SQL::Abstract::mysql->new(quote_char => chr(96), name_sep => '.');
-  # The same as
-  use Mojo::mysql;
-  my $mysql = Mojo::mysql->new;
-  my $abstract = $mysql->abstract;
 
   say $abstract->insert('some_table', \%some_values, \%some_options);
-  say $abstract->select('some_table');
+  say $abstract->update('some_table', \%some_values, \%some_options);
+  say $abstract->select('some_table', \@some_fields, \%some_filters, \%some_options);
 
 =head1 DESCRIPTION
 
 L<SQL::Abstract::mysql> extends L<SQL::Abstract> with a few MySQL / MariaDB
 features used by L<Mojo::mysql>. It was inspired by L<SQL::Abstract::Pg>.
+
+=head1 CONSTRUCTOR
+
+=head2 new
+
+  my $abstract = SQL::Abstract::mysql->new(quote_char => chr(96), name_sep => '.');
+
+Creates a new L<SQL::Abstract::mysql>. The same as:
+
+  use Mojo::mysql;
+  my $mysql = Mojo::mysql->new;
+  my $abstract = $mysql->abstract;
 
 =head1 METHODS
 
@@ -253,6 +393,63 @@ C<share> and scalar references to pass literal SQL are supported.
 
   # "select * from some_table for update skip locked"
   $abstract->select('some_table', '*', undef, {for => \'update skip locked'});
+
+=head1 NESTED DATA (JSON)
+
+=head2 arrow operator
+
+C<SQL::Abstract::mysql> generates queries to manipulate nested data in databases
+that support JSON (starting with MySQL 5.7 and MariaDB 10.2).
+
+Paths to values are represented with an arrow as C<< table.field->path.to.value >>.
+If data is read, there is a distinction between single and double arrows.
+C<< field->key >> returns the object for a given key, C<< field->>key >> its value.
+
+=head2 insert nested data
+
+To insert data, hash references can be passed directly to L</insert>.
+
+  my %data = (field1 => 'value1', document => {...}, ...);
+  $abstract->insert('some_table', \%data);
+
+=head2 select and filter nested data
+
+L<Select|/select> queries with arrow operators return hash references with the selected values
+at the first level.
+
+  # returns {key1 => 'value1', key2 => {...}}
+  $abstract->select('some_table', ['document->>key1', 'document->key2']);
+
+Paths are valid as filters too.
+
+  # key1 == 50
+  $abstract->select('some_table', '*', {'document->>key1' => 50});
+  # key1 exists
+  $abstract->select('some_table', '*', {-e => 'document->key1'});
+  # key1 doesn't exist
+  $abstract->select('some_table', '*', {-ne => 'document->key1'});
+
+In the same way they can be used to sort the result.
+
+  # ordered by the value of key1
+  $abstract->select('some_table', '*', undef, {order_by => 'document->>key1'});
+
+=head2 update keys and values
+
+Single keys and values are directly accessible, without the need to read and write the
+whole data structure.
+
+  # 'new value' for key1
+  $abstract->update('some_table', {'document->key1' => 'new value'});
+  # new object for key2; not working on MariaDB
+  $abstract->update('some_table', {'document->key2' => \%new_object});
+  # remove key3, don't combine with the above
+  $abstract->update('some_table', {'document->key3' => undef});
+
+To replace the content of a field a the top level, use an arrow without path.
+
+  # add new document; not working on MariaDB
+  $abstract->update('some_table', {'document->' => \%new_document});
 
 =head1 SEE ALSO
 

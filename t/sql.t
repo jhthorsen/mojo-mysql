@@ -81,4 +81,76 @@ like $@, qr/for value "update skip locked" is not allowed/, 'right error';
 eval { $abstract->select('foo', '*', undef, {for => []}) };
 like $@, qr/ARRAYREF/, 'right error';
 
+note 'JSON: INSERT';
+
+@sql = $abstract->insert('foo', {bar => 'baz', yada => {wibble => 'wobble'}});
+$result = [q|INSERT INTO `foo` ( `bar`, `yada`) VALUES ( ?, ? )|, 'baz', '{"wibble":"wobble"}'];
+is_deeply \@sql, $result, 'right query';
+
+note 'JSON: SELECT';
+
+@sql = $abstract->select('foo', ['bar', 'bar->baz', 'bar->>baz.yada']);
+$result = [
+  q|SELECT `bar`,JSON_EXTRACT(`bar`,'$.baz') AS `baz`,JSON_UNQUOTE(JSON_EXTRACT(`bar`,'$.baz.yada')) AS `yada` FROM `foo`|,
+];
+is_deeply \@sql, $result, 'right query';
+
+@sql = $abstract->select('foo', '*', {'bar->>baz.yada' => 'wibble'});
+$result = [q|SELECT * FROM `foo` WHERE ( JSON_UNQUOTE(JSON_EXTRACT(`bar`,'$.baz.yada')) = ? )|, 'wibble',];
+is_deeply \@sql, $result, 'right query';
+
+@sql = $abstract->select('foo', '*', {-e => 'bar->baz.yada'});
+$result = [q|SELECT * FROM `foo` WHERE ( JSON_CONTAINS_PATH(`bar`,'one','$.baz.yada') )|,];
+is_deeply \@sql, $result, 'right query';
+
+@sql = $abstract->select('foo', '*', {-ne => 'bar->baz.yada'});
+$result = [q|SELECT * FROM `foo` WHERE ( NOT JSON_CONTAINS_PATH(`bar`,'one','$.baz.yada') )|,];
+is_deeply \@sql, $result, 'right query';
+
+@sql = $abstract->select('foo', '*', undef, [ 'bar->>baz' ]);
+$result = [q|SELECT * FROM `foo` ORDER BY JSON_UNQUOTE(JSON_EXTRACT(`bar`,'$.baz'))|,];
+is_deeply \@sql, $result, 'right query';
+
+note 'JSON: SELECT, unsupported value';
+
+eval { $abstract->select('foo', '*', {-e => 'bar.baz'}) };
+like $@, qr/-e => bar.baz doesn't work/, 'right error';
+
+eval { $abstract->select('foo', '*', {-ne => 'bar.baz'}) };
+like $@, qr/-ne => bar.baz doesn't work/, 'right error';
+
+note 'JSON: UPDATE';
+
+@sql = $abstract->update('foo', {'bar->baz.yada' => 'wibble'});
+$result = [q|UPDATE `foo` SET `bar` = JSON_SET(`bar`,'$.baz.yada',?)|, 'wibble'];
+is_deeply \@sql, $result, 'right query';
+
+@sql = $abstract->update('foo', {'bar->baz.yada' => {wibble => 'wobble'}});
+$result = [q|UPDATE `foo` SET `bar` = JSON_SET(`bar`,'$.baz.yada',CAST(? AS JSON))|, '{"wibble":"wobble"}'];
+is_deeply \@sql, $result, 'right query';
+
+@sql = $abstract->update('foo', {'bar->baz' => 'wibble', 'bar->yada' => 'wobble'});
+$result = [q|UPDATE `foo` SET `bar` = JSON_SET(`bar`,'$.baz',?,'$.yada',?)|, 'wibble', 'wobble'];
+is_deeply \@sql, $result, 'right query';
+
+@sql = $abstract->update('foo', {'bar->' => {baz => 'yada'}});
+$result = [q|UPDATE `foo` SET `bar` = ?|, '{"baz":"yada"}'];
+is_deeply \@sql, $result, 'right query';
+
+@sql = $abstract->update('foo', {'bar->baz.yada' => undef});
+$result = [q|UPDATE `foo` SET `bar` = JSON_REMOVE(`bar`,'$.baz.yada')|];
+is_deeply \@sql, $result, 'right query';
+
+@sql = $abstract->update('foo', {'bar->baz' => undef, 'bar->yada' => undef});
+$result = [q|UPDATE `foo` SET `bar` = JSON_REMOVE(`bar`,'$.baz','$.yada')|];
+is_deeply \@sql, $result, 'right query';
+
+note 'JSON: UPDATE, unsupported value';
+
+eval { @sql = $abstract->update('foo', {'bar->baz' => 'wibble', 'bar->yada' => undef}) };
+like $@, qr/you can't update and remove values of bar in the same query/, 'right error';
+
+eval { @sql = $abstract->update('foo', {'bar->' => {baz => 'wibble'}, 'bar->yada' => 'wobble'}) };
+like $@, qr/you can't update bar and its values in the same query/, 'right error';
+
 done_testing;
