@@ -9,8 +9,8 @@ sub new {
   my $self = shift->SUPER::new(@_);
 
   # -e and -ne op
-  push @{$self->{unary_ops}}, {regex => qr/^e$/, handler => '_where_op_EXISTS',},
-    {regex => qr/^ne$/, handler => '_where_op_NOT_EXISTS',};
+  push @{$self->{unary_ops}}, {regex => qr/^e$/, handler => '_where_op_EXISTS'},
+    {regex => qr/^ne$/, handler => '_where_op_NOT_EXISTS'};
 
   return $self;
 }
@@ -128,7 +128,7 @@ sub _order_by {
       $for => {
         SCALAR => sub {
           my %commands = (update => 'for update', share => 'lock in share mode');
-          my $command = $commands{$for} or puke qq{for value "$for" is not allowed};
+          my $command  = $commands{$for} or puke qq{for value "$for" is not allowed};
           $for_sql = $self->_sqlcase($command);
         },
         SCALARREF => sub { $for_sql = "FOR $$for" }
@@ -168,15 +168,14 @@ sub _update_set_values {
   for my $k (sort grep /->/, keys %$data) {
     my ($label, $path) = $k =~ /(.+)->(.*)/;
     my $origin = $self->_quote($label);
-    puke "you can\'t update $label and its values in the same query"
-      unless ($data->{$label}->[0] || 'json') =~ /^json/i;
+    puke "you can\'t update $label and its values in the same query" unless ($data->{$label}[0] || 'json') =~ /^json/i;
     if (defined $data->{$k}) {
-      if ($data->{$label}->[0]) {
+      if ($data->{$label}[0]) {
         puke "you can\'t update and remove values of $label in the same query"
-          unless $data->{$label}->[0] =~ /^json_set/i;
+          unless $data->{$label}[0] =~ /^json_set/i;
       }
       else {
-        $data->{$label}->[0] = $path ? $self->_sqlcase('json_set(') . "$origin)" : '?';
+        $data->{$label}[0] = $path ? $self->_sqlcase('json_set(') . "$origin)" : '?';
       }
       my $placeholder;
       if (ref $data->{$k}) {
@@ -187,18 +186,18 @@ sub _update_set_values {
         $placeholder = '?';
       }
 
-      $data->{$label}->[0] =~ s/\)$/,'\$.$path',$placeholder)/ if $path;
+      $data->{$label}[0] =~ s/\)$/,'\$.$path',$placeholder)/ if $path;
       push @{$data->{$label}}, $data->{$k};
     }
     else {
-      if ($data->{$label}->[0]) {
+      if ($data->{$label}[0]) {
         puke "you can\'t update and remove values of $label in the same query"
-          unless $data->{$label}->[0] =~ /^json_remove/i;
+          unless $data->{$label}[0] =~ /^json_remove/i;
       }
       else {
-        $data->{$label}->[0] = $self->_sqlcase('json_remove(') . "$origin)";
+        $data->{$label}[0] = $self->_sqlcase('json_remove(') . "$origin)";
       }
-      $data->{$label}->[0] =~ s/\)$/,'\$.$path')/;
+      $data->{$label}[0] =~ s/\)$/,'\$.$path')/;
     }
     delete $data->{$k};
   }
