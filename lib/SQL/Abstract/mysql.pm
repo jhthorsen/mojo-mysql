@@ -50,10 +50,7 @@ sub insert {
 sub _insert_value {
   my ($self, $column, $v) = @_;
 
-  if (ref $v eq 'HASH') {
-
-    # THINK: anything useful to do with a HASHREF ? (SQL::Abstract)
-    # ANSWER: Of course, insert JSON!
+  if (ref $v eq 'HASH' || ref $v eq 'ARRAY') {
     $v = encode_json($v);
   }
   return $self->SUPER::_insert_value($column, $v);
