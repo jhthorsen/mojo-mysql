@@ -20,12 +20,26 @@ is $db->query('select json_extract(j, "$.foo") from mojo_json_test')->array->[0]
 is_deeply $db->query('select id, name, j from mojo_json_test where json_extract(j, "$.foo") = 42')->expand->hash,
   {id => $$, name => $0, j => {foo => 42}}, 'expand json';
 
+my $value_hash = {nick => 'supergirl'};
+my $value_json = Mojo::JSON::to_json($value_hash);
+my $query      = 'select name from mojo_json_test where name like "%supergirl%"';
 $db->query('insert into mojo_json_test (name) values (?)', {json => {nick => 'supergirl'}});
-is_deeply $db->query('select name from mojo_json_test where name like "%supergirl%"')->expand->hash,
-  {name => Mojo::JSON::to_json({nick => 'supergirl'})}, 'name as string';
 
-is_deeply $db->query('select name from mojo_json_test where name like "%supergirl%"')->expand(1)->hash,
-  {name => {nick => 'supergirl'}}, 'name as hash';
+is_deeply $db->query($query)->expand->hash, {name => $value_json}, 'hash: name as string';
+
+is_deeply $db->query($query)->expand(1)->hash, {name => $value_hash}, 'hash: name as hash';
+
+is_deeply $db->query($query)->expand->hashes, [{name => $value_json}], 'hashes: name as string';
+
+is_deeply $db->query($query)->expand(1)->hashes, [{name => $value_hash}], 'hashes: name as hash';
+
+is_deeply $db->query($query)->expand->array, [$value_json], 'array: name as string';
+
+is_deeply $db->query($query)->expand(1)->array, [$value_hash], 'array: name as hash';
+
+is_deeply $db->query($query)->expand->arrays, [[$value_json]], 'arrays: name as string';
+
+is_deeply $db->query($query)->expand(1)->arrays, [[$value_hash]], 'arrays: name as hash';
 
 $db->query('drop table mojo_json_test') unless $ENV{TEST_KEEP_DB};
 
