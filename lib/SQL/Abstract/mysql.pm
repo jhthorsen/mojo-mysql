@@ -139,34 +139,29 @@ sub _order_by {
 
 sub _order_by_chunks {
   my ($self, $arg) = @_;
-  if ($arg =~ /->/) {
-    return $self->_json_extract($arg);
-  }
-  else {
-    return $self->SUPER::_order_by_chunks($arg);
-  }
+  return $self->_json_extract($arg) if $arg =~ /->/;
+  return $self->SUPER::_order_by_chunks($arg);
 }
 
 sub _select_fields {
   my ($self, $fields) = @_;
   return $fields unless ref $fields eq 'ARRAY';
-
-  if (grep /->/, @$fields) {
-    return join ',', map { $self->_json_extract($_, 1) } @$fields;
-  }
-  else {
-    return join ',', map { $self->_quote($_) } @$fields;
-  }
+  return join ',', map { $self->_json_extract($_, 1) } @$fields if grep /->/, @$fields;
+  return join ',', map { $self->_quote($_) } @$fields;
 }
 
 sub _update_set_values {
   my ($self, $data) = @_;
 
+  # interate over field->path
   for my $k (sort grep /->/, keys %$data) {
     my ($label, $path) = $k =~ /(.+)->(.*)/;
     my $origin = $self->_quote($label);
     puke "you can\'t update $label and its values in the same query" unless ($data->{$label}[0] || 'json') =~ /^json/i;
+
+    # field->path has value: update
     if (defined $data->{$k}) {
+      # json_set for field
       if ($data->{$label}[0]) {
         puke "you can\'t update and remove values of $label in the same query"
           unless $data->{$label}[0] =~ /^json_set/i;
@@ -174,6 +169,7 @@ sub _update_set_values {
       else {
         $data->{$label}[0] = $path ? $self->_sqlcase('json_set(') . "$origin)" : '?';
       }
+      # placeholder
       my $placeholder;
       if (ref $data->{$k}) {
         $data->{$k} = encode_json($data->{$k});
@@ -182,11 +178,15 @@ sub _update_set_values {
       else {
         $placeholder = '?';
       }
-
       $data->{$label}[0] =~ s/\)$/,'\$.$path',$placeholder)/ if $path;
+
+      # collect value
       push @{$data->{$label}}, $data->{$k};
     }
+
+    # field->path has no value: delete
     else {
+      # json_remove for field
       if ($data->{$label}[0]) {
         puke "you can\'t update and remove values of $label in the same query"
           unless $data->{$label}[0] =~ /^json_remove/i;
@@ -196,6 +196,8 @@ sub _update_set_values {
       }
       $data->{$label}[0] =~ s/\)$/,'\$.$path')/;
     }
+
+    # delete original field->path
     delete $data->{$k};
   }
 
