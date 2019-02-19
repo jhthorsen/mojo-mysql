@@ -98,6 +98,38 @@ sub _order_by {
   return $sql, @bind;
 }
 
+sub _table {
+  my ($self, $table) = @_;
+
+  return $self->SUPER::_table($table) unless ref $table eq 'ARRAY';
+
+  my (@table, @join);
+  for my $t (@$table) {
+    if   (ref $t eq 'ARRAY') { push @join,  $t }
+    else                     { push @table, $t }
+  }
+
+  $table = $self->SUPER::_table(\@table);
+  my $sep = $self->{name_sep} // '';
+  for my $join (@join) {
+    puke 'join must be in the form [$table, $fk => $pk]' if @$join < 3;
+    my $type = @$join % 2 == 0 ? shift @$join : '';
+    my ($name, $fk, $pk, @morekeys) = @$join;
+    $table
+      .= $self->_sqlcase($type =~ /^-(.+)$/ ? " $1 join " : ' join ')
+      . $self->_quote($name)
+      . $self->_sqlcase(' on ') . '(';
+    do {
+      $table
+        .= $self->_quote(index($fk, $sep) > 0 ? $fk : "$name.$fk") . ' = '
+        . $self->_quote(index($pk, $sep) > 0 ? $pk : "$table[0].$pk")
+        . (@morekeys ? $self->_sqlcase(' and ') : ')');
+    } while ($fk, $pk, @morekeys) = @morekeys;
+  }
+
+  return $table;
+}
+
 1;
 
 =encoding utf8
@@ -187,11 +219,17 @@ names, but also array references with tables to generate C<JOIN> clauses for.
   # "select * from foo join bar on (foo.id = bar.foo_id)"
   $abstract->select(['foo', ['bar', 'foo.id' => 'bar.foo_id']]);
 
-  # "select * from a join b on (b.a_id = a.id) join c on (c.a_id = a.id)"
-  $abstract->select(['a', ['b', a_id => 'id'], ['c', a_id => 'id']]);
-
+  # -left, -right, -inner
   # "select * from foo left join bar on (bar.foo_id = foo.id)"
   $abstract->select(['foo', [-left => 'bar', foo_id => 'id']]);
+
+  # more than one table
+  # "select * from foo join bar on (bar.foo_id = foo.id) join baz on (baz.foo_id = foo.id)"
+  $abstract->select(['foo', ['bar', foo_id => 'id'], ['baz', foo_id => 'id']]);
+
+  # more than one field
+  # "select * from foo left join bar on (bar.foo_id = foo.id and bar.foo_id2 = foo.id2)"
+  $abstract->select(['foo', [-left => 'bar', foo_id => 'id', foo_id2 => 'id2']]);
 
 =head3 ORDER BY
 
