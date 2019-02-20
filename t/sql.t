@@ -104,6 +104,13 @@ note 'LEFT JOIN';
 @sql = $abstract->select(['foo', [-left => 'bar', foo_id => 'id']]);
 is_deeply \@sql, ['SELECT * FROM `foo` LEFT JOIN `bar` ON (`bar`.`foo_id` = `foo`.`id`)'], 'right query';
 
+note 'LEFT JOIN: multiple fields';
+@sql = $abstract->select(['foo', [-left => 'bar', foo_id => 'id', foo_id2 => 'id2', foo_id3 => 'id3']]);
+is_deeply \@sql,
+  [   'SELECT * FROM `foo` LEFT JOIN `bar` ON (`bar`.`foo_id` = `foo`.`id`'
+    . ' AND `bar`.`foo_id2` = `foo`.`id2` AND `bar`.`foo_id3` = `foo`.`id3`)'
+  ], 'right query';
+
 note 'RIGHT JOIN';
 @sql = $abstract->select(['foo', [-right => 'bar', foo_id => 'id']]);
 is_deeply \@sql, ['SELECT * FROM `foo` RIGHT JOIN `bar` ON (`bar`.`foo_id` = `foo`.`id`)'], 'right query';
@@ -112,15 +119,11 @@ note 'INNER JOIN';
 @sql = $abstract->select(['foo', [-inner => 'bar', foo_id => 'id']]);
 is_deeply \@sql, ['SELECT * FROM `foo` INNER JOIN `bar` ON (`bar`.`foo_id` = `foo`.`id`)'], 'right query';
 
-note 'LEFT JOIN: multiple fields';
-@sql = $abstract->select(['foo', [-left => 'bar', foo_id => 'id', foo_id2 => 'id2', foo_id3 => 'id3']]);
-is_deeply \@sql,
-  [   'SELECT * FROM `foo` LEFT JOIN `bar` ON (`bar`.`foo_id` = `foo`.`id`'
-    . ' AND `bar`.`foo_id2` = `foo`.`id2` AND `bar`.`foo_id3` = `foo`.`id3`)'
-  ], 'right query';
-
 note 'JOIN: unsupported value';
 eval { $abstract->select(['foo', []]) };
 like $@, qr/join must be in the form \[\$table, \$fk => \$pk\]/, 'right error';
+
+eval { $abstract->select(['foo', ['bar', foo_id => 'id', 'id2']]) };
+like $@, qr/join requires an even number of keys/, 'right error';
 
 done_testing;

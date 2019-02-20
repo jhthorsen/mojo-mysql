@@ -86,7 +86,7 @@ sub _order_by {
       $for => {
         SCALAR => sub {
           my %commands = (update => 'for update', share => 'lock in share mode');
-          my $command = $commands{$for} or puke qq{for value "$for" is not allowed};
+          my $command  = $commands{$for} or puke qq{for value "$for" is not allowed};
           $for_sql = $self->_sqlcase($command);
         },
         SCALARREF => sub { $for_sql = "FOR $$for" }
@@ -103,31 +103,42 @@ sub _table {
 
   return $self->SUPER::_table($table) unless ref $table eq 'ARRAY';
 
-  my (@table, @join);
-  for my $t (@$table) {
-    if   (ref $t eq 'ARRAY') { push @join,  $t }
-    else                     { push @table, $t }
+  my (@tables, @joins);
+  for my $jt (@$table) {
+    if   (ref $jt eq 'ARRAY') { push @joins,  $jt }
+    else                      { push @tables, $jt }
   }
 
-  $table = $self->SUPER::_table(\@table);
+  my $sql = $self->SUPER::_table(\@tables);
   my $sep = $self->{name_sep} // '';
-  for my $join (@join) {
+  for my $join (@joins) {
     puke 'join must be in the form [$table, $fk => $pk]' if @$join < 3;
-    my $type = @$join % 2 == 0 ? shift @$join : '';
-    my ($name, $fk, $pk, @morekeys) = @$join;
-    $table
-      .= $self->_sqlcase($type =~ /^-(.+)$/ ? " $1 join " : ' join ')
+
+    my $type = '';
+    if ($join->[0] =~ /^-(.+)/) {
+      $type = " $1";
+      shift @$join;
+    }
+
+    my $name = shift @$join;
+
+    puke 'join requires an even number of keys' if @$join % 2;
+
+    my @keys;
+    while (my ($fk, $pk) = splice @$join, 0, 2) {
+      push @keys,
+        $self->_quote(index($fk, $sep) > 0 ? $fk : "$name.$fk") . ' = '
+        . $self->_quote(index($pk, $sep) > 0 ? $pk : "$tables[0].$pk");
+    }
+
+    $sql
+      .= $self->_sqlcase("$type join ")
       . $self->_quote($name)
-      . $self->_sqlcase(' on ') . '(';
-    do {
-      $table
-        .= $self->_quote(index($fk, $sep) > 0 ? $fk : "$name.$fk") . ' = '
-        . $self->_quote(index($pk, $sep) > 0 ? $pk : "$table[0].$pk")
-        . (@morekeys ? $self->_sqlcase(' and ') : ')');
-    } while ($fk, $pk, @morekeys) = @morekeys;
+      . $self->_sqlcase(' on ') . '('
+      . join($self->_sqlcase(' and '), @keys) . ')';
   }
 
-  return $table;
+  return $sql;
 }
 
 1;
