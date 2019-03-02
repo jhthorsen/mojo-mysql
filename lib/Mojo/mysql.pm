@@ -17,14 +17,20 @@ has auto_migrate    => 0;
 has database_class  => 'Mojo::mysql::Database';
 has dsn             => 'dbi:mysql:dbname=test';
 has max_connections => 5;
-has migrations      => sub {
+
+has migrations => sub {
   my $migrations = Mojo::mysql::Migrations->new(mysql => shift);
   weaken $migrations->{mysql};
   return $migrations;
 };
+
 has options => sub {
-  {mysql_enable_utf8 => 1, AutoCommit => 1, AutoInactiveDestroy => 1, PrintError => 0, RaiseError => 1};
+  my $self    = shift;
+  my $options = {AutoCommit => 1, AutoInactiveDestroy => 1, PrintError => 0, RaiseError => 1};
+  $options->{mysql_enable_utf8} = 1 if $self->dsn =~ m!^dbi:mysql:!;
+  return $options;
 };
+
 has [qw(password username)] => '';
 has pubsub => sub {
   require Mojo::mysql::PubSub;
@@ -59,10 +65,13 @@ sub from_string {
 
   # Protocol
   return $self unless $str;
-  my $url = UNIVERSAL::isa($str, "Mojo::URL") ? $str : Mojo::URL->new($str);
-  croak qq{Invalid MySQL connection string "$str"} unless $url->protocol eq 'mysql';
+  my $url = UNIVERSAL::isa($str, 'Mojo::URL') ? $str : Mojo::URL->new($str);
+  croak qq{Invalid MySQL/MariaDB connection string "$str"} unless $url->protocol =~ m!^(mariadb|mysql)$!;
+  my $dsn = $url->protocol eq 'mariadb' ? 'dbi:MariaDB' : 'dbi:mysql';
 
-  my $dsn = 'dbi:mysql';
+  # https://github.com/jhthorsen/mojo-mysql/pull/47
+  die "DBD::MariaDB 1.21 is required for Mojo::mysql to work properly"
+    if $dsn eq 'dbi:MariaDB' and !eval 'use DBD::MariaDB 1.21;1';
 
   # Database
   $dsn .= ':dbname=' . $url->path->parts->[0] if defined $url->path->parts->[0];
@@ -70,6 +79,9 @@ sub from_string {
   # Host and port
   if (my $host = $url->host) { $dsn .= file_name_is_absolute($host) ? ";mysql_socket=$host" : ";host=$host" }
   if (my $port = $url->port) { $dsn .= ";port=$port" }
+
+  # Need to set the dsn before reading options
+  $self->dsn($dsn);
 
   # Username and password
   if (($url->userinfo // '') =~ /^([^:]+)(?::([^:]+))?$/) {
@@ -81,7 +93,7 @@ sub from_string {
   my $hash = $url->query->to_hash;
   @{$self->options}{keys %$hash} = values %$hash;
 
-  return $self->dsn($dsn);
+  return $self;
 }
 
 sub new {
@@ -96,6 +108,14 @@ sub strict_mode {
   return $self;
 }
 
+sub _dbi_attr {
+  my ($self, $handle) = (shift, shift);
+  my $key = $self->dsn =~ m!^dbi:(\w+):! ? lc "$1_$_[0]" : "mysql_$_[0]";
+  return $handle->{$key} if @_ == 1;
+  $handle->{$key} = $_[1];
+  $handle;
+}
+
 sub _dequeue {
   my $self = shift;
   my $dbh;
@@ -107,7 +127,7 @@ sub _dequeue {
   # especially once he discovers that DBD::mysql randomly reconnects under
   # you, silently, but only if certain env vars are set
   # hint: force-set mysql_auto_reconnect or whatever it's called to 0
-  $dbh->{mysql_auto_reconnect} = 0;
+  $self->_dbi_attr($dbh, auto_reconnect => 0);
 
   # Maintain Commits with Mojo::mysql::Transaction
   $dbh->{AutoCommit} = 1;
@@ -135,7 +155,7 @@ sub _set_strict_mode {
 
 =head1 NAME
 
-Mojo::mysql - Mojolicious and Async MySQL
+Mojo::mysql - Mojolicious and Async MySQL/MariaDB
 
 =head1 SYNOPSIS
 
@@ -148,6 +168,9 @@ Mojo::mysql - Mojolicious and Async MySQL
   my $mysql = Mojo::mysql->strict_mode('mysql://username:password@hostname/test');
   # MySQL >= 8.0:
   my $mysql = Mojo::mysql->strict_mode('mysql://username:password@hostname/test;mysql_ssl=1');
+
+  # Use DBD::MariaDB instead of DBD::mysql
+  my $mysql = Mojo::mysql->strict_mode('mariadb://username@/test');
 
   # Create a table
   $mysql->db->query(
@@ -215,9 +238,14 @@ Mojo::mysql - Mojolicious and Async MySQL
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql> is a tiny wrapper around L<DBD::mysql> that makes
-L<MySQL|http://www.mysql.org> a lot of fun to use with the
-L<Mojolicious|http://mojolicio.us> real-time web framework.
+L<Mojo::mysql> is a tiny wrapper around L<DBD::mysql> and L<DBD::MariaDB> that
+makes L<MySQL|http://www.mysql.org> and L<MariaDB|https://mariadb.org/> a lot
+of fun to use with the L<Mojolicious|http://mojolicio.us> real-time web
+framework.
+
+The two DBD drivers are compatible with both MySQL and MariaDB, but they offer
+different L</options>. L<DBD::MariaDB> should have better unicode support
+though and might become the default in the future.
 
 Database and handles are cached automatically, so they can be reused
 transparently to increase performance. And you can handle connection timeouts
@@ -338,11 +366,11 @@ easily.
   # Load migrations from file and migrate to latest version
   $mysql->migrations->from_file('/Users/sri/migrations.sql')->migrate;
 
-MySQL does not support nested transactions and DDL transactions.
-DDL statements cause implicit C<COMMIT>. C<ROLLBACK> will be called if
-any step of migration script fails, but only DML statements after the
-last implicit or explicit C<COMMIT> can be reverted.
-Not all MySQL storage engines (like C<MYISAM>) support transactions.
+MySQL and MariaDB does not support nested transactions and DDL transactions.
+DDL statements cause implicit C<COMMIT>. C<ROLLBACK> will be called if any step
+of migration script fails, but only DML statements after the last implicit or
+explicit C<COMMIT> can be reverted. Not all storage engines (like C<MYISAM>)
+support transactions.
 
 This means database will most likely be left in unknown state if migration script fails.
 Use this feature with caution and remember to always backup your database.
@@ -352,10 +380,10 @@ Use this feature with caution and remember to always backup your database.
   my $options = $mysql->options;
   $mysql      = $mysql->options({mysql_use_result => 1});
 
-Options for database handles, defaults to activating C<mysql_enable_utf8>, C<AutoCommit>,
-C<AutoInactiveDestroy> as well as C<RaiseError> and deactivating C<PrintError>.
-Note that C<AutoCommit> and C<RaiseError> are considered mandatory, so
-deactivating them would be very dangerous.
+Options for database handles, defaults to activating C<mysql_enable_utf8> (only
+for L<DBD::mysql>), C<AutoCommit>, C<AutoInactiveDestroy> as well as
+C<RaiseError> and deactivating C<PrintError>. C<AutoCommit> and C<RaiseError>
+are considered mandatory, so deactivating them would be very dangerous.
 
 C<mysql_auto_reconnect> is never enabled, L<Mojo::mysql> takes care of dead connections.
 
@@ -363,7 +391,7 @@ C<AutoCommit> cannot not be disabled, use $db->L<begin|Mojo::mysql::Database/"be
 
 C<RaiseError> is enabled for blocking and disabled in event loop for non-blocking queries.
 
-Note about C<mysql_enable_utf8>:
+About C<mysql_enable_utf8>:
 
   The mysql_enable_utf8 sets the utf8 charset which only supports up to 3-byte
   UTF-8 encodings. mysql_enable_utf8mb4 (as of DBD::mysql 4.032) properly
@@ -436,9 +464,13 @@ Parse configuration from connection string.
   my $mysql = Mojo::mysql->new(%attrs);
   my $mysql = Mojo::mysql->new(\%attrs);
   my $mysql = Mojo::mysql->new('mysql://user@/test');
+  my $mysql = Mojo::mysql->new('mariadb://user@/test');
 
 Construct a new L<Mojo::mysql> object either from L</ATTRIBUTES> and or parse
 connection string with L</"from_string"> if necessary.
+
+Using the "mariadb" scheme requires the optional module L<DBD::MariaDB> version
+1.21 (or later) to be installed.
 
 =head2 strict_mode
 

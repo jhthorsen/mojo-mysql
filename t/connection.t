@@ -67,7 +67,7 @@ is_deeply $mysql->options, $options, 'right options';
 
 note 'Invalid connection string';
 eval { Mojo::mysql->new('http://localhost:3000/test') };
-like $@, qr/Invalid MySQL connection string/, 'right error';
+like $@, qr{Invalid MySQL/MariaDB connection string}, 'right error';
 
 note 'Quote fieldnames correctly';
 like $mysql->abstract->select("foo", ['binary']),     qr{`binary},       'quoted correct binary';

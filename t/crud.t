@@ -22,7 +22,7 @@ $db->query(
 note 'Create';
 $db->insert('crud_test', {name => 'foo'});
 is_deeply $db->select('crud_test')->hashes->to_array, [{id => 1, name => 'foo'}], 'right structure';
-is $db->insert('crud_test', {name => 'bar'})->sth->{mysql_insertid}, 2, 'right value';
+is $db->mysql->_dbi_attr($db->insert('crud_test', {name => 'bar'})->sth, 'insertid'), 2, 'right value';
 is_deeply $db->select('crud_test')->hashes->to_array, [{id => 1, name => 'foo'}, {id => 2, name => 'bar'}],
   'right structure';
 
@@ -41,7 +41,7 @@ $db->select('crud_test', $delay->begin);
 $delay->wait;
 is_deeply $result, [{id => 1, name => 'foo'}, {id => 2, name => 'bar'}], 'right structure';
 $result = undef;
-$delay = Mojo::IOLoop->delay(sub { $result = pop->hashes->to_array });
+$delay  = Mojo::IOLoop->delay(sub { $result = pop->hashes->to_array });
 $db->select('crud_test', undef, undef, {-desc => 'id'}, $delay->begin);
 $delay->wait;
 is_deeply $result, [{id => 2, name => 'bar'}, {id => 1, name => 'foo'}], 'right structure';

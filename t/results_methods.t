@@ -8,7 +8,8 @@ use Mojo::IOLoop;
 use Mojo::mysql;
 
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
-$mysql->options->{mysql_client_found_rows} = 0;
+my $driver = $ENV{TEST_ONLINE} =~ m!^(\w+):! ? $1 : 'mysql';
+$mysql->options->{"${driver}_client_found_rows"} = 0;
 my $db = $mysql->db;
 $db->query(
   'create table if not exists results_test (
@@ -46,7 +47,7 @@ like $res->hashes->[0]->{Message}, qr/Truncated/, 'warning message';
 
 $db->disconnect;
 
-$mysql->options->{mysql_client_found_rows} = 1;
+$mysql->options->{"${driver}_client_found_rows"} = 1;
 $db = $mysql->db;
 
 is $db->query('update results_test set name=? where name=?', 'foo', 'foo1')->affected_rows, 0, 'right affected rows';

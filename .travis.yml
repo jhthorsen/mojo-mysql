@@ -9,11 +9,11 @@ perl:
 addons:
   mysql: "5.7"
 before_script:
-  - mysql -e 'create database myapp_test default character set utf8 default collate utf8_general_ci;'
+  - mysql -e 'create database tarvis_ci_mojo_mysql default character set utf8 default collate utf8_general_ci;'
 env:
-  - "HARNESS_OPTIONS=j3 TEST_POD=1 TEST_PUBSUB=1 TEST_FOR=500 TEST_ONLINE=mysql://root@/myapp_test"
+  - "HARNESS_OPTIONS=j3 TEST_POD=1 TEST_PUBSUB=1 TEST_FOR=500 TEST_ONLINE=mysql://root@/tarvis_ci_mojo_mysql"
 install:
-  - "cpanm -n Test::Pod Test::Pod::Coverage"
+  - "cpanm -n DBD::MariaDB Test::Pod Test::Pod::Coverage"
   - "cpanm -n --installdeps ."
 notifications:
   email: false
