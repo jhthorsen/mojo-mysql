@@ -1,6 +1,6 @@
 # NAME
 
-Mojo::mysql - Mojolicious and Async MySQL
+Mojo::mysql - Mojolicious and Async MySQL/MariaDB
 
 # SYNOPSIS
 
@@ -13,6 +13,9 @@ Mojo::mysql - Mojolicious and Async MySQL
     my $mysql = Mojo::mysql->strict_mode('mysql://username:password@hostname/test');
     # MySQL >= 8.0:
     my $mysql = Mojo::mysql->strict_mode('mysql://username:password@hostname/test;mysql_ssl=1');
+
+    # Use DBD::MariaDB instead of DBD::mysql
+    my $mysql = Mojo::mysql->strict_mode('mariadb://username@/test');
 
     # Create a table
     $mysql->db->query(
@@ -76,25 +79,18 @@ Mojo::mysql - Mojolicious and Async MySQL
       warn "Something went wrong: $err";
     })->wait;
 
-    # Send and receive notifications non-blocking
-    $mysql->pubsub->listen(foo => sub {
-      my ($pubsub, $payload) = @_;
-      say "foo: $payload";
-      $pubsub->notify(bar => $payload);
-    });
-    $mysql->pubsub->listen(bar => sub {
-      my ($pubsub, $payload) = @_;
-      say "bar: $payload";
-    });
-    $mysql->pubsub->notify(foo => 'MySQL rocks!');
-
     Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 
 # DESCRIPTION
 
-[Mojo::mysql](https://metacpan.org/pod/Mojo::mysql) is a tiny wrapper around [DBD::mysql](https://metacpan.org/pod/DBD::mysql) that makes
-[MySQL](http://www.mysql.org) a lot of fun to use with the
-[Mojolicious](http://mojolicio.us) real-time web framework.
+[Mojo::mysql](https://metacpan.org/pod/Mojo::mysql) is a tiny wrapper around [DBD::mysql](https://metacpan.org/pod/DBD::mysql) and [DBD::MariaDB](https://metacpan.org/pod/DBD::MariaDB) that
+makes [MySQL](http://www.mysql.org) and [MariaDB](https://mariadb.org/) a lot
+of fun to use with the [Mojolicious](http://mojolicio.us) real-time web
+framework.
+
+The two DBD drivers are compatible with both MySQL and MariaDB, but they offer
+different ["options"](#options). [DBD::MariaDB](https://metacpan.org/pod/DBD::MariaDB) should have better unicode support
+though and might become the default in the future.
 
 Database and handles are cached automatically, so they can be reused
 transparently to increase performance. And you can handle connection timeouts
@@ -215,11 +211,11 @@ easily.
     # Load migrations from file and migrate to latest version
     $mysql->migrations->from_file('/Users/sri/migrations.sql')->migrate;
 
-MySQL does not support nested transactions and DDL transactions.
-DDL statements cause implicit `COMMIT`. `ROLLBACK` will be called if
-any step of migration script fails, but only DML statements after the
-last implicit or explicit `COMMIT` can be reverted.
-Not all MySQL storage engines (like `MYISAM`) support transactions.
+MySQL and MariaDB does not support nested transactions and DDL transactions.
+DDL statements cause implicit `COMMIT`. `ROLLBACK` will be called if any step
+of migration script fails, but only DML statements after the last implicit or
+explicit `COMMIT` can be reverted. Not all storage engines (like `MYISAM`)
+support transactions.
 
 This means database will most likely be left in unknown state if migration script fails.
 Use this feature with caution and remember to always backup your database.
@@ -229,10 +225,10 @@ Use this feature with caution and remember to always backup your database.
     my $options = $mysql->options;
     $mysql      = $mysql->options({mysql_use_result => 1});
 
-Options for database handles, defaults to activating `mysql_enable_utf8`, `AutoCommit`,
-`AutoInactiveDestroy` as well as `RaiseError` and deactivating `PrintError`.
-Note that `AutoCommit` and `RaiseError` are considered mandatory, so
-deactivating them would be very dangerous.
+Options for database handles, defaults to activating `mysql_enable_utf8` (only
+for [DBD::mysql](https://metacpan.org/pod/DBD::mysql)), `AutoCommit`, `AutoInactiveDestroy` as well as
+`RaiseError` and deactivating `PrintError`. `AutoCommit` and `RaiseError`
+are considered mandatory, so deactivating them would be very dangerous.
 
 `mysql_auto_reconnect` is never enabled, [Mojo::mysql](https://metacpan.org/pod/Mojo::mysql) takes care of dead connections.
 
@@ -240,7 +236,7 @@ deactivating them would be very dangerous.
 
 `RaiseError` is enabled for blocking and disabled in event loop for non-blocking queries.
 
-Note about `mysql_enable_utf8`:
+About `mysql_enable_utf8`:
 
     The mysql_enable_utf8 sets the utf8 charset which only supports up to 3-byte
     UTF-8 encodings. mysql_enable_utf8mb4 (as of DBD::mysql 4.032) properly
@@ -262,19 +258,8 @@ Database password, defaults to an empty string.
     my $pubsub = $mysql->pubsub;
     $mysql     = $mysql->pubsub(Mojo::mysql::PubSub->new);
 
-[Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo::mysql::PubSub) object you can use to send and receive notifications very
-efficiently, by sharing a single database connection with many consumers.
-
-    # Subscribe to a channel
-    $mysql->pubsub->listen(news => sub {
-      my ($pubsub, $payload) = @_;
-      say "Received: $payload";
-    });
-
-    # Notify a channel
-    $mysql->pubsub->notify(news => 'MySQL rocks!');
-
-Note that [Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo::mysql::PubSub) should be considered an experiment!
+[Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo::mysql::PubSub) should be considered an EXPIREMENT! See
+["DESCRIPTION" in Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo::mysql::PubSub#DESCRIPTION) for more information.
 
 ## username
 
@@ -324,9 +309,13 @@ Parse configuration from connection string.
     my $mysql = Mojo::mysql->new(%attrs);
     my $mysql = Mojo::mysql->new(\%attrs);
     my $mysql = Mojo::mysql->new('mysql://user@/test');
+    my $mysql = Mojo::mysql->new('mariadb://user@/test');
 
 Construct a new [Mojo::mysql](https://metacpan.org/pod/Mojo::mysql) object either from ["ATTRIBUTES"](#attributes) and or parse
 connection string with ["from\_string"](#from_string) if necessary.
+
+Using the "mariadb" scheme requires the optional module [DBD::MariaDB](https://metacpan.org/pod/DBD::MariaDB) version
+1.21 (or later) to be installed.
 
 ## strict\_mode
 
@@ -384,6 +373,8 @@ Dan Book - `dbook@cpan.org`
 Jan Henning Thorsen - `jhthorsen@cpan.org`.
 
 Mike Magowan
+
+Tekki
 
 This code is mostly a rip-off from Sebastian Riedel's [Mojo::Pg](https://metacpan.org/pod/Mojo::Pg).
 

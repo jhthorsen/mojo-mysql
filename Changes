@@ -1,5 +1,11 @@
 Revision history for perl distribution Mojo-mysql
 
+1.13 2019-03-02T11:27:01+0800
+ - Add support for DBD::MariaDB #47
+ - Add missing code for SQL JOIN #56
+   Contributor: Tekki
+ - Made it clearer that PubSub is an experiment
+
 1.12 2019-01-05T12:34:13+0900
  - Bumped Mojolicious version to 8.03
  - Bumped SQL::Abstract version to 1.86 #49

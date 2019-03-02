@@ -10,7 +10,7 @@ use Mojo::URL;
 use Scalar::Util 'weaken';
 use SQL::Abstract::mysql;
 
-our $VERSION = '1.12';
+our $VERSION = '1.13';
 
 has abstract        => sub { SQL::Abstract::mysql->new(quote_char => chr(96), name_sep => '.') };
 has auto_migrate    => 0;
@@ -537,6 +537,8 @@ Dan Book - C<dbook@cpan.org>
 Jan Henning Thorsen - C<jhthorsen@cpan.org>.
 
 Mike Magowan
+
+Tekki
 
 This code is mostly a rip-off from Sebastian Riedel's L<Mojo::Pg>.
 
