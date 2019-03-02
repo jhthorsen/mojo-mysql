@@ -211,18 +211,6 @@ Mojo::mysql - Mojolicious and Async MySQL
     warn "Something went wrong: $err";
   })->wait;
 
-  # Send and receive notifications non-blocking
-  $mysql->pubsub->listen(foo => sub {
-    my ($pubsub, $payload) = @_;
-    say "foo: $payload";
-    $pubsub->notify(bar => $payload);
-  });
-  $mysql->pubsub->listen(bar => sub {
-    my ($pubsub, $payload) = @_;
-    say "bar: $payload";
-  });
-  $mysql->pubsub->notify(foo => 'MySQL rocks!');
-
   Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 
 =head1 DESCRIPTION
@@ -397,19 +385,8 @@ Database password, defaults to an empty string.
   my $pubsub = $mysql->pubsub;
   $mysql     = $mysql->pubsub(Mojo::mysql::PubSub->new);
 
-L<Mojo::mysql::PubSub> object you can use to send and receive notifications very
-efficiently, by sharing a single database connection with many consumers.
-
-  # Subscribe to a channel
-  $mysql->pubsub->listen(news => sub {
-    my ($pubsub, $payload) = @_;
-    say "Received: $payload";
-  });
-
-  # Notify a channel
-  $mysql->pubsub->notify(news => 'MySQL rocks!');
-
-Note that L<Mojo::mysql::PubSub> should be considered an experiment!
+L<Mojo::mysql::PubSub> should be considered an EXPIREMENT! See
+L<Mojo::mysql::PubSub/DESCRIPTION> for more information.
 
 =head2 username
 
