@@ -25,7 +25,7 @@ has migrations => sub {
 };
 
 has options => sub {
-  my $self = shift;
+  my $self    = shift;
   my $options = {AutoCommit => 1, AutoInactiveDestroy => 1, PrintError => 0, RaiseError => 1};
   $options->{mysql_enable_utf8} = 1 if $self->dsn =~ m!^dbi:mysql:!;
   return $options;
@@ -68,6 +68,10 @@ sub from_string {
   my $url = UNIVERSAL::isa($str, 'Mojo::URL') ? $str : Mojo::URL->new($str);
   croak qq{Invalid MySQL/MariaDB connection string "$str"} unless $url->protocol =~ m!^(mariadb|mysql)$!;
   my $dsn = $url->protocol eq 'mariadb' ? 'dbi:MariaDB' : 'dbi:mysql';
+
+  # https://github.com/jhthorsen/mojo-mysql/pull/47
+  die "DBD::MariaDB 1.21 is required for Mojo::mysql to work properly"
+    if $dsn eq 'dbi:MariaDB' and !eval 'use DBD::MariaDB 1.21;1';
 
   # Database
   $dsn .= ':dbname=' . $url->path->parts->[0] if defined $url->path->parts->[0];
@@ -473,8 +477,8 @@ This method is EXPERIMENTAL and could be removed in future releases.
 Construct a new L<Mojo::mysql> object either from L</ATTRIBUTES> and or parse
 connection string with L</"from_string"> if necessary.
 
-Using the "mariadb" scheme requires the optional module L<DBD::MariaDB> to be
-installed.
+Using the "mariadb" scheme requires the optional module L<DBD::MariaDB> version
+1.21 (or later) to be installed.
 
 =head2 strict_mode
 
