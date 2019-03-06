@@ -9,7 +9,7 @@ has [qw(db sth)];
 
 sub array { ($_[0]->_expand($_[0]->sth->fetchrow_arrayref))[0] }
 
-sub arrays { _c($_[0]->_expand(@{$_[0]->sth->fetchall_arrayref})) }
+sub arrays { _c($_[0]->_types->_expand(@{$_[0]->sth->fetchall_arrayref})) }
 
 sub columns { shift->sth->{NAME} }
 
@@ -19,7 +19,7 @@ sub finish { shift->sth->finish }
 
 sub hash { ($_[0]->_expand($_[0]->sth->fetchrow_hashref))[0] }
 
-sub hashes { _c($_[0]->_expand(@{$_[0]->sth->fetchall_arrayref({})})) }
+sub hashes { _c($_[0]->_types->_expand(@{$_[0]->sth->fetchall_arrayref({})})) }
 
 sub rows { shift->sth->rows }
 
@@ -47,19 +47,27 @@ sub _expand {
   return @rows unless my $mode = $self->{expand} and $rows[0];
 
   # Force expanding
-  return map {
-    my $r = $_;
-    $_ = from_json $_ for grep {/^(\[|\{).*(\}|\])/} values %$r;
-    $r;
-  } @rows if $mode == 2;
+  if ($mode == 2) {
+    my $is_json = qr/^[\[{].*[}\]]$/;
+    if (ref $rows[0] eq 'HASH') {
+      return map {    ## no critic
+        my $r = $_;
+        $_ = from_json $_ for grep {$is_json} values %$r;
+        $r;
+      } @rows;
+    }
+    else {
+      return map {    ## no critic
+        my $r = $_;
+        $_ = from_json $_ for grep {$is_json} @$r;
+        $r;
+      } @rows;
+    }
+  }
 
   # Only expand json columns
+  $self->_types unless $self->{idx};
   my ($idx, $name) = @$self{qw(idx name)};
-  unless ($idx) {
-    my $types = $self->db->mysql->_dbi_attr($self->sth, 'type');
-    my @idx   = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
-    ($idx, $name) = @$self{qw(idx name)} = (\@idx, [@{$self->columns}[@idx]]);
-  }
 
   return @rows unless @$idx;
   if (ref $rows[0] eq 'HASH') {
@@ -70,6 +78,16 @@ sub _expand {
   }
 
   return @rows;
+}
+
+sub _types {
+  my $self = shift;
+
+  my $types = $self->db->mysql->_dbi_attr($self->sth, 'type');
+  my @idx   = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
+  @$self{qw(idx name)} = (\@idx, [@{$self->columns}[@idx]]);
+
+  return $self;
 }
 
 sub DESTROY {
