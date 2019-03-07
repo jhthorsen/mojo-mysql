@@ -48,21 +48,11 @@ sub _expand {
 
   # Force expanding
   if ($mode == 2) {
-    my $is_json = qr/^[\[{].*[}\]]$/;
-    if (ref $rows[0] eq 'HASH') {
-      return map {    ## no critic
-        my $r = $_;
-        $_ = from_json $_ for grep {$is_json} values %$r;
-        $r;
-      } @rows;
-    }
-    else {
-      return map {    ## no critic
-        my $r = $_;
-        $_ = from_json $_ for grep {$is_json} @$r;
-        $r;
-      } @rows;
-    }
+    my $looks_like_json = qr/^[\[{].*[}\]]$/;
+    return map {    ## no critic
+      $_ = from_json $_ for grep {$looks_like_json} ref eq 'HASH' ? values %$_ : @$_;
+      $_;
+    } @rows;
   }
 
   # Only expand json columns
