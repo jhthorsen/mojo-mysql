@@ -5,11 +5,13 @@ use Mojo::Collection;
 use Mojo::JSON 'from_json';
 use Mojo::Util 'tablify';
 
+my $LOOKS_LIKE_JSON_RE = qr/^[\[{].*[}\]]$/;
+
 has [qw(db sth)];
 
-sub array { ($_[0]->_expand($_[0]->sth->fetchrow_arrayref))[0] }
+sub array { ($_[0]->_expand({}))[0] }
 
-sub arrays { _c($_[0]->_types->_expand(@{$_[0]->sth->fetchall_arrayref})) }
+sub arrays { _c($_[0]->_expand({list => 1})) }
 
 sub columns { shift->sth->{NAME} }
 
@@ -17,9 +19,9 @@ sub expand { $_[0]{expand} = defined $_[1] ? 2 : 1 and return $_[0] }
 
 sub finish { shift->sth->finish }
 
-sub hash { ($_[0]->_expand($_[0]->sth->fetchrow_hashref))[0] }
+sub hash { ($_[0]->_expand({hash => 1}))[0] }
 
-sub hashes { _c($_[0]->_types->_expand(@{$_[0]->sth->fetchall_arrayref({})})) }
+sub hashes { _c($_[0]->_expand({hash => 1, list => 1})) }
 
 sub rows { shift->sth->rows }
 
@@ -42,42 +44,53 @@ sub state { shift->sth->state }
 sub _c { Mojo::Collection->new(@_) }
 
 sub _expand {
-  my ($self, @rows) = @_;
+  my ($self, $to) = @_;
 
-  return @rows unless my $mode = $self->{expand} and $rows[0];
+  # Get field names and types, needs to be done before reading from sth
+  my $mode = $self->{expand} || 0;
+  my ($idx, $names) = $mode == 1 ? $self->_types : ();
 
-  # Force expanding
-  if ($mode == 2) {
-    my $looks_like_json = qr/^[\[{].*[}\]]$/;
-    return map {    ## no critic
-      $_ = from_json $_ for grep {$looks_like_json} ref eq 'HASH' ? values %$_ : @$_;
-      $_;
-    } @rows;
-  }
-
-  # Only expand json columns
-  $self->_types unless $self->{idx};
-  my ($idx, $name) = @$self{qw(idx name)};
-
-  return @rows unless @$idx;
-  if (ref $rows[0] eq 'HASH') {
-    for my $r (@rows) { $r->{$_} and ($r->{$_} = from_json $r->{$_}) for @$name }
+  # Fetch sql data
+  my $sql_data;
+  if ($to->{list}) {
+    $sql_data = $to->{hash} ? $self->sth->fetchall_arrayref({}) : $self->sth->fetchall_arrayref;
   }
   else {
-    for my $r (@rows) { $r->[$_] and ($r->[$_] = from_json $r->[$_]) for @$idx }
+    @$sql_data = $to->{hash} ? $self->sth->fetchrow_hashref : $self->sth->fetchrow_arrayref;
   }
 
-  return @rows;
+  # expand(), only expand json columns
+  if ($mode == 1) {
+    if ($to->{hash}) {
+      for my $r (@$sql_data) {
+        $r->{$_} = from_json $r->{$_} for grep { defined $r->{$_} } @$names;
+      }
+    }
+    else {
+      for my $r (@$sql_data) {
+        $r->[$_] = from_json $r->[$_] for grep { defined $r->[$_] } @$idx;
+      }
+    }
+  }
+
+  # expand(1), force expanding
+  elsif ($mode == 2) {
+    for my $r (@$sql_data) {
+      $_ = from_json $_ for grep $LOOKS_LIKE_JSON_RE, $to->{hash} ? values %$r : @$r;
+    }
+  }
+
+  return @$sql_data;
 }
 
 sub _types {
   my $self = shift;
+  return @$self{qw(idx names)} if $self->{idx};
 
   my $types = $self->db->mysql->_dbi_attr($self->sth, 'type');
   my @idx   = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
-  @$self{qw(idx name)} = (\@idx, [@{$self->columns}[@idx]]);
 
-  return $self;
+  return ($self->{idx} = \@idx, $self->{names} = [@{$self->columns}[@idx]]);
 }
 
 sub DESTROY {
