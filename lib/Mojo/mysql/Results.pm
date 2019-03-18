@@ -5,8 +5,6 @@ use Mojo::Collection;
 use Mojo::JSON 'from_json';
 use Mojo::Util 'tablify';
 
-my $LOOKS_LIKE_JSON_RE = qr/^[\[{].*[}\]]$/;
-
 has [qw(db sth)];
 
 sub array { ($_[0]->_expand({}))[0] }
@@ -76,7 +74,7 @@ sub _expand {
   # expand(1), force expanding
   elsif ($mode == 2) {
     for my $r (@$sql_data) {
-      $_ = from_json $_ for grep $LOOKS_LIKE_JSON_RE, $to->{hash} ? values %$r : @$r;
+      $_ = from_json $_ for grep /^[\[{].*[}\]]$/, $to->{hash} ? values %$r : @$r;
     }
   }
 
