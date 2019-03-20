@@ -7,9 +7,9 @@ use Mojo::Util 'tablify';
 
 has [qw(db sth)];
 
-sub array { ($_[0]->_expand({}))[0] }
+sub array { ($_[0]->_expand({list => 0, type => 'array'}))[0] }
 
-sub arrays { _c($_[0]->_expand({list => 1})) }
+sub arrays { _c($_[0]->_expand({list => 1, type => 'array'})) }
 
 sub columns { shift->sth->{NAME} }
 
@@ -17,9 +17,9 @@ sub expand { $_[0]{expand} = defined $_[1] ? 2 : 1 and return $_[0] }
 
 sub finish { shift->sth->finish }
 
-sub hash { ($_[0]->_expand({hash => 1}))[0] }
+sub hash { ($_[0]->_expand({list => 0, type => 'hash'}))[0] }
 
-sub hashes { _c($_[0]->_expand({hash => 1, list => 1})) }
+sub hashes { _c($_[0]->_expand({list => 1, type => 'hash'})) }
 
 sub rows { shift->sth->rows }
 
@@ -49,36 +49,40 @@ sub _expand {
   my ($idx, $names) = $mode == 1 ? $self->_types : ();
 
   # Fetch sql data
-  my $sql_data;
-  if ($to->{list}) {
-    $sql_data = $to->{hash} ? $self->sth->fetchall_arrayref({}) : $self->sth->fetchall_arrayref;
-  }
-  else {
-    @$sql_data = $to->{hash} ? $self->sth->fetchrow_hashref : $self->sth->fetchrow_arrayref;
-  }
+  my $hash = $to->{type} eq 'hash';
+  my $sql_data
+    = $to->{list} && $hash ? $self->sth->fetchall_arrayref({})
+    : $to->{list} ? $self->sth->fetchall_arrayref
+    : $hash       ? [$self->sth->fetchrow_hashref]
+    :               [$self->sth->fetchrow_arrayref];
 
-  # expand(), only expand json columns
-  if ($mode == 1) {
-    if ($to->{hash}) {
-      for my $r (@$sql_data) {
-        $r->{$_} = from_json $r->{$_} for grep { defined $r->{$_} } @$names;
-      }
-    }
-    else {
-      for my $r (@$sql_data) {
-        $r->[$_] = from_json $r->[$_] for grep { defined $r->[$_] } @$idx;
-      }
-    }
-  }
-
-  # expand(1), force expanding
-  elsif ($mode == 2) {
-    for my $r (@$sql_data) {
-      $_ = from_json $_ for grep /^[\[{].*[}\]]$/, $to->{hash} ? values %$r : @$r;
-    }
+  # Optionally expand
+  if ($mode) {
+    my $from_json = __PACKAGE__->can(sprintf '_from_json_mode_%s_%s', $mode, $to->{type});
+    $from_json->($_, $idx, $names) for @$sql_data;
   }
 
   return @$sql_data;
+}
+
+sub _from_json_mode_1_array {
+  my ($r, $idx, $names) = @_;
+  $r->[$_] = from_json $r->[$_] for grep { defined $r->[$_] } @$idx;
+}
+
+sub _from_json_mode_1_hash {
+  my ($r, $idx, $names) = @_;
+  $r->{$_} = from_json $r->{$_} for grep { defined $r->{$_} } @$names;
+}
+
+sub _from_json_mode_2_array {
+  my ($r, $idx, $names) = @_;
+  $_ = from_json $_ for grep /^[\[{].*[}\]]$/, @$r;
+}
+
+sub _from_json_mode_2_hash {
+  my ($r, $idx, $names) = @_;
+  $_ = from_json $_ for grep /^[\[{].*[}\]]$/, values %$r;
 }
 
 sub _types {
@@ -86,7 +90,7 @@ sub _types {
   return @$self{qw(idx names)} if $self->{idx};
 
   my $types = $self->db->mysql->_dbi_attr($self->sth, 'type');
-  my @idx   = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
+  my @idx = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
 
   return ($self->{idx} = \@idx, $self->{names} = [@{$self->columns}[@idx]]);
 }
