@@ -326,12 +326,6 @@ soon as the first database connection has been established.
 
 Defaults to false.
 
-=head2 close_idle_connections
-
-  $mysql = $mysql->close_idle_connections;
-
-Close all connections that are not currently active.
-
 =head2 database_class
 
   $class = $mysql->database_class;
@@ -427,6 +421,12 @@ Database username, defaults to an empty string.
 
 L<Mojo::mysql> inherits all methods from L<Mojo::EventEmitter> and implements the
 following new ones.
+
+=head2 close_idle_connections
+
+  $mysql = $mysql->close_idle_connections;
+
+Close all connections that are not currently active.
 
 =head2 db
 
