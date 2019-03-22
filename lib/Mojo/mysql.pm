@@ -538,13 +538,13 @@ Jan Henning Thorsen - C<jhthorsen@cpan.org>.
 
 Mike Magowan
 
-Tekki
+Rolf Stöckli - C<tekki@cpan.org>.
 
-This code is mostly a rip-off from Sebastian Riedel's L<Mojo::Pg>.
+This code started as a rip-off from Sebastian Riedel's L<Mojo::Pg>.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2014-2015, Jan Henning Thorsen.
+Copyright (C) 2014-2019, Jan Henning Thorsen.
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.

@@ -1,5 +1,8 @@
 Revision history for perl distribution Mojo-mysql
 
+1.14 Not Released
+ - Correct handling of fetchall and arrays in Results
+
 1.13 2019-03-02T11:27:01+0800
  - Add support for DBD::MariaDB #47
  - Add missing code for SQL JOIN #56
