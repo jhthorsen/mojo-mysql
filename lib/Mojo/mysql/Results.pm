@@ -7,9 +7,9 @@ use Mojo::Util 'tablify';
 
 has [qw(db sth)];
 
-sub array { ($_[0]->_expand($_[0]->sth->fetchrow_arrayref))[0] }
+sub array { ($_[0]->_expand({list => 0, type => 'array'}))[0] }
 
-sub arrays { _c($_[0]->_expand(@{$_[0]->sth->fetchall_arrayref})) }
+sub arrays { _c($_[0]->_expand({list => 1, type => 'array'})) }
 
 sub columns { shift->sth->{NAME} }
 
@@ -17,9 +17,9 @@ sub expand { $_[0]{expand} = defined $_[1] ? 2 : 1 and return $_[0] }
 
 sub finish { shift->sth->finish }
 
-sub hash { ($_[0]->_expand($_[0]->sth->fetchrow_hashref))[0] }
+sub hash { ($_[0]->_expand({list => 0, type => 'hash'}))[0] }
 
-sub hashes { _c($_[0]->_expand(@{$_[0]->sth->fetchall_arrayref({})})) }
+sub hashes { _c($_[0]->_expand({list => 1, type => 'hash'})) }
 
 sub rows { shift->sth->rows }
 
@@ -42,34 +42,57 @@ sub state { shift->sth->state }
 sub _c { Mojo::Collection->new(@_) }
 
 sub _expand {
-  my ($self, @rows) = @_;
+  my ($self, $to) = @_;
 
-  return @rows unless my $mode = $self->{expand} and $rows[0];
+  # Get field names and types, needs to be done before reading from sth
+  my $mode = $self->{expand} || 0;
+  my ($idx, $names) = $mode == 1 ? $self->_types : ();
 
-  # Force expanding
-  return map {
-    my $r = $_;
-    $_ = from_json $_ for grep {/^(\[|\{).*(\}|\])/} values %$r;
-    $r;
-  } @rows if $mode == 2;
+  # Fetch sql data
+  my $hash = $to->{type} eq 'hash';
+  my $sql_data
+    = $to->{list} && $hash ? $self->sth->fetchall_arrayref({})
+    : $to->{list} ? $self->sth->fetchall_arrayref
+    : $hash       ? [$self->sth->fetchrow_hashref]
+    :               [$self->sth->fetchrow_arrayref];
 
-  # Only expand json columns
-  my ($idx, $name) = @$self{qw(idx name)};
-  unless ($idx) {
-    my $types = $self->db->mysql->_dbi_attr($self->sth, 'type');
-    my @idx   = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
-    ($idx, $name) = @$self{qw(idx name)} = (\@idx, [@{$self->columns}[@idx]]);
+  # Optionally expand
+  if ($mode) {
+    my $from_json = __PACKAGE__->can(sprintf '_from_json_mode_%s_%s', $mode, $to->{type});
+    $from_json->($_, $idx, $names) for @$sql_data;
   }
 
-  return @rows unless @$idx;
-  if (ref $rows[0] eq 'HASH') {
-    for my $r (@rows) { $r->{$_} and ($r->{$_} = from_json $r->{$_}) for @$name }
-  }
-  else {
-    for my $r (@rows) { $r->[$_] and ($r->[$_] = from_json $r->[$_]) for @$idx }
-  }
+  return @$sql_data;
+}
 
-  return @rows;
+sub _from_json_mode_1_array {
+  my ($r, $idx, $names) = @_;
+  $r->[$_] = from_json $r->[$_] for grep { defined $r->[$_] } @$idx;
+}
+
+sub _from_json_mode_1_hash {
+  my ($r, $idx, $names) = @_;
+  $r->{$_} = from_json $r->{$_} for grep { defined $r->{$_} } @$names;
+}
+
+sub _from_json_mode_2_array {
+  my ($r, $idx, $names) = @_;
+  $_ = from_json $_ for grep /^[\[{].*[}\]]$/, @$r;
+}
+
+sub _from_json_mode_2_hash {
+  my ($r, $idx, $names) = @_;
+  $_ = from_json $_ for grep /^[\[{].*[}\]]$/, values %$r;
+}
+
+sub _types {
+  my $self = shift;
+  return @$self{qw(idx names)} if $self->{idx};
+
+  my $types = $self->db->mysql->_dbi_attr($self->sth, 'type');
+  my @idx = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
+
+  return ($self->{idx} = \@idx, $self->{names} = [@{$self->columns}[@idx]]);
 }
 
 sub DESTROY {
