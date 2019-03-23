@@ -1,6 +1,6 @@
 Revision history for perl distribution Mojo-mysql
 
-1.14 Not Released
+1.14 2019-03-23T08:07:17+0100
  - Correct handling of fetchall and arrays in Results
 
 1.13 2019-03-02T11:27:01+0800

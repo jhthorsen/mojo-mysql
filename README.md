@@ -171,12 +171,6 @@ soon as the first database connection has been established.
 
 Defaults to false.
 
-## close\_idle\_connections
-
-    $mysql = $mysql->close_idle_connections;
-
-Close all connections that are not currently active.
-
 ## database\_class
 
     $class = $mysql->database_class;
@@ -272,6 +266,12 @@ Database username, defaults to an empty string.
 
 [Mojo::mysql](https://metacpan.org/pod/Mojo::mysql) inherits all methods from [Mojo::EventEmitter](https://metacpan.org/pod/Mojo::EventEmitter) and implements the
 following new ones.
+
+## close\_idle\_connections
+
+    $mysql = $mysql->close_idle_connections;
+
+Close all connections that are not currently active.
 
 ## db
 
@@ -374,13 +374,13 @@ Jan Henning Thorsen - `jhthorsen@cpan.org`.
 
 Mike Magowan
 
-Tekki
+Rolf Stöckli - `tekki@cpan.org`.
 
-This code is mostly a rip-off from Sebastian Riedel's [Mojo::Pg](https://metacpan.org/pod/Mojo::Pg).
+This code started as a rip-off from Sebastian Riedel's [Mojo::Pg](https://metacpan.org/pod/Mojo::Pg).
 
 # COPYRIGHT AND LICENSE
 
-Copyright (C) 2014-2015, Jan Henning Thorsen.
+Copyright (C) 2014-2019, Jan Henning Thorsen.
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.

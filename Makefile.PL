@@ -2,14 +2,23 @@
 use ExtUtils::MakeMaker;
 my %WriteMakefileArgs = (
   NAME           => 'Mojo::mysql',
-  AUTHOR         => 'Jan Henning Thorsen <jhthorsen@cpan.org>',
+  AUTHOR         => 'Tekki <tekki@tekki.ch>',
   LICENSE        => 'artistic_2',
   ABSTRACT_FROM  => 'lib/Mojo/mysql.pm',
   VERSION_FROM   => 'lib/Mojo/mysql.pm',
   EXE_FILES      => [qw()],
-  BUILD_REQUIRES => {},
-  TEST_REQUIRES  => {'Test::More' => '0.90'},
-  PREREQ_PM      => {'DBD::mysql' => '4.042', 'Mojolicious' => '8.03', 'SQL::Abstract' => '1.86'},
+  BUILD_REQUIRES => {}
+,
+  TEST_REQUIRES  => {
+  'Test::More' => '0.90'
+}
+,
+  PREREQ_PM      => {
+  'DBD::mysql' => '4.042',
+  'Mojolicious' => '8.03',
+  'SQL::Abstract' => '1.86'
+}
+,
   META_MERGE     => {
     'dynamic_config' => 0,
     'meta-spec'      => {version => 2},
