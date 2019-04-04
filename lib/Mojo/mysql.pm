@@ -530,15 +530,15 @@ This is the class hierarchy of the L<Mojo::mysql> distribution.
 
 =head1 AUTHOR
 
-Curt Hochwender - C<hochwender@centurytel.net>.
+Curt Hochwender - C<hochwender@centurytel.net>
 
 Dan Book - C<dbook@cpan.org>
 
-Jan Henning Thorsen - C<jhthorsen@cpan.org>.
+Jan Henning Thorsen - C<jhthorsen@cpan.org>
 
 Mike Magowan
 
-Rolf Stöckli - C<tekki@cpan.org>.
+Rolf Stöckli - C<tekki@cpan.org>
 
 This code started as a rip-off from Sebastian Riedel's L<Mojo::Pg>.
 
