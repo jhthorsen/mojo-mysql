@@ -7,20 +7,19 @@ plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 my $db    = $mysql->db;
 
-eval {
-  $db->query('select json_type("[]")');
-} or do {
+eval { $db->query('select json_type("[]")'); } or do {
   plan skip_all => $@;
 };
 
+my $drink = 'szőlőlé';
 $db->query('create table if not exists mojo_json_test (id int(10), name varchar(60), j json)');
 $db->query('truncate table mojo_json_test');
-$db->query('insert into mojo_json_test (id, name, j) values (?, ?, ?)', $$, $0, {json => {foo => 42}});
+$db->query('insert into mojo_json_test (id, name, j) values (?, ?, ?)', $$, $0, {json => {drink => $drink}});
 
-is $db->query('select json_type(j) from mojo_json_test')->array->[0],             'OBJECT', 'json_type';
-is $db->query('select json_extract(j, "$.foo") from mojo_json_test')->array->[0], '42',     'json_extract';
-is_deeply $db->query('select id, name, j from mojo_json_test where json_extract(j, "$.foo") = 42')->expand->hash,
-  {id => $$, name => $0, j => {foo => 42}}, 'expand json';
+is $db->query('select json_type(j) from mojo_json_test')->array->[0],               'OBJECT',     'json_type';
+is $db->query('select json_extract(j, "$.drink") from mojo_json_test')->array->[0], qq|"$drink"|, 'json_extract';
+is_deeply $db->query(qq|select id, name, j from mojo_json_test where json_extract(j, '\$.drink') = '$drink'|)
+  ->expand->hash, {id => $$, name => $0, j => {drink => $drink}}, 'expand json';
 
 my $value_hash = {nick => 'supergirl'};
 my $value_json = Mojo::JSON::to_json($value_hash);
