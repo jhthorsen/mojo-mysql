@@ -67,12 +67,18 @@ sub _expand {
 
 sub _from_json_mode_1_array {
   my ($r, $idx, $names) = @_;
-  $r->[$_] = from_json $r->[$_] for grep { defined $r->[$_] } @$idx;
+  for (grep { defined $r->[$_] } @$idx) {
+    utf8::decode $r->[$_];
+    $r->[$_] = from_json $r->[$_];
+  }
 }
 
 sub _from_json_mode_1_hash {
   my ($r, $idx, $names) = @_;
-  $r->{$_} = from_json $r->{$_} for grep { defined $r->{$_} } @$names;
+  for (grep { defined $r->{$_} } @$names) {
+    utf8::decode $r->{$_};
+    $r->{$_} = from_json $r->{$_};
+  }
 }
 
 sub _from_json_mode_2_array {
@@ -90,7 +96,7 @@ sub _types {
   return @$self{qw(idx names)} if $self->{idx};
 
   my $types = $self->db->mysql->_dbi_attr($self->sth, 'type');
-  my @idx = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
+  my @idx   = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
 
   return ($self->{idx} = \@idx, $self->{names} = [@{$self->columns}[@idx]]);
 }
