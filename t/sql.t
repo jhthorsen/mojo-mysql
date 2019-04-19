@@ -119,11 +119,22 @@ note 'INNER JOIN';
 @sql = $abstract->select(['foo', [-inner => 'bar', foo_id => 'id']]);
 is_deeply \@sql, ['SELECT * FROM `foo` INNER JOIN `bar` ON (`bar`.`foo_id` = `foo`.`id`)'], 'right query';
 
+note 'NATURAL JOIN';
+@sql = $abstract->select(['foo', [-natural => 'bar']]);
+is_deeply \@sql, ['SELECT * FROM `foo` NATURAL JOIN `bar`'], 'right query';
+
+note 'JOIN USING';
+@sql = $abstract->select(['foo', [bar => 'foo_id']]);
+is_deeply \@sql, ['SELECT * FROM `foo` JOIN `bar` USING (`foo_id`)'], 'right query';
+
 note 'JOIN: unsupported value';
-eval { $abstract->select(['foo', []]) };
-like $@, qr/join must be in the form \[\$table, \$fk => \$pk\]/, 'right error';
+eval { $abstract->select(['foo', ['bar']]) };
+like $@, qr/join must be in the form \[\$table, \$fk => \$pk\]/, 'right error for missing keys';
 
 eval { $abstract->select(['foo', ['bar', foo_id => 'id', 'id2']]) };
-like $@, qr/join requires an even number of keys/, 'right error';
+like $@, qr/join requires an even number of keys/, 'right error for uneven number of keys';
+
+eval { $abstract->select(['foo', [-natural => 'bar', 'foo_id']]) };
+like $@, qr/natural join must be in the form \[-natural => \$table\]/, 'right error for wrong natural join';
 
 done_testing;
