@@ -239,7 +239,7 @@ names, but also array references with tables to generate C<JOIN> clauses for.
   $abstract->select(['foo', ['bar', foo_id => 'id']]);
 
   # "select * from foo join bar on (foo.id = bar.foo_id)"
-  $abstract->select(['foo', ['bar', foo.id => 'bar.foo_id']]);
+  $abstract->select(['foo', ['bar', 'foo.id' => 'bar.foo_id']]);
 
   # -left, -right, -inner
   # "select * from foo left join bar on (bar.foo_id = foo.id)"
