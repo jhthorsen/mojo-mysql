@@ -1,5 +1,8 @@
 Revision history for perl distribution Mojo-mysql
 
+1.15 Not Released
+ - Add support for NATURAL JOIN and JOIN USING #59
+
 1.14 2019-03-23T08:07:17+0100
  - Correct handling of fetchall and arrays in Results
 
