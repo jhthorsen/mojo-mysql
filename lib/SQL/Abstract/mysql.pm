@@ -112,7 +112,6 @@ sub _table {
   my $sql = $self->SUPER::_table(\@tables);
   my $sep = $self->{name_sep} // '';
   for my $join (@joins) {
-    puke 'join must be in the form [$table, $fk => $pk]' if @$join < 3;
 
     my $type = '';
     if ($join->[0] =~ /^-(.+)/) {
@@ -121,21 +120,33 @@ sub _table {
     }
 
     my $name = shift @$join;
+    $sql .= $self->_sqlcase("$type join ") . $self->_quote($name);
 
-    puke 'join requires an even number of keys' if @$join % 2;
-
-    my @keys;
-    while (my ($fk, $pk) = splice @$join, 0, 2) {
-      push @keys,
-        $self->_quote(index($fk, $sep) > 0 ? $fk : "$name.$fk") . ' = '
-        . $self->_quote(index($pk, $sep) > 0 ? $pk : "$tables[0].$pk");
+    # NATURAL JOIN
+    if ($type eq ' natural') {
+      puke 'natural join must be in the form [-natural => $table]' if @$join;
     }
 
-    $sql
-      .= $self->_sqlcase("$type join ")
-      . $self->_quote($name)
-      . $self->_sqlcase(' on ') . '('
-      . join($self->_sqlcase(' and '), @keys) . ')';
+    # JOIN USING
+    elsif (@$join == 1) {
+      $sql .= $self->_sqlcase(' using (') . $self->_quote($join->[0]) . ')';
+    }
+
+    # others
+    else {
+      puke 'join must be in the form [$table, $fk => $pk]' if @$join < 2;
+      puke 'join requires an even number of keys' if @$join % 2;
+
+      my @keys;
+      while (my ($fk, $pk) = splice @$join, 0, 2) {
+        push @keys,
+          $self->_quote(index($fk, $sep) > 0 ? $fk : "$name.$fk") . ' = '
+          . $self->_quote(index($pk, $sep) > 0 ? $pk : "$tables[0].$pk");
+      }
+
+      $sql .= $self->_sqlcase(' on ') . '(' . join($self->_sqlcase(' and '), @keys) . ')';
+    }
+
   }
 
   return $sql;
@@ -233,6 +244,14 @@ names, but also array references with tables to generate C<JOIN> clauses for.
   # -left, -right, -inner
   # "select * from foo left join bar on (bar.foo_id = foo.id)"
   $abstract->select(['foo', [-left => 'bar', foo_id => 'id']]);
+
+  # -natural
+  # "select * from foo natural join bar"
+  $abstract->select(['foo', [-natural => 'bar']]);
+
+  # join using
+  # "select * from foo join bar using (foo_id)"
+  $abstract->select(['foo', [bar => 'foo_id']]);
 
   # more than one table
   # "select * from foo join bar on (bar.foo_id = foo.id) join baz on (baz.foo_id = foo.id)"
