@@ -366,15 +366,15 @@ This is the class hierarchy of the [Mojo::mysql](https://metacpan.org/pod/Mojo::
 
 # AUTHOR
 
-Curt Hochwender - `hochwender@centurytel.net`.
+Curt Hochwender - `hochwender@centurytel.net`
 
 Dan Book - `dbook@cpan.org`
 
-Jan Henning Thorsen - `jhthorsen@cpan.org`.
+Jan Henning Thorsen - `jhthorsen@cpan.org`
 
 Mike Magowan
 
-Rolf Stöckli - `tekki@cpan.org`.
+Rolf Stöckli - `tekki@cpan.org`
 
 This code started as a rip-off from Sebastian Riedel's [Mojo::Pg](https://metacpan.org/pod/Mojo::Pg).
 
