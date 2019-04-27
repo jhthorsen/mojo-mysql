@@ -1,5 +1,9 @@
 Revision history for perl distribution Mojo-mysql
 
+1.16 Not Released
+ - Add DBI to prerequisites
+   Contributor: Mohammad S Anwar
+
 1.15 2019-04-22T06:41:34+0200
  - Add support for NATURAL JOIN and JOIN USING #59
 
