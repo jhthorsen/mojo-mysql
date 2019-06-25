@@ -10,7 +10,7 @@ my %WriteMakefileArgs = (
   EXE_FILES      => [qw()],
   BUILD_REQUIRES => {},
   TEST_REQUIRES  => {'Test::More' => '0.90'},
-  PREREQ_PM      => {'DBD::mysql' => '4.042', 'Mojolicious' => '8.03', 'SQL::Abstract' => '1.86'},
+  PREREQ_PM      => {'DBD::mysql' => '4.042', 'DBI' => '1.627', 'Mojolicious' => '8.03', 'SQL::Abstract' => '1.86'},
   META_MERGE     => {
     'dynamic_config' => 0,
     'meta-spec'      => {version => 2},

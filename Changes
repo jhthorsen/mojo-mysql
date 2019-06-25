@@ -1,6 +1,6 @@
 Revision history for perl distribution Mojo-mysql
 
-1.16 Not Released
+1.16 2019-06-25T06:33:55+0200
  - Add DBI to prerequisites
    Contributor: Mohammad S Anwar
 
