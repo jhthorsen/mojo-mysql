@@ -10,7 +10,7 @@ use Mojo::URL;
 use Scalar::Util 'weaken';
 use SQL::Abstract::mysql;
 
-our $VERSION = '1.16';
+our $VERSION = '1.17';
 
 has abstract        => sub { SQL::Abstract::mysql->new(quote_char => chr(96), name_sep => '.') };
 has auto_migrate    => 0;
@@ -32,7 +32,7 @@ has options => sub {
 };
 
 has [qw(password username)] => '';
-has pubsub => sub {
+has pubsub                  => sub {
   require Mojo::mysql::PubSub;
   my $pubsub = Mojo::mysql::PubSub->new(mysql => shift);
   warn "Use of Mojo::mysql::PubSub is highly EXPERIMENTAL and should be considered an experiment"
