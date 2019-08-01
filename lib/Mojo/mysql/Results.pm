@@ -52,9 +52,9 @@ sub _expand {
   my $hash = $to->{type} eq 'hash';
   my $sql_data
     = $to->{list} && $hash ? $self->sth->fetchall_arrayref({})
-    : $to->{list} ? $self->sth->fetchall_arrayref
-    : $hash       ? [$self->sth->fetchrow_hashref]
-    :               [$self->sth->fetchrow_arrayref];
+    : $to->{list}          ? $self->sth->fetchall_arrayref
+    : $hash                ? [$self->sth->fetchrow_hashref]
+    :                        [$self->sth->fetchrow_arrayref];
 
   # Optionally expand
   if ($mode) {
@@ -90,7 +90,7 @@ sub _types {
   return @$self{qw(idx names)} if $self->{idx};
 
   my $types = $self->db->mysql->_dbi_attr($self->sth, 'type');
-  my @idx = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
+  my @idx   = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
 
   return ($self->{idx} = \@idx, $self->{names} = [@{$self->columns}[@idx]]);
 }
@@ -98,7 +98,7 @@ sub _types {
 sub DESTROY {
   my $self = shift;
   return unless my $db = $self->{db} and my $sth = $self->{sth};
-  push @{$db->{done_sth}}, $sth;
+  push @{$db->{done_sth}}, $sth unless $self->{is_blocking};
 }
 
 1;

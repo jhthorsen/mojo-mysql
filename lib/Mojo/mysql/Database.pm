@@ -63,7 +63,7 @@ sub query {
     local $sth->{HandleError} = sub { $_[0] = Carp::shortmess($_[0]); 0 };
     _bind_params($sth, @_);
     my $rv  = $sth->execute;
-    my $res = $self->results_class->new(db => $self, sth => $sth);
+    my $res = $self->results_class->new(db => $self, is_blocking => 1, sth => $sth);
     $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
     return $res;
   }
@@ -148,7 +148,7 @@ sub _watch {
       my ($cb, $err, $sth) = @{shift @$waiting}{qw(cb err sth)};
 
       # Do not raise exceptions inside the event loop
-      my $rv = do { local $sth->{RaiseError} = 0; $sth->$result_method };
+      my $rv  = do { local $sth->{RaiseError} = 0; $sth->$result_method };
       my $res = $self->results_class->new(db => $self, sth => $sth);
 
       $err = undef if defined $rv;
@@ -361,13 +361,13 @@ L<Mojo::Promise> object instead of accepting a callback.
 =head2 quote
 
   my $escaped = $db->quote($str);
- 
+
 Quote a string literal for use as a literal value in an SQL statement.
- 
+
 =head2 quote_id
- 
+
   my $escaped = $db->quote_id($id);
- 
+
 Quote an identifier (table name etc.) for use in an SQL statement.
 
 =head2 select

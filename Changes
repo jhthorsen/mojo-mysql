@@ -1,5 +1,8 @@
 Revision history for perl distribution Mojo-mysql
 
+1.17 Not Released
+ - Fix leaking $sth when used in blocking mode, fixes #66
+
 1.16 2019-06-25T06:33:55+0200
  - Add DBI to prerequisites
    Contributor: Mohammad S Anwar
