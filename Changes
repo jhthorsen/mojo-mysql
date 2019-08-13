@@ -1,5 +1,8 @@
 Revision history for perl distribution Mojo-mysql
 
+1.18 Not Released
+ - Add missing code for SELECT AS
+
 1.17 2019-08-01T09:44:57+0200
  - Fix leaking $sth when used in blocking mode, fixes #66
 

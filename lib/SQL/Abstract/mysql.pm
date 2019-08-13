@@ -98,6 +98,32 @@ sub _order_by {
   return $sql, @bind;
 }
 
+sub _select_fields {
+  my ($self, $fields) = @_;
+
+  return $fields unless ref $fields eq 'ARRAY';
+
+  my (@fields, @bind);
+  for my $field (@$fields) {
+    $self->_SWITCH_refkind(
+      $field => {
+        ARRAYREF => sub {
+          puke 'field alias must be in the form [$name => $alias]' if @$field < 2;
+          push @fields, $self->_quote($field->[0]) . $self->_sqlcase(' as ') . $self->_quote($field->[1]);
+        },
+        ARRAYREFREF => sub {
+          push @fields, shift @$$field;
+          push @bind,   @$$field;
+        },
+        SCALARREF => sub { push @fields, $$field },
+        FALLBACK  => sub { push @fields, $self->_quote($field) }
+      }
+    );
+  }
+
+  return join(', ', @fields), @bind;
+}
+
 sub _table {
   my ($self, $table) = @_;
 

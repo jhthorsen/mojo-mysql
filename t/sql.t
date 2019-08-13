@@ -33,6 +33,10 @@ like $@, qr/on_conflict value "do something" is not allowed/, 'right error';
 eval { $abstract->insert('foo', {bar => 'baz'}, {on_conflict => undef}) };
 like $@, qr/on_conflict value "" is not allowed/, 'right error';
 
+note 'SELECT AS';
+is_deeply [$abstract->select('foo', [[bar => 'wibble'], [baz => 'wobble'], 'yada'])],
+  ['SELECT `bar` AS `wibble`, `baz` AS `wobble`, `yada` FROM `foo`'], 'right query';
+
 note 'ORDER BY';
 @sql = $abstract->select('foo', '*', {bar => 'baz'}, {-desc => 'yada'});
 is_deeply \@sql, ['SELECT * FROM `foo` WHERE ( `bar` = ? ) ORDER BY `yada` DESC', 'baz'], 'right query';
