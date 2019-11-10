@@ -178,7 +178,7 @@ Mojo::mysql::Database - Database
 
 =head1 DESCRIPTION
 
-L<Mojo::mysql::Database> is a container for database handles used by L<Mojo::MySQL>.
+L<Mojo::mysql::Database> is a container for database handles used by L<Mojo::mysql>.
 
 =head1 ATTRIBUTES
 
