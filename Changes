@@ -1,6 +1,6 @@
 Revision history for perl distribution Mojo-mysql
 
-1.18 Not Released
+1.18 2019-12-01T09:41:10+0100
  - Add missing code for SELECT AS
 
 1.17 2019-08-01T09:44:57+0200

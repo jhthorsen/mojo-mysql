@@ -3,11 +3,12 @@ use utf8;
 use ExtUtils::MakeMaker;
 my %WriteMakefileArgs = (
   NAME           => 'Mojo::mysql',
-  AUTHOR         => 'Jan Henning Thorsen <jhthorsen@cpan.org>',
+  AUTHOR         => 'Rolf Stöckli <tekki@cpan.org>',
   LICENSE        => 'artistic_2',
   ABSTRACT_FROM  => 'lib/Mojo/mysql.pm',
   VERSION_FROM   => 'lib/Mojo/mysql.pm',
   EXE_FILES      => [qw()],
+  OBJECT         => '',
   BUILD_REQUIRES => {},
   TEST_REQUIRES  => {'Test::More' => '0.90'},
   PREREQ_PM      => {'DBD::mysql' => '4.042', 'DBI' => '1.627', 'Mojolicious' => '8.03', 'SQL::Abstract' => '1.86'},

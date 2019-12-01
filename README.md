@@ -83,13 +83,13 @@ Mojo::mysql - Mojolicious and Async MySQL/MariaDB
 
 # DESCRIPTION
 
-[Mojo::mysql](https://metacpan.org/pod/Mojo::mysql) is a tiny wrapper around [DBD::mysql](https://metacpan.org/pod/DBD::mysql) and [DBD::MariaDB](https://metacpan.org/pod/DBD::MariaDB) that
+[Mojo::mysql](https://metacpan.org/pod/Mojo%3A%3Amysql) is a tiny wrapper around [DBD::mysql](https://metacpan.org/pod/DBD%3A%3Amysql) and [DBD::MariaDB](https://metacpan.org/pod/DBD%3A%3AMariaDB) that
 makes [MySQL](http://www.mysql.org) and [MariaDB](https://mariadb.org/) a lot
 of fun to use with the [Mojolicious](http://mojolicio.us) real-time web
 framework.
 
 The two DBD drivers are compatible with both MySQL and MariaDB, but they offer
-different ["options"](#options). [DBD::MariaDB](https://metacpan.org/pod/DBD::MariaDB) should have better unicode support
+different ["options"](#options). [DBD::MariaDB](https://metacpan.org/pod/DBD%3A%3AMariaDB) should have better unicode support
 though and might become the default in the future.
 
 Database and handles are cached automatically, so they can be reused
@@ -111,7 +111,7 @@ gracefully by holding on to them only for short amounts of time.
     app->start;
 
 While all I/O operations are performed blocking, you can wait for long running
-queries asynchronously, allowing the [Mojo::IOLoop](https://metacpan.org/pod/Mojo::IOLoop) event loop to perform
+queries asynchronously, allowing the [Mojo::IOLoop](https://metacpan.org/pod/Mojo%3A%3AIOLoop) event loop to perform
 other tasks in the meantime. Since database connections usually have a very low
 latency, this often results in very good performance.
 
@@ -130,12 +130,12 @@ concurrently, you have to use multiple connections.
     $mysql->db->query('select sleep(5)' => sub {...});
 
 All cached database handles will be reset automatically if a new process has
-been forked, this allows multiple processes to share the same [Mojo::mysql](https://metacpan.org/pod/Mojo::mysql)
+been forked, this allows multiple processes to share the same [Mojo::mysql](https://metacpan.org/pod/Mojo%3A%3Amysql)
 object safely.
 
 # EVENTS
 
-[Mojo::mysql](https://metacpan.org/pod/Mojo::mysql) inherits all events from [Mojo::EventEmitter](https://metacpan.org/pod/Mojo::EventEmitter) and can emit the
+[Mojo::mysql](https://metacpan.org/pod/Mojo%3A%3Amysql) inherits all events from [Mojo::EventEmitter](https://metacpan.org/pod/Mojo%3A%3AEventEmitter) and can emit the
 following new ones.
 
 ## connection
@@ -149,14 +149,14 @@ Emitted when a new database connection has been established.
 
 # ATTRIBUTES
 
-[Mojo::mysql](https://metacpan.org/pod/Mojo::mysql) implements the following attributes.
+[Mojo::mysql](https://metacpan.org/pod/Mojo%3A%3Amysql) implements the following attributes.
 
 ## abstract
 
     $abstract = $mysql->abstract;
     $mysql    = $mysql->abstract(SQL::Abstract::mysql->new);
 
-[SQL::Abstract::mysql](https://metacpan.org/pod/SQL::Abstract::mysql) object used to generate CRUD queries for [Mojo::mysql::Database](https://metacpan.org/pod/Mojo::mysql::Database).
+[SQL::Abstract::mysql](https://metacpan.org/pod/SQL%3A%3AAbstract%3A%3Amysql) object used to generate CRUD queries for [Mojo::mysql::Database](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3ADatabase).
 
     # Generate statements and bind values
     my ($stmt, @bind) = $mysql->abstract->select('names');
@@ -176,7 +176,7 @@ Defaults to false.
     $class = $mysql->database_class;
     $mysql = $mysql->database_class("MyApp::Database");
 
-Class to be used by ["db"](#db), defaults to [Mojo::mysql::Database](https://metacpan.org/pod/Mojo::mysql::Database). Note that this
+Class to be used by ["db"](#db), defaults to [Mojo::mysql::Database](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3ADatabase). Note that this
 class needs to have already been loaded before ["db"](#db) is called.
 
 ## dsn
@@ -199,7 +199,7 @@ Maximum number of idle database handles to cache for future use, defaults to
     my $migrations = $mysql->migrations;
     $mysql         = $mysql->migrations(Mojo::mysql::Migrations->new);
 
-[Mojo::mysql::Migrations](https://metacpan.org/pod/Mojo::mysql::Migrations) object you can use to change your database schema more
+[Mojo::mysql::Migrations](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3AMigrations) object you can use to change your database schema more
 easily.
 
     # Load migrations from file and migrate to latest version
@@ -220,13 +220,13 @@ Use this feature with caution and remember to always backup your database.
     $mysql      = $mysql->options({mysql_use_result => 1});
 
 Options for database handles, defaults to activating `mysql_enable_utf8` (only
-for [DBD::mysql](https://metacpan.org/pod/DBD::mysql)), `AutoCommit`, `AutoInactiveDestroy` as well as
+for [DBD::mysql](https://metacpan.org/pod/DBD%3A%3Amysql)), `AutoCommit`, `AutoInactiveDestroy` as well as
 `RaiseError` and deactivating `PrintError`. `AutoCommit` and `RaiseError`
 are considered mandatory, so deactivating them would be very dangerous.
 
-`mysql_auto_reconnect` is never enabled, [Mojo::mysql](https://metacpan.org/pod/Mojo::mysql) takes care of dead connections.
+`mysql_auto_reconnect` is never enabled, [Mojo::mysql](https://metacpan.org/pod/Mojo%3A%3Amysql) takes care of dead connections.
 
-`AutoCommit` cannot not be disabled, use $db->[begin](https://metacpan.org/pod/Mojo::mysql::Database#begin) to manage transactions.
+`AutoCommit` cannot not be disabled, use $db->[begin](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3ADatabase#begin) to manage transactions.
 
 `RaiseError` is enabled for blocking and disabled in event loop for non-blocking queries.
 
@@ -252,8 +252,8 @@ Database password, defaults to an empty string.
     my $pubsub = $mysql->pubsub;
     $mysql     = $mysql->pubsub(Mojo::mysql::PubSub->new);
 
-[Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo::mysql::PubSub) should be considered an EXPIREMENT! See
-["DESCRIPTION" in Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo::mysql::PubSub#DESCRIPTION) for more information.
+[Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3APubSub) should be considered an EXPIREMENT! See
+["DESCRIPTION" in Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3APubSub#DESCRIPTION) for more information.
 
 ## username
 
@@ -264,7 +264,7 @@ Database username, defaults to an empty string.
 
 # METHODS
 
-[Mojo::mysql](https://metacpan.org/pod/Mojo::mysql) inherits all methods from [Mojo::EventEmitter](https://metacpan.org/pod/Mojo::EventEmitter) and implements the
+[Mojo::mysql](https://metacpan.org/pod/Mojo%3A%3Amysql) inherits all methods from [Mojo::EventEmitter](https://metacpan.org/pod/Mojo%3A%3AEventEmitter) and implements the
 following new ones.
 
 ## close\_idle\_connections
@@ -277,7 +277,7 @@ Close all connections that are not currently active.
 
     my $db = $mysql->db;
 
-Get [Mojo::mysql::Database](https://metacpan.org/pod/Mojo::mysql::Database) object for a cached or newly created database
+Get [Mojo::mysql::Database](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3ADatabase) object for a cached or newly created database
 handle. The database handle will be automatically cached again when that
 object is destroyed, so you can handle connection timeouts gracefully by
 holding on to it only for short amounts of time.
@@ -311,10 +311,10 @@ Parse configuration from connection string.
     my $mysql = Mojo::mysql->new('mysql://user@/test');
     my $mysql = Mojo::mysql->new('mariadb://user@/test');
 
-Construct a new [Mojo::mysql](https://metacpan.org/pod/Mojo::mysql) object either from ["ATTRIBUTES"](#attributes) and or parse
+Construct a new [Mojo::mysql](https://metacpan.org/pod/Mojo%3A%3Amysql) object either from ["ATTRIBUTES"](#attributes) and or parse
 connection string with ["from\_string"](#from_string) if necessary.
 
-Using the "mariadb" scheme requires the optional module [DBD::MariaDB](https://metacpan.org/pod/DBD::MariaDB) version
+Using the "mariadb" scheme requires the optional module [DBD::MariaDB](https://metacpan.org/pod/DBD%3A%3AMariaDB) version
 1.21 (or later) to be installed.
 
 ## strict\_mode
@@ -355,14 +355,14 @@ See also [https://metacpan.org/pod/DBI#DBI\_TRACE](https://metacpan.org/pod/DBI#
 
 # REFERENCE
 
-This is the class hierarchy of the [Mojo::mysql](https://metacpan.org/pod/Mojo::mysql) distribution.
+This is the class hierarchy of the [Mojo::mysql](https://metacpan.org/pod/Mojo%3A%3Amysql) distribution.
 
-- [Mojo::mysql](https://metacpan.org/pod/Mojo::mysql)
-- [Mojo::mysql::Database](https://metacpan.org/pod/Mojo::mysql::Database)
-- [Mojo::mysql::Migrations](https://metacpan.org/pod/Mojo::mysql::Migrations)
-- [Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo::mysql::PubSub)
-- [Mojo::mysql::Results](https://metacpan.org/pod/Mojo::mysql::Results)
-- [Mojo::mysql::Transaction](https://metacpan.org/pod/Mojo::mysql::Transaction)
+- [Mojo::mysql](https://metacpan.org/pod/Mojo%3A%3Amysql)
+- [Mojo::mysql::Database](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3ADatabase)
+- [Mojo::mysql::Migrations](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3AMigrations)
+- [Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3APubSub)
+- [Mojo::mysql::Results](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3AResults)
+- [Mojo::mysql::Transaction](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3ATransaction)
 
 # AUTHOR
 
@@ -376,7 +376,7 @@ Mike Magowan
 
 Rolf Stöckli - `tekki@cpan.org`
 
-This code started as a rip-off from Sebastian Riedel's [Mojo::Pg](https://metacpan.org/pod/Mojo::Pg).
+This code started as a rip-off from Sebastian Riedel's [Mojo::Pg](https://metacpan.org/pod/Mojo%3A%3APg).
 
 # COPYRIGHT AND LICENSE
 
@@ -389,8 +389,8 @@ the terms of the Artistic License version 2.0.
 
 [https://github.com/jhthorsen/mojo-mysql](https://github.com/jhthorsen/mojo-mysql),
 
-[Mojo::Pg](https://metacpan.org/pod/Mojo::Pg) Async Connector for PostgreSQL using [DBD::Pg](https://metacpan.org/pod/DBD::Pg), [https://github.com/kraih/mojo-pg](https://github.com/kraih/mojo-pg),
+[Mojo::Pg](https://metacpan.org/pod/Mojo%3A%3APg) Async Connector for PostgreSQL using [DBD::Pg](https://metacpan.org/pod/DBD%3A%3APg), [https://github.com/kraih/mojo-pg](https://github.com/kraih/mojo-pg),
 
-[Mojo::MySQL5](https://metacpan.org/pod/Mojo::MySQL5) Pure-Perl non-blocking I/O MySQL Connector, [https://github.com/harry-bix/mojo-mysql5](https://github.com/harry-bix/mojo-mysql5),
+[Mojo::MySQL5](https://metacpan.org/pod/Mojo%3A%3AMySQL5) Pure-Perl non-blocking I/O MySQL Connector, [https://github.com/harry-bix/mojo-mysql5](https://github.com/harry-bix/mojo-mysql5),
 
-[Mojolicious::Guides](https://metacpan.org/pod/Mojolicious::Guides), [http://mojolicio.us](http://mojolicio.us).
+[Mojolicious::Guides](https://metacpan.org/pod/Mojolicious%3A%3AGuides), [http://mojolicio.us](http://mojolicio.us).
