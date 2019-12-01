@@ -169,4 +169,8 @@ eval { $db->query('select 22') };
 like $@, qr{Cannot perform blocking query, while waiting for async response},
   'Cannot perform blocking and non-blocking at the same time';
 
+note 'Promises';
+$mysql->db_p->then(sub { shift->query_p('select 40 + 2') })->then(sub { $res = shift })->wait;
+is $res->array->[0], 42, 'db_p';
+
 done_testing;

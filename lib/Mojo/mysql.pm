@@ -6,6 +6,7 @@ use DBI;
 use File::Spec::Functions 'file_name_is_absolute';
 use Mojo::mysql::Database;
 use Mojo::mysql::Migrations;
+use Mojo::Promise;
 use Mojo::URL;
 use Scalar::Util 'weaken';
 use SQL::Abstract::mysql;
@@ -32,6 +33,7 @@ has options => sub {
 };
 
 has [qw(password username)] => '';
+
 has pubsub => sub {
   require Mojo::mysql::PubSub;
   my $pubsub = Mojo::mysql::PubSub->new(mysql => shift);
@@ -58,6 +60,25 @@ sub db {
 
   my ($dbh, $handle) = @{$self->_dequeue};
   return $self->database_class->new(dbh => $dbh, handle => $handle, mysql => $self);
+}
+
+sub db_p {
+  my $self = shift;
+  my $p    = Mojo::Promise->new;
+
+  # Fork safety
+  delete @$self{qw(pid queue)} unless ($self->{pid} //= $$) eq $$;
+
+  Mojo::IOLoop->next_tick(sub {
+    eval {
+      my ($dbh, $handle) = @{$self->_dequeue};
+      $p->resolve($self->database_class->new(dbh => $dbh, handle => $handle, lazy => 1, mysql => $self));
+    } or do {
+      $p->reject($@);
+    };
+  });
+
+  return $p;
 }
 
 sub from_string {
@@ -133,7 +154,7 @@ sub _dequeue {
   $dbh->{AutoCommit} = 1;
 
   $self->_set_strict_mode($dbh) if $self->{strict_mode};
-  $self->migrations->migrate if $self->auto_migrate and !$self->{migrated}++;
+  $self->migrations->migrate    if $self->auto_migrate and !$self->{migrated}++;
   $self->emit(connection => $dbh);
   [$dbh];
 }
@@ -436,6 +457,15 @@ Get L<Mojo::mysql::Database> object for a cached or newly created database
 handle. The database handle will be automatically cached again when that
 object is destroyed, so you can handle connection timeouts gracefully by
 holding on to it only for short amounts of time.
+
+This method will die if a connection could not be established to the database.
+
+=head2 db_p
+
+  my $promise = $mysql->db_p->then(sub { my $db = shift });
+
+Same as L</"db">, but will pass the L<Mojo::mysql::Database> object to the
+fulfillment handler.
 
 =head2 from_string
 
