@@ -85,6 +85,26 @@ eval {
 like $@, qr/does_not_exist/, 'right error';
 is_deeply $db->query('select * from results_test where name = ?', 'tx3')->hashes->to_array, [], 'no results';
 
+{
+  my ($err, $n_rows, $tx) = ('nope');
+  Mojo::IOLoop->delay(
+    sub {
+      $tx = $db->begin;
+      $db->query("insert into results_test (name) values ('txc')", shift->begin);
+    },
+    sub {
+      undef $tx;
+      $db->query("select name from results_test where name = 'txc'", shift->begin);
+    },
+    sub {
+      my ($delay, $err, $res) = @_;
+      $n_rows = $res->arrays->size;
+    },
+  )->catch(sub { $err = pop })->wait;
+  is $n_rows, 0,      'async rollback works - nothing inserted';
+  is $err,    'nope', 'async rollback works - no error';
+}
+
 $db->query('drop table results_test');
 
 done_testing;
