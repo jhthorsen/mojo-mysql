@@ -4,129 +4,134 @@ use Mojo::Base 'SQL::Abstract';
 BEGIN { *puke = \&SQL::Abstract::puke }
 
 sub insert {
-  my $self    = shift;
-  my $table   = $self->_table(shift);
-  my $data    = shift || return;
-  my $options = shift || {};
+  my ($self, $table, $data, $options) = (shift, @_);
+  my ($sql, @bind) = $self->SUPER::insert(@_);
 
-  my $method = $self->_METHOD_FOR_refkind('_insert', $data);
-  my ($sql, @bind) = $self->$method($data);
-  my $command;
-
-  # options
-  if (exists $options->{on_conflict}) {
-    my $on_conflict = $options->{on_conflict} // '';
-    my %commands = (ignore => 'insert ignore', replace => 'replace');
-    if (ref $on_conflict eq 'HASH') {
-      $command = 'insert';
-      my ($sql2, @bind2) = $self->_update_set_values($on_conflict);
-      $sql .= $self->_sqlcase(' on duplicate key update ') . $sql2;
-      push @bind, @bind2;
-    }
-    else {
-      $command = $commands{$on_conflict} or puke qq{on_conflict value "$on_conflict" is not allowed};
-    }
-  }
-  else {
-    $command = 'insert';
-  }
-  $sql = join ' ', $self->_sqlcase("$command into"), $table, $sql;
+  $self->_mysql_on_conflict(\$sql, \@bind, $options->{on_conflict} // '') if exists $options->{on_conflict};
 
   return wantarray ? ($sql, @bind) : $sql;
 }
 
-sub _order_by {
-  my ($self, $options) = @_;
+sub select {
+  my ($self, $table, $fields) = (shift, shift, shift);
 
-  # Legacy
-  return $self->SUPER::_order_by($options) if ref $options ne 'HASH' or grep {/^-(?:desc|asc)/i} keys %$options;
+  my @b;
+  $fields = $self->_mysql_array_fields(\@b, $fields) if ref $fields eq 'ARRAY';
 
-  # GROUP BY
-  my $sql = '';
-  my @bind;
-  if (defined(my $group = $options->{group_by})) {
-    my $group_sql;
-    $self->_SWITCH_refkind(
-      $group => {
-        ARRAYREF => sub {
-          $group_sql = join ', ', map { $self->_quote($_) } @$group;
-        },
-        SCALARREF => sub { $group_sql = $$group }
-      }
-    );
-    $sql .= $self->_sqlcase(' group by ') . $group_sql;
-  }
-
-  # HAVING
-  if (defined(my $having = $options->{having})) {
-    my ($having_sql, @having_bind) = $self->_recurse_where($having);
-    $sql .= $self->_sqlcase(' having ') . $having_sql;
-    push @bind, @having_bind;
-  }
-
-  # ORDER BY
-  $sql .= $self->_order_by($options->{order_by}) if defined $options->{order_by};
-
-  # LIMIT
-  if (defined $options->{limit}) {
-    $sql .= $self->_sqlcase(' limit ') . '?';
-    push @bind, $options->{limit};
-  }
-
-  # OFFSET
-  if (defined $options->{offset}) {
-    $sql .= $self->_sqlcase(' offset ') . '?';
-    push @bind, $options->{offset};
-  }
-
-  # FOR
-  if (defined(my $for = $options->{for})) {
-    my $for_sql;
-    $self->_SWITCH_refkind(
-      $for => {
-        SCALAR => sub {
-          my %commands = (update => 'for update', share => 'lock in share mode');
-          my $command  = $commands{$for} or puke qq{for value "$for" is not allowed};
-          $for_sql = $self->_sqlcase($command);
-        },
-        SCALARREF => sub { $for_sql = "FOR $$for" }
-      }
-    );
-    $sql .= " $for_sql";
-  }
-
-  return $sql, @bind;
+  my ($sql, @bind) = $self->SUPER::select($table, $fields, @_);
+  return wantarray ? ($sql, @b, @bind) : $sql;
 }
 
-sub _select_fields {
-  my ($self, $fields) = @_;
+sub where {
+  my ($self, $where, $order) = (shift, shift, shift);
+  my $options = {};
 
-  return $fields unless ref $fields eq 'ARRAY';
+  if (ref $order eq 'HASH' and !grep /^-(?:desc|asc)/i, keys %$order) {
+    $options = $order;
+    $order   = $order->{order_by};
+  }
 
-  my (@fields, @bind);
-  for my $field (@$fields) {
+  my ($sql, @bind) = $self->SUPER::where($where, $order, @_);
+  $self->_mysql_group_by(\$sql, \@bind, $options->{group_by}) if defined $options->{group_by};
+  $self->_mysql_having(\$sql, \@bind, $options->{having})     if defined $options->{having};
+  $self->_mysql_limit(\$sql, \@bind, $options->{limit})       if defined $options->{limit};
+  $self->_mysql_offset(\$sql, \@bind, $options->{offset})     if defined $options->{offset};
+  $self->_mysql_for(\$sql, \@bind, $options->{for})           if defined $options->{for};
+
+  return wantarray ? ($sql, @bind) : $sql;
+}
+
+sub _mysql_array_fields {
+  my ($self, $bind, $fields) = @_;
+
+  return join ', ', map {
+    my $field = $_;
     $self->_SWITCH_refkind(
       $field => {
         ARRAYREF => sub {
           puke 'field alias must be in the form [$name => $alias]' if @$field < 2;
-          push @fields, $self->_quote($field->[0]) . $self->_sqlcase(' as ') . $self->_quote($field->[1]);
+          $self->_quote($field->[0]) . $self->_sqlcase(' as ') . $self->_quote($field->[1]);
         },
         ARRAYREFREF => sub {
-          push @fields, shift @$$field;
-          push @bind,   @$$field;
+          my $name = shift @$$field;
+          push @$bind, @$$field;
+          return $name;
         },
-        SCALARREF => sub { push @fields, $$field },
-        FALLBACK  => sub { push @fields, $self->_quote($field) }
+        SCALARREF => sub {$$field},
+        FALLBACK  => sub { $self->_quote($field) }
       }
     );
-  }
+  } @$fields;
+}
 
-  return join(', ', @fields), @bind;
+sub _mysql_for {
+  my ($self, $sql, $bind, $for) = @_;
+
+  $$sql .= $self->_SWITCH_refkind(
+    $for => {
+      SCALAR => sub {
+        return $self->_sqlcase(' lock in share mode') if $for eq 'share';
+        return $self->_sqlcase(' for update')         if $for eq 'update';
+        puke qq{for value "$for" is not allowed};
+      },
+      SCALARREF => sub { $self->_sqlcase(' for ') . $$for }
+    }
+  );
+}
+
+sub _mysql_group_by {
+  my ($self, $sql, $bind, $group_by) = @_;
+
+  $$sql .= $self->_sqlcase(' group by ') . $self->_SWITCH_refkind(
+    $group_by => {
+      ARRAYREF => sub {
+        join ', ', map { $self->_quote($_) } @$group_by;
+      },
+      SCALARREF => sub {$$group_by},
+    }
+  );
+}
+
+sub _mysql_having {
+  my ($self, $sql, $bind, $having) = @_;
+  my ($s, @b) = $self->_recurse_where($having);
+  $$sql .= $self->_sqlcase(' having ') . $s;
+  push @$bind, @b;
+}
+
+sub _mysql_limit {
+  my ($self, $sql, $bind, $limit) = @_;
+  $$sql .= $self->_sqlcase(' limit ') . '?';
+  push @$bind, $limit;
+}
+
+sub _mysql_offset {
+  my ($self, $sql, $bind, $offset) = @_;
+  $$sql .= $self->_sqlcase(' offset ') . '?';
+  push @$bind, $offset;
+}
+
+sub _mysql_on_conflict {
+  my ($self, $sql, $bind, $on_conflict) = @_;
+
+  if (ref $on_conflict eq 'HASH') {
+    my ($s, @b) = $self->_update_set_values($on_conflict);
+    $$sql .= $self->_sqlcase(' on duplicate key update ') . $s;
+    push @$bind, @b;
+  }
+  elsif ($on_conflict eq 'ignore') {
+    $$sql =~ s!^(\w+)!{$self->_sqlcase('insert ignore')}!e;
+  }
+  elsif ($on_conflict eq 'replace') {
+    $$sql =~ s!^(\w+)!{$self->_sqlcase('replace')}!e;
+  }
+  else {
+    puke qq{on_conflict value "$on_conflict" is not allowed};
+  }
 }
 
 sub _table {
   my ($self, $table) = @_;
-
   return $self->SUPER::_table($table) unless ref $table eq 'ARRAY';
 
   my (@tables, @joins);
@@ -141,15 +146,15 @@ sub _table {
 
     my $type = '';
     if ($join->[0] =~ /^-(.+)/) {
-      $type = " $1";
+      $type = $1;
       shift @$join;
     }
 
     my $name = shift @$join;
-    $sql .= $self->_sqlcase("$type join ") . $self->_quote($name);
+    $sql .= $self->_sqlcase(" $type join ") . $self->_quote($name);
 
     # NATURAL JOIN
-    if ($type eq ' natural') {
+    if ($type eq 'natural') {
       puke 'natural join must be in the form [-natural => $table]' if @$join;
     }
 
@@ -161,18 +166,17 @@ sub _table {
     # others
     else {
       puke 'join must be in the form [$table, $fk => $pk]' if @$join < 2;
-      puke 'join requires an even number of keys' if @$join % 2;
+      puke 'join requires an even number of keys'          if @$join % 2;
 
       my @keys;
       while (my ($fk, $pk) = splice @$join, 0, 2) {
         push @keys,
-          $self->_quote(index($fk, $sep) > 0 ? $fk : "$name.$fk") . ' = '
+          $self->_quote(index($fk, $sep) > 0   ? $fk : "$name.$fk") . ' = '
           . $self->_quote(index($pk, $sep) > 0 ? $pk : "$tables[0].$pk");
       }
 
       $sql .= $self->_sqlcase(' on ') . '(' . join($self->_sqlcase(' and '), @keys) . ')';
     }
-
   }
 
   return $sql;
@@ -287,28 +291,11 @@ names, but also array references with tables to generate C<JOIN> clauses for.
   # "select * from foo left join bar on (bar.foo_id = foo.id and bar.foo_id2 = foo.id2)"
   $abstract->select(['foo', [-left => 'bar', foo_id => 'id', foo_id2 => 'id2']]);
 
-=head3 ORDER BY
+=head2 where
 
-In addition to the C<$order> argument accepted by L<SQL::Abstract> you can pass
-a hash reference with various options. This includes C<order_by>, which takes
-the same values as the C<$order> argument.
+  my ($stmt, @bind) = $abstract->where($where, \%options);
 
-  # "select * from some_table order by foo desc"
-  $abstract->select('some_table', '*', undef, {order_by => {-desc => 'foo'}});
-
-=head3 LIMIT / OFFSET
-
-The C<limit> and C<offset> options can be used to generate C<SELECT> queries
-with C<LIMIT> and C<OFFSET> clauses.
-
-  # "select * from some_table limit 10"
-  $abstract->select('some_table', '*', undef, {limit => 10});
-
-  # "select * from some_table offset 5"
-  $abstract->select('some_table', '*', undef, {offset => 5});
-
-  # "select * from some_table limit 10 offset 5"
-  $abstract->select('some_table', '*', undef, {limit => 10, offset => 5});
+This method extends L<SQL::Abstract/where> with the following functionality:
 
 =head3 GROUP BY
 
@@ -321,14 +308,6 @@ references to pass literal SQL are supported.
 
   # "select * from some_table group by foo, bar"
   $abstract->select('some_table', '*', undef, {group_by => \'foo, bar'});
-
-=head3 HAVING
-
-The C<having> option can be used to generate C<SELECT> queries with C<HAVING>
-clauses, which takes the same values as the C<$where> argument.
-
-  # "select * from t group by a having b = 'c'"
-  $abstract->select('t', '*', undef, {group_by => ['a'], having => {b => 'c'}});
 
 =head3 FOR
 
@@ -347,6 +326,37 @@ C<share> and scalar references to pass literal SQL are supported.
 
   # "select * from some_table for update skip locked"
   $abstract->select('some_table', '*', undef, {for => \'update skip locked'});
+
+=head3 HAVING
+
+The C<having> option can be used to generate C<SELECT> queries with C<HAVING>
+clauses, which takes the same values as the C<$where> argument.
+
+  # "select * from t group by a having b = 'c'"
+  $abstract->select('t', '*', undef, {group_by => ['a'], having => {b => 'c'}});
+
+=head3 LIMIT / OFFSET
+
+The C<limit> and C<offset> options can be used to generate C<SELECT> queries
+with C<LIMIT> and C<OFFSET> clauses.
+
+  # "select * from some_table limit 10"
+  $abstract->select('some_table', '*', undef, {limit => 10});
+
+  # "select * from some_table offset 5"
+  $abstract->select('some_table', '*', undef, {offset => 5});
+
+  # "select * from some_table limit 10 offset 5"
+  $abstract->select('some_table', '*', undef, {limit => 10, offset => 5});
+
+=head3 ORDER BY
+
+In addition to the C<$order> argument accepted by L<SQL::Abstract> you can pass
+a hash reference with various options. This includes C<order_by>, which takes
+the same values as the C<$order> argument.
+
+  # "select * from some_table order by foo desc"
+  $abstract->select('some_table', '*', undef, {order_by => {-desc => 'foo'}});
 
 =head1 SEE ALSO
 
