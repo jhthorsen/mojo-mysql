@@ -32,7 +32,7 @@ has options => sub {
 };
 
 has [qw(password username)] => '';
-has pubsub => sub {
+has pubsub                  => sub {
   require Mojo::mysql::PubSub;
   my $pubsub = Mojo::mysql::PubSub->new(mysql => shift);
   warn "Use of Mojo::mysql::PubSub is highly EXPERIMENTAL and should be considered an experiment"
@@ -133,7 +133,7 @@ sub _dequeue {
   $dbh->{AutoCommit} = 1;
 
   $self->_set_strict_mode($dbh) if $self->{strict_mode};
-  $self->migrations->migrate if $self->auto_migrate and !$self->{migrated}++;
+  $self->migrations->migrate    if $self->auto_migrate and !$self->{migrated}++;
   $self->emit(connection => $dbh);
   [$dbh];
 }
@@ -424,9 +424,10 @@ following new ones.
 
 =head2 close_idle_connections
 
-  $mysql = $mysql->close_idle_connections;
+  $mysql = $mysql->close_idle_connections($keep);
 
-Close all connections that are not currently active.
+Close all connections that are not currently active, or limit the
+number of idle connections to C<$keep>.
 
 =head2 db
 
