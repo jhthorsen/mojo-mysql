@@ -5,12 +5,11 @@ BEGIN { *puke = \&SQL::Abstract::puke }
 
 sub insert {
   my $self    = shift;
-  my $table   = $self->_table(shift);
-  my $data    = shift || return;
-  my $options = shift || {};
+  my $table   = $self->_table($_[0]);
+  my $data    = $_[1] || return;
+  my $options = $_[2] || {};
 
-  my $method = $self->_METHOD_FOR_refkind('_insert', $data);
-  my ($sql, @bind) = $self->$method($data);
+  my ($sql, @bind) = $self->SUPER::insert(@_);
   my $command;
 
   # options
@@ -26,11 +25,9 @@ sub insert {
     else {
       $command = $commands{$on_conflict} or puke qq{on_conflict value "$on_conflict" is not allowed};
     }
+    my $replace = $self->_sqlcase($command);
+    $sql =~ s/^(\w+)/$replace/;
   }
-  else {
-    $command = 'insert';
-  }
-  $sql = join ' ', $self->_sqlcase("$command into"), $table, $sql;
 
   return wantarray ? ($sql, @bind) : $sql;
 }
