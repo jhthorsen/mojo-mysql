@@ -15,7 +15,7 @@ sub insert {
   # options
   if (exists $options->{on_conflict}) {
     my $on_conflict = $options->{on_conflict} // '';
-    my %commands = (ignore => 'insert ignore', replace => 'replace');
+    my %commands    = (ignore => 'insert ignore', replace => 'replace');
     if (ref $on_conflict eq 'HASH') {
       $command = 'insert';
       my ($sql2, @bind2) = $self->_update_set_values($on_conflict);
@@ -32,65 +32,57 @@ sub insert {
   return wantarray ? ($sql, @bind) : $sql;
 }
 
+sub _mysql_for {
+  my ($self, $param) = @_;
+
+  return $self->_SWITCH_refkind(
+    $param => {
+      SCALAR => sub {
+        return $self->_sqlcase('lock in share mode') if $param eq 'share';
+        return $self->_sqlcase('for update')         if $param eq 'update';
+        puke qq{for value "$param" is not allowed};
+      },
+      SCALARREF => sub { $self->_sqlcase('for ') . $$param },
+    }
+  );
+}
+
+sub _mysql_group_by {
+  my ($self, $param) = @_;
+
+  return $self->_SWITCH_refkind(
+    $param => {ARRAYREF => sub { join ', ', map $self->_quote($_), @$param }, SCALARREF => sub {$$param},});
+}
+
 sub _order_by {
   my ($self, $options) = @_;
+  my ($sql,  @bind)    = ('');
 
   # Legacy
   return $self->SUPER::_order_by($options) if ref $options ne 'HASH' or grep {/^-(?:desc|asc)/i} keys %$options;
 
   # GROUP BY
-  my $sql = '';
-  my @bind;
-  if (defined(my $group = $options->{group_by})) {
-    my $group_sql;
-    $self->_SWITCH_refkind(
-      $group => {
-        ARRAYREF => sub {
-          $group_sql = join ', ', map { $self->_quote($_) } @$group;
-        },
-        SCALARREF => sub { $group_sql = $$group }
-      }
-    );
-    $sql .= $self->_sqlcase(' group by ') . $group_sql;
-  }
+  $sql .= $self->_sqlcase(' group by ') . $self->_mysql_group_by($options->{group_by}) if defined $options->{group_by};
 
   # HAVING
-  if (defined(my $having = $options->{having})) {
-    my ($having_sql, @having_bind) = $self->_recurse_where($having);
-    $sql .= $self->_sqlcase(' having ') . $having_sql;
-    push @bind, @having_bind;
+  if (defined($options->{having})) {
+    my ($s, @b) = $self->_recurse_where($options->{having});
+    $sql .= $self->_sqlcase(' having ') . $s;
+    push @bind, @b;
   }
 
   # ORDER BY
   $sql .= $self->_order_by($options->{order_by}) if defined $options->{order_by};
 
-  # LIMIT
-  if (defined $options->{limit}) {
-    $sql .= $self->_sqlcase(' limit ') . '?';
-    push @bind, $options->{limit};
-  }
-
-  # OFFSET
-  if (defined $options->{offset}) {
-    $sql .= $self->_sqlcase(' offset ') . '?';
-    push @bind, $options->{offset};
+  # LIMIT / OFFSET
+  for my $name (qw(limit offset)) {
+    next unless defined $options->{$name};
+    $sql .= $self->_sqlcase(" $name ") . '?';
+    push @bind, $options->{$name};
   }
 
   # FOR
-  if (defined(my $for = $options->{for})) {
-    my $for_sql;
-    $self->_SWITCH_refkind(
-      $for => {
-        SCALAR => sub {
-          my %commands = (update => 'for update', share => 'lock in share mode');
-          my $command  = $commands{$for} or puke qq{for value "$for" is not allowed};
-          $for_sql = $self->_sqlcase($command);
-        },
-        SCALARREF => sub { $for_sql = "FOR $$for" }
-      }
-    );
-    $sql .= " $for_sql";
-  }
+  $sql .= ' ' . $self->_mysql_for($options->{for}) if defined $options->{for};
 
   return $sql, @bind;
 }
@@ -158,12 +150,12 @@ sub _table {
     # others
     else {
       puke 'join must be in the form [$table, $fk => $pk]' if @$join < 2;
-      puke 'join requires an even number of keys' if @$join % 2;
+      puke 'join requires an even number of keys'          if @$join % 2;
 
       my @keys;
       while (my ($fk, $pk) = splice @$join, 0, 2) {
         push @keys,
-          $self->_quote(index($fk, $sep) > 0 ? $fk : "$name.$fk") . ' = '
+          $self->_quote(index($fk, $sep) > 0   ? $fk : "$name.$fk") . ' = '
           . $self->_quote(index($pk, $sep) > 0 ? $pk : "$tables[0].$pk");
       }
 
@@ -284,6 +276,50 @@ names, but also array references with tables to generate C<JOIN> clauses for.
   # "select * from foo left join bar on (bar.foo_id = foo.id and bar.foo_id2 = foo.id2)"
   $abstract->select(['foo', [-left => 'bar', foo_id => 'id', foo_id2 => 'id2']]);
 
+=head2 where
+
+  my ($stmt, @bind) = $abstract->where($where, \%options);
+
+This method extends L<SQL::Abstract/where> with the following functionality:
+
+=head3 FOR
+
+The C<for> option can be used to generate C<SELECT> queries with C<FOR UPDATE>
+or C<LOCK IN SHARE MODE> clauses.  So far the scalar values C<update> and
+C<share> and scalar references to pass literal SQL are supported.
+
+  # "select * from some_table for update"
+  $abstract->select('some_table', '*', undef, {for => 'update'});
+
+  # "select * from some_table lock in share mode"
+  $abstract->select('some_table', '*', undef, {for => 'share'});
+
+  # "select * from some_table for share"
+  $abstract->select('some_table', '*', undef, {for => \'share'});
+
+  # "select * from some_table for update skip locked"
+  $abstract->select('some_table', '*', undef, {for => \'update skip locked'});
+
+=head3 GROUP BY
+
+The C<group_by> option can be used to generate C<SELECT> queries with C<GROUP
+BY> clauses. So far array references to pass a list of fields and scalar
+references to pass literal SQL are supported.
+
+  # "select * from some_table group by foo, bar"
+  $abstract->select('some_table', '*', undef, {group_by => ['foo', 'bar']});
+
+  # "select * from some_table group by foo, bar"
+  $abstract->select('some_table', '*', undef, {group_by => \'foo, bar'});
+
+=head3 HAVING
+
+The C<having> option can be used to generate C<SELECT> queries with C<HAVING>
+clauses, which takes the same values as the C<$where> argument.
+
+  # "select * from t group by a having b = 'c'"
+  $abstract->select('t', '*', undef, {group_by => ['a'], having => {b => 'c'}});
+
 =head3 ORDER BY
 
 In addition to the C<$order> argument accepted by L<SQL::Abstract> you can pass
@@ -306,44 +342,6 @@ with C<LIMIT> and C<OFFSET> clauses.
 
   # "select * from some_table limit 10 offset 5"
   $abstract->select('some_table', '*', undef, {limit => 10, offset => 5});
-
-=head3 GROUP BY
-
-The C<group_by> option can be used to generate C<SELECT> queries with C<GROUP
-BY> clauses. So far array references to pass a list of fields and scalar
-references to pass literal SQL are supported.
-
-  # "select * from some_table group by foo, bar"
-  $abstract->select('some_table', '*', undef, {group_by => ['foo', 'bar']});
-
-  # "select * from some_table group by foo, bar"
-  $abstract->select('some_table', '*', undef, {group_by => \'foo, bar'});
-
-=head3 HAVING
-
-The C<having> option can be used to generate C<SELECT> queries with C<HAVING>
-clauses, which takes the same values as the C<$where> argument.
-
-  # "select * from t group by a having b = 'c'"
-  $abstract->select('t', '*', undef, {group_by => ['a'], having => {b => 'c'}});
-
-=head3 FOR
-
-The C<for> option can be used to generate C<SELECT> queries with C<FOR UPDATE>
-or C<LOCK IN SHARE MODE> clauses.  So far the scalar values C<update> and
-C<share> and scalar references to pass literal SQL are supported.
-
-  # "select * from some_table for update"
-  $abstract->select('some_table', '*', undef, {for => 'update'});
-
-  # "select * from some_table lock in share mode"
-  $abstract->select('some_table', '*', undef, {for => 'share'});
-
-  # "select * from some_table for share"
-  $abstract->select('some_table', '*', undef, {for => \'share'});
-
-  # "select * from some_table for update skip locked"
-  $abstract->select('some_table', '*', undef, {for => \'update skip locked'});
 
 =head1 SEE ALSO
 

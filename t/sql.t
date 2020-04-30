@@ -152,6 +152,35 @@ like $@, qr/join requires an even number of keys/, 'right error for uneven numbe
 eval { $abstract->select(['foo', [-natural => 'bar', 'foo_id']]) };
 like $@, qr/natural join must be in the form \[-natural => \$table\]/, 'right error for wrong natural join';
 
+note 'where';
+@sql = $abstract->where(
+  {user => {-like => 'r%'}},
+  {
+    for      => 'share',
+    group_by => ['user'],
+    having   => {max_connections => {'<' => 100}},
+    limit    => 10,
+    offset   => 42,
+    order_by => 'user',
+  }
+);
+
+is_query(
+  \@sql,
+  [
+    join(' ',
+      'WHERE ( `user` LIKE ? )',
+      'GROUP BY `user`',
+      'HAVING `max_connections` < ?',
+      'ORDER BY `user`',
+      'LIMIT ? OFFSET ?',
+      'LOCK IN SHARE MODE',
+    ),
+    'r%', 100, 10, 42
+  ],
+  'right where'
+);
+
 done_testing;
 
 sub is_query {
