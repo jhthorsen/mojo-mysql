@@ -4,29 +4,26 @@ use Mojo::Base 'SQL::Abstract';
 BEGIN { *puke = \&SQL::Abstract::puke }
 
 sub insert {
-  my $self    = shift;
-  my $table   = $self->_table($_[0]);
-  my $data    = $_[1] || return;
-  my $options = $_[2] || {};
-
-  my ($sql, @bind) = $self->SUPER::insert(@_);
-  my $command;
+  my ($self, $options) = (shift, $_[2] || {});       # ($self, $table, $data, $options)
+  my ($sql,  @bind)    = $self->SUPER::insert(@_);
 
   # options
   if (exists $options->{on_conflict}) {
     my $on_conflict = $options->{on_conflict} // '';
-    my %commands    = (ignore => 'insert ignore', replace => 'replace');
     if (ref $on_conflict eq 'HASH') {
-      $command = 'insert';
-      my ($sql2, @bind2) = $self->_update_set_values($on_conflict);
-      $sql .= $self->_sqlcase(' on duplicate key update ') . $sql2;
-      push @bind, @bind2;
+      my ($s, @b) = $self->_update_set_values($on_conflict);
+      $sql .= $self->_sqlcase(' on duplicate key update ') . $s;
+      push @bind, @b;
+    }
+    elsif ($on_conflict eq 'ignore') {
+      $sql =~ s/^(\w+)/{$self->_sqlcase('insert ignore')}/e;
+    }
+    elsif ($on_conflict eq 'replace') {
+      $sql =~ s/^(\w+)/{$self->_sqlcase('replace')}/e;
     }
     else {
-      $command = $commands{$on_conflict} or puke qq{on_conflict value "$on_conflict" is not allowed};
+      puke qq{on_conflict value "$on_conflict" is not allowed};
     }
-    my $replace = $self->_sqlcase($command);
-    $sql =~ s/^(\w+)/$replace/;
   }
 
   return wantarray ? ($sql, @bind) : $sql;
