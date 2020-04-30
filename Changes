@@ -1,5 +1,11 @@
 Revision history for perl distribution Mojo-mysql
 
+1.19 2020-05-01T06:58:48+0900
+ - Fix documentation for Mojo::mysql::close_idle_connections()
+ - Add documentation for SQL::Abstract::mysql::where() #78
+ - Made SQL::Abstract::mysql more compatible with SQL::Abstract #77
+   Contributor: Matt S Trout
+
 1.18 2019-12-01T09:41:10+0100
  - Add missing code for SELECT AS
 

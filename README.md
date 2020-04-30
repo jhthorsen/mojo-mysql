@@ -269,9 +269,10 @@ following new ones.
 
 ## close\_idle\_connections
 
-    $mysql = $mysql->close_idle_connections;
+    $mysql = $mysql->close_idle_connections($keep);
 
-Close all connections that are not currently active.
+Close all connections that are not currently active, or limit the
+number of idle connections to `$keep`.
 
 ## db
 
