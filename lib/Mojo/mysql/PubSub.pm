@@ -24,7 +24,7 @@ sub listen {
   warn qq|[PubSub] (@{[$wait_pid]}) listen "$channel"\n| if DEBUG;
   _query_with_retry(
     $sync_db,
-    'replace mojo_pubsub_subscribe (pid, channel, ts) values (?, ?, current_timestamp)',
+    'insert into mojo_pubsub_subscribe (pid, channel) values (?, ?) on duplicate key update ts=current_timestamp',
     $wait_pid, $channel
   );
   push @{$self->{chans}{$channel}}, $cb;
@@ -106,7 +106,7 @@ sub _wait_db {
   my $wait_db_pid = $wait_db->pid;
   _query_with_retry(
     $sync_db,
-    'replace mojo_pubsub_subscribe (pid, channel) values (?, ?)',
+    'insert into mojo_pubsub_subscribe (pid, channel) values (?, ?) on duplicate key update ts=current_timestamp',
     $wait_db_pid, $_
   ) for keys %{$self->{chans}};
 
