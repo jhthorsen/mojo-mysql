@@ -154,14 +154,14 @@ sub _wait_db {
 }
 
 sub _query_with_retry {
-  my ($db, @query_args) = @_;
+  my ($db, $sql, @bind) = @_;
 
   my $result;
 
   my $remaining_attempts = 2;
   while ($remaining_attempts--) {
     local $@;
-    eval { $result = $db->query(@query_args) };
+    eval { $result = $db->query($sql, @bind) };
     last unless $@;  # success
     croak $@ unless $remaining_attempts;  # rethrow $@ if no remaining attempts
 
@@ -173,7 +173,7 @@ sub _query_with_retry {
     croak $@ unless $err =~ /^\V*(?:retry|timeout)/i; # ... and maybe rethrow it
 
     # If we got here, we are retrying the query:
-    warn qq|[PubSub] (@{[$db->pid]}) Retrying after: !!! $err\n| if DEBUG;
+    warn qq|[PubSub] (@{[$db->pid]}) retry ($sql) !!! $err\n| if DEBUG;
   }
 
   return $result;
