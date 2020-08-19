@@ -307,7 +307,7 @@ drop table if exists mojo_pubsub_subscribe;
 drop table if exists mojo_pubsub_notify;
 
 create table mojo_pubsub_subscribe (
-  id bigint unsigned auto_increment primary key,
+  id integer auto_increment primary key,
   pid integer not null,
   channel varchar(64) not null,
   ts timestamp not null default current_timestamp,
@@ -316,7 +316,7 @@ create table mojo_pubsub_subscribe (
 );
 
 create table mojo_pubsub_notify (
-  id bigint unsigned auto_increment primary key,
+  id integer auto_increment primary key,
   channel varchar(64) not null,
   payload text,
   ts timestamp not null default current_timestamp,
