@@ -3,7 +3,7 @@ use Mojo::Base 'Mojo::EventEmitter';
 
 use Scalar::Util 'weaken';
 
-use constant DEBUG   => $ENV{MOJO_PUBSUB_DEBUG} || 0;
+use constant DEBUG   => $ENV{MOJO_PUBSUB_DEBUG}         || 0;
 use constant RETRIES => $ENV{MOJO_MYSQL_PUBSUB_RETRIES} || 1;
 
 has 'mysql';
@@ -11,11 +11,7 @@ has 'mysql';
 sub DESTROY {
   my $self = shift;
   return unless $self->{wait_db} and $self->mysql;
-  _query_with_retry(
-    $self->mysql->db,
-    'delete from mojo_pubsub_subscribe where pid = ?',
-    $self->{wait_db}->pid
-  );
+  _query_with_retry($self->mysql->db, 'delete from mojo_pubsub_subscribe where pid = ?', $self->{wait_db}->pid);
 }
 
 sub listen {
@@ -23,11 +19,9 @@ sub listen {
   my $sync_db  = $self->mysql->db;
   my $wait_pid = $self->_wait_db($sync_db)->pid;
   warn qq|[PubSub] (@{[$wait_pid]}) listen "$channel"\n| if DEBUG;
-  _query_with_retry(
-    $sync_db,
+  _query_with_retry($sync_db,
     'insert into mojo_pubsub_subscribe (pid, channel) values (?, ?) on duplicate key update ts=current_timestamp',
-    $wait_pid, $channel
-  );
+    $wait_pid, $channel);
   push @{$self->{chans}{$channel}}, $cb;
   return $cb;
 }
@@ -37,11 +31,8 @@ sub notify {
   my $sync_db = $self->mysql->db;
   warn qq|[PubSub] channel:$channel <<< "@{[$payload // '']}"\n| if DEBUG;
   $self->_init($sync_db) unless $self->{init};
-  _query_with_retry(
-    $sync_db,
-    'insert into mojo_pubsub_notify (channel, payload) values (?, ?)',
-    $channel, $payload // ''
-  );
+  _query_with_retry($sync_db, 'insert into mojo_pubsub_notify (channel, payload) values (?, ?)',
+    $channel, $payload // '');
   return $self;
 }
 
@@ -55,11 +46,7 @@ sub unlisten {
   my $sync_db  = $self->mysql->db;
   my $wait_pid = $self->_wait_db($sync_db)->pid;
   warn qq|[PubSub] ($wait_pid) unlisten "$channel"\n| if DEBUG;
-  _query_with_retry(
-    $sync_db,
-    'delete from mojo_pubsub_subscribe where pid = ? and channel = ?',
-    $wait_pid, $channel
-  );
+  _query_with_retry($sync_db, 'delete from mojo_pubsub_subscribe where pid = ? and channel = ?', $wait_pid, $channel);
   delete $self->{chans}{$channel};
   return $self;
 }
@@ -67,24 +54,18 @@ sub unlisten {
 sub _init {
   my ($self, $sync_db) = @_;
   $self->mysql->migrations->name('pubsub')->from_data->migrate;
-  _query_with_retry(
-    $sync_db,
-    'delete from mojo_pubsub_notify where ts < date_add(current_timestamp, interval -10 minute)'
-  );
-  _query_with_retry(
-    $sync_db,
-    'delete from mojo_pubsub_subscribe where ts < date_add(current_timestamp, interval -1 hour)'
-  );
+  _query_with_retry($sync_db,
+    'delete from mojo_pubsub_notify where ts < date_add(current_timestamp, interval -10 minute)');
+  _query_with_retry($sync_db,
+    'delete from mojo_pubsub_subscribe where ts < date_add(current_timestamp, interval -1 hour)');
   $self->{init} = 1;
 }
 
 sub _notifications {
   my ($self, $sync_db) = @_;
-  my $result = _query_with_retry(
-    $sync_db,
-    'select id, channel, payload from mojo_pubsub_notify where id > ? order by id',
-    $self->{last_id}
-  );
+  my $result
+    = _query_with_retry($sync_db, 'select id, channel, payload from mojo_pubsub_notify where id > ? order by id',
+    $self->{last_id});
   while (my $row = $result->array) {
     my ($id, $channel, $payload) = @$row;
     $self->{last_id} = $id;
@@ -103,22 +84,18 @@ sub _wait_db {
   return $self->{wait_db} if $self->{wait_db};
 
   $self->_init($sync_db) unless $self->{init};
-  my $wait_db = $self->{wait_db} = $self->mysql->db;
+  my $wait_db     = $self->{wait_db} = $self->mysql->db;
   my $wait_db_pid = $wait_db->pid;
-  _query_with_retry(
-    $sync_db,
+  _query_with_retry($sync_db,
     'insert into mojo_pubsub_subscribe (pid, channel) values (?, ?) on duplicate key update ts=current_timestamp',
-    $wait_db_pid, $_
-  ) for keys %{$self->{chans}};
+    $wait_db_pid, $_)
+    for keys %{$self->{chans}};
 
   if ($self->{last_id}) {
     $self->_notifications($sync_db);
   }
   else {
-    my $last = _query_with_retry(
-      $sync_db,
-      'select id from mojo_pubsub_notify order by id desc limit 1'
-    )->array;
+    my $last = _query_with_retry($sync_db, 'select id from mojo_pubsub_notify order by id desc limit 1')->array;
     $self->{last_id} = defined $last ? $last->[0] : 0;
   }
 
@@ -132,26 +109,14 @@ sub _wait_db {
     my $sync_db = $self->mysql->db;
     return (delete $self->{wait_db}, $self->_wait_db($sync_db)) if $err;
     $res->finish;
-    _query_with_retry(
-      $db,
-      'select sleep(600)',
-      $cb
-    );
-    _query_with_retry(
-      $sync_db,
-      'update mojo_pubsub_subscribe set ts = current_timestamp where pid = ?',
-      $db->pid
-    );
+    _query_with_retry($db,      'select sleep(600)',                                                     $cb);
+    _query_with_retry($sync_db, 'update mojo_pubsub_subscribe set ts = current_timestamp where pid = ?', $db->pid);
     $self->_notifications($self->mysql->db);
   };
 
   warn qq|[PubSub] (@{[$wait_db->pid]}) reconnect\n| if DEBUG;
   $self->emit(reconnect => $wait_db);
-  return _query_with_retry(
-    $wait_db,
-    'select sleep(600)',
-    $cb
-  );
+  return _query_with_retry($wait_db, 'select sleep(600)', $cb);
 }
 
 sub _query_with_retry {
@@ -163,15 +128,15 @@ sub _query_with_retry {
   while ($remaining_attempts--) {
     local $@;
     eval { $result = $db->query($sql, @bind) };
-    last unless $@;  # success
-    croak $@ unless $remaining_attempts;  # rethrow $@ if no remaining attempts
+    last     unless $@;                     # success
+    croak $@ unless $remaining_attempts;    # rethrow $@ if no remaining attempts
 
     # If we are allowed to retry, check if the error message looks
     # like it refers to something retryable.  Only look within the
     # first line to avoid potential spurious matches if the error
     # e.g. contains a stack trace.
-    my $err = $@;                                     # avoid stringifying $@ ...
-    croak $@ unless $err =~ /^\V*(?:retry|timeout)/i; # ... and maybe rethrow it
+    my $err = $@;                                        # avoid stringifying $@ ...
+    croak $@ unless $err =~ /^\V*(?:retry|timeout)/i;    # ... and maybe rethrow it
 
     # If we got here, we are retrying the query:
     warn qq|[PubSub] (@{[$db->pid]}) retry ($sql) !!! $err\n| if DEBUG;
