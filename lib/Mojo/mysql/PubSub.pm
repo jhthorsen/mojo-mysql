@@ -3,7 +3,8 @@ use Mojo::Base 'Mojo::EventEmitter';
 
 use Scalar::Util 'weaken';
 
-use constant DEBUG => $ENV{MOJO_PUBSUB_DEBUG} || 0;
+use constant DEBUG   => $ENV{MOJO_PUBSUB_DEBUG} || 0;
+use constant RETRIES => $ENV{MOJO_MYSQL_PUBSUB_RETRIES} || 1;
 
 has 'mysql';
 
@@ -158,7 +159,7 @@ sub _query_with_retry {
 
   my $result;
 
-  my $remaining_attempts = 2;
+  my $remaining_attempts = RETRIES + 1;    # including initial attempt
   while ($remaining_attempts--) {
     local $@;
     eval { $result = $db->query($sql, @bind) };
