@@ -156,17 +156,12 @@ sub _wait_db {
 sub _query_with_retry {
   my ($db, @query_args) = @_;
 
-  my $wantarray = wantarray;
-  my @results;
+  my $result;
 
   my $remaining_attempts = 2;
   while ($remaining_attempts--) {
     local $@;
-    eval {
-      if    (!defined $wantarray) {               $db->query(@query_args) }
-      elsif          ($wantarray) { @results    = $db->query(@query_args) }
-      else                        { $results[0] = $db->query(@query_args) }
-    };
+    eval { $result = $db->query(@query_args) };
     last unless $@;  # success
     die unless $remaining_attempts;  # rethrow $@ if no remaining attempts
 
@@ -181,7 +176,7 @@ sub _query_with_retry {
     warn qq|[PubSub] (@{[$db->pid]}) Retrying after: !!! $err\n| if DEBUG;
   }
 
-  return $wantarray ? @results : $results[0];
+  return $result;
 }
 
 1;
