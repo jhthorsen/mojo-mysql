@@ -163,14 +163,14 @@ sub _query_with_retry {
     local $@;
     eval { $result = $db->query(@query_args) };
     last unless $@;  # success
-    die unless $remaining_attempts;  # rethrow $@ if no remaining attempts
+    croak $@ unless $remaining_attempts;  # rethrow $@ if no remaining attempts
 
     # If we are allowed to retry, check if the error message looks
     # like it refers to something retryable.  Only look within the
     # first line to avoid potential spurious matches if the error
     # e.g. contains a stack trace.
-    my $err = $@;                                  # avoid stringifying $@ ...
-    die unless $err =~ /^\V*(?:retry|timeout)/i;   # ... and maybe rethrow it
+    my $err = $@;                                     # avoid stringifying $@ ...
+    croak $@ unless $err =~ /^\V*(?:retry|timeout)/i; # ... and maybe rethrow it
 
     # If we got here, we are retrying the query:
     warn qq|[PubSub] (@{[$db->pid]}) Retrying after: !!! $err\n| if DEBUG;
