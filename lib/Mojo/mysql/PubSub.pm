@@ -3,8 +3,8 @@ use Mojo::Base 'Mojo::EventEmitter';
 
 use Scalar::Util 'weaken';
 
-use constant DEBUG   => $ENV{MOJO_PUBSUB_DEBUG}         || 0;
-use constant RETRIES => $ENV{MOJO_MYSQL_PUBSUB_RETRIES} || 1;
+use constant DEBUG   => $ENV{MOJO_PUBSUB_DEBUG} || 0;
+use constant RETRIES => $ENV{MOJO_MYSQL_PUBSUB_RETRIES} // 1;
 
 has 'mysql';
 
