@@ -1,6 +1,6 @@
 Revision history for perl distribution Mojo-mysql
 
-1.22 Not Released
+1.22 2020-12-22T11:33:16+0900
  - Fix MANIFEST.SKIP #82
 
 1.20 2020-09-05T13:27:52+0900
