@@ -7,9 +7,7 @@ plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 my $db    = $mysql->db;
 
-eval {
-  $db->query('select json_type("[]")');
-} or do {
+eval { $db->query('select json_type("[]")'); } or do {
   plan skip_all => $@;
 };
 
@@ -27,21 +25,26 @@ my $value_json = Mojo::JSON::to_json($value_hash);
 my $query      = 'select name from mojo_json_test where name like "%supergirl%"';
 $db->query('insert into mojo_json_test (name) values (?)', {json => {nick => 'supergirl'}});
 
-is_deeply $db->query($query)->expand->hash, {name => $value_json}, 'hash: name as string';
-
+is_deeply $db->query($query)->expand->hash,    {name => $value_json}, 'hash: name as string';
 is_deeply $db->query($query)->expand(1)->hash, {name => $value_hash}, 'hash: name as hash';
-
 is_deeply $db->query($query)->expand->hashes, [{name => $value_json}], 'hashes: name as string';
-
 is_deeply $db->query($query)->expand(1)->hashes, [{name => $value_hash}], 'hashes: name as hash';
-
 is_deeply $db->query($query)->expand->array, [$value_json], 'array: name as string';
-
 is_deeply $db->query($query)->expand(1)->array, [$value_hash], 'array: name as hash';
-
 is_deeply $db->query($query)->expand->arrays, [[$value_json]], 'arrays: name as string';
-
 is_deeply $db->query($query)->expand(1)->arrays, [[$value_hash]], 'arrays: name as hash';
+
+$db->query('insert into mojo_json_test (name) values (?)', undef);
+is_deeply $db->query('select name from mojo_json_test where name is null')->expand->hash->{name}, undef, 'name is null';
+is_deeply $db->query('select name from mojo_json_test where name is null')->expand(0)->hash->{name}, undef,
+  'name is null';
+is_deeply $db->query('select name from mojo_json_test where name is null')->expand(1)->hash->{name}, undef,
+  'name is null';
+is_deeply $db->query('select name from mojo_json_test where name is null')->expand->array->[0], undef, 'name is null';
+is_deeply $db->query('select name from mojo_json_test where name is null')->expand(0)->array->[0], undef,
+  'name is null';
+is_deeply $db->query('select name from mojo_json_test where name is null')->expand(1)->array->[0], undef,
+  'name is null';
 
 $db->query('drop table mojo_json_test') unless $ENV{TEST_KEEP_DB};
 

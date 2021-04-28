@@ -77,12 +77,12 @@ sub _from_json_mode_1_hash {
 
 sub _from_json_mode_2_array {
   my ($r, $idx, $names) = @_;
-  $_ = from_json $_ for grep /^[\[{].*[}\]]$/, @$r;
+  $_ = from_json $_ for grep defined && /^[\[{].*[}\]]$/, @$r;
 }
 
 sub _from_json_mode_2_hash {
   my ($r, $idx, $names) = @_;
-  $_ = from_json $_ for grep /^[\[{].*[}\]]$/, values %$r;
+  $_ = from_json $_ for grep defined && /^[\[{].*[}\]]$/, values %$r;
 }
 
 sub _types {
