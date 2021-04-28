@@ -1,6 +1,6 @@
 Revision history for perl distribution Mojo-mysql
 
-1.21 Not Released
+1.21 2021-04-28T12:15:39+0900
  - Fix uninitialized warning with expand(1) #83
  - Removed delay() from tests and documentation
 
