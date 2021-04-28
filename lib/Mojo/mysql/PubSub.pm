@@ -1,7 +1,8 @@
 package Mojo::mysql::PubSub;
 use Mojo::Base 'Mojo::EventEmitter';
 
-use Scalar::Util 'weaken';
+use Carp qw(croak);
+use Scalar::Util qw(weaken);
 
 use constant DEBUG   => $ENV{MOJO_PUBSUB_DEBUG} || 0;
 use constant RETRIES => $ENV{MOJO_MYSQL_PUBSUB_RETRIES} // 1;
