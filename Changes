@@ -1,7 +1,7 @@
 Revision history for perl distribution Mojo-mysql
 
 1.21 Not Released
- - Fix missing croak() in PubSub
+ - Removed delay() from tests and documentation
 
 1.20 2020-09-05T13:27:52+0900
  - Mojo::mysql::PubSub is less susceptible to deadlocks/timeouts #80

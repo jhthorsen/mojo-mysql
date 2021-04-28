@@ -7,7 +7,7 @@ plan skip_all => 'TEST_ONLINE=mysql://root@/test' unless $ENV{TEST_ONLINE};
 use Mojo::IOLoop;
 use Mojo::mysql;
 
-my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
+my $mysql  = Mojo::mysql->new($ENV{TEST_ONLINE});
 my $driver = $ENV{TEST_ONLINE} =~ m!^(\w+):! ? $1 : 'mysql';
 $mysql->options->{"${driver}_client_found_rows"} = 0;
 my $db = $mysql->db;
@@ -57,17 +57,8 @@ is $db->query('update results_test set id=1 where id=1')->affected_rows, 1, 'rig
 $db->query('drop table results_test');
 
 my $err;
-Mojo::IOLoop->delay(
-  sub {
-    my $delay = shift;
-    $db->query('select name from results_test', $delay->begin);
-  },
-  sub {
-    my $delay = shift;
-    $err = shift;
-    $res = shift;
-  }
-)->wait;
+$db->query('select name from results_test', sub { shift; ($err, $res) = @_; Mojo::IOLoop->stop });
+Mojo::IOLoop->start;
 like $err, qr/results_test/, 'has error';
 ok index($err, $res->errstr) == 0, 'same error';
 is length($res->state), 5, 'has state';

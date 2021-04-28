@@ -27,48 +27,27 @@ is_deeply $res, {one => 1, two => 2, three => 3}, 'right structure';
 
 note 'Concurrent non-blocking selects';
 ($err, $res) = ();
-Mojo::IOLoop->delay(
-  sub {
-    my $delay = shift;
-    my $db    = $mysql->db;
-    $db->query('select 1 as one' => $delay->begin);
-    $db->query('select 2 as two' => $delay->begin);
-    $db->query('select 2 as two' => $delay->begin);
-  },
-  sub {
-    my ($delay, $err_one, $one, $err_two, $two, $err_again, $again) = @_;
-    $err = $err_one || $err_two || $err_again;
-    $res = [$one->hashes->first, $two->hashes->first, $again->hashes->first];
-  }
-)->wait;
+$db = $mysql->db;
+Mojo::Promise->all($db->query_p('select 1 as one'), $db->query_p('select 2 as two'), $db->query_p('select 2 as two'))
+  ->then(sub {
+  $res = [map { $_->[0]->hashes->first } @_];
+  })->catch(sub { $err = shift })->wait;
 ok !$err, 'no error' or diag "err=$err";
 is_deeply $res, [{one => 1}, {two => 2}, {two => 2}], 'concurrent non-blocking selects' or diag explain $res;
 
 note 'Sequential and Concurrent non-blocking selects';
 ($err, $res) = (0, []);
-Mojo::IOLoop->delay(
-  sub {
-    $db->query('select 1 as one' => $_[0]->begin);
-  },
-  sub {
-    $err ||= $_[1];
-    push @$res, $_[2]->hashes->first;
-    $db->query('select 2 as two' => $_[0]->begin);
-    $db->query('select 2 as two' => $_[0]->begin);
-  },
-  sub {
-    my ($delay, $err_two, $two, $err_again, $again) = @_;
-    push @$res, $db->query('select 1 as one')->hashes->first;
-    $err ||= $err_two || $err_again;
-    push @$res, $two->hashes->first, $again->hashes->first;
-    $db->query('select 3 as three' => $delay->begin);
-  },
-  sub {
-    my ($delay, $err_three, $three) = @_;
-    $err ||= $err_three;
-    push @$res, $three->hashes->first;
-  }
-)->wait;
+$db->query_p('select 1 as one')->then(sub {
+  push @$res, shift->hashes->first;
+  return Mojo::Promise->all($db->query_p('select 2 as two'), $db->query_p('select 2 as two'));
+})->then(sub {
+  push @$res, $db->query('select 1 as one')->hashes->first;
+  push @$res, map { $_->[0]->hashes->first } @_;
+  return $db->query_p('select 3 as three');
+})->then(sub {
+  push @$res, shift->hashes->first;
+})->catch(sub { $err = shift })->wait;
+
 ok !$err, 'no error' or diag "err=$err";
 is_deeply $res, [{one => 1}, {one => 1}, {two => 2}, {two => 2}, {three => 3}], 'right structure';
 
@@ -78,9 +57,9 @@ my @pids = sort map { $_->pid } $mysql->db, $mysql->db, $mysql->db, $mysql->db, 
 is_deeply \@pids, [sort map { $_->pid } $mysql->db, $mysql->db, $mysql->db, $mysql->db, $mysql->db],
   'same database pids';
 my $pid = $mysql->max_connections(1)->db->pid;
-is $mysql->db->pid, $pid, 'same database pid';
+is $mysql->db->pid,   $pid, 'same database pid';
 isnt $mysql->db->pid, $mysql->db->pid, 'different database pids';
-is $mysql->db->pid, $pid, 'different database pid';
+is $mysql->db->pid,   $pid, 'different database pid';
 $pid = $mysql->db->pid;
 is $mysql->db->pid, $pid, 'same database pid';
 $mysql->db->disconnect;
@@ -140,23 +119,14 @@ $mysql->max_connections(20);
 $db = $mysql->db;
 my @results = ($db->query('select 1'));
 my @warnings;
-
 local $SIG{__WARN__} = sub { push @warnings, $_[0] =~ /DBD::mysql/ ? Carp::longmess($_[0]) : $_[0] };
-Mojo::IOLoop->delay(
-  sub {
-    my $delay = shift;
-    $db->query('select 2', $delay->begin);
-    $db->query('select 3', sub { }); # Results in "Gathering async_query_in_flight results for the wrong handle" warning
-    $db->query('select 4', $delay->begin);
-  },
-  sub {
-    my $delay = shift;
-    push @results, grep {$_} @_;
-    Mojo::IOLoop->stop;
-  },
-)->catch(sub {
-  diag pop;
-});
+my $cb = sub {
+  push @results, pop;
+  Mojo::IOLoop->stop if @results == 3;
+};
+$db->query('select 2', $cb);
+$db->query('select 3', sub { });    # Results in "Gathering async_query_in_flight results for the wrong handle" warning
+$db->query('select 4', $cb);
 Mojo::IOLoop->start;
 delete $SIG{__WARN__};
 

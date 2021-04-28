@@ -36,15 +36,10 @@ is_deeply $db->select('crud_test', ['name'], undef, {-desc => 'id'})->hashes->to
 
 note 'Non-blocking read';
 my $result;
-my $delay = Mojo::IOLoop->delay(sub { $result = pop->hashes->to_array });
-$db->select('crud_test', $delay->begin);
-$delay->wait;
+$db->select_p('crud_test')->then(sub { $result = pop->hashes->to_array })->wait;
 is_deeply $result, [{id => 1, name => 'foo'}, {id => 2, name => 'bar'}], 'right structure';
 $result = undef;
-$delay  = Mojo::IOLoop->delay(sub { $result = pop->hashes->to_array });
-$db->select('crud_test', undef, undef, {-desc => 'id'}, $delay->begin);
-$delay->wait;
-is_deeply $result, [{id => 2, name => 'bar'}, {id => 1, name => 'foo'}], 'right structure';
+Mojo::Promise->timer(0.1 => sub { $result = pop->hashes->to_array })->wait;
 
 note 'Update';
 $db->update('crud_test', {name => 'baz'}, {name => 'foo'});

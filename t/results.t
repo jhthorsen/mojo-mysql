@@ -15,7 +15,7 @@ $db->query(
 $db->query('insert into results_test (name) values (?)', $_) for qw(foo bar);
 
 note 'Result methods';
-is_deeply $db->query('select * from results_test')->rows, 2, 'two rows';
+is_deeply $db->query('select * from results_test')->rows,    2, 'two rows';
 is_deeply $db->query('select * from results_test')->columns, ['id', 'name'], 'right structure';
 is_deeply $db->query('select * from results_test')->array,   [1,    'foo'],  'right structure';
 is_deeply $db->query('select * from results_test')->arrays->to_array, [[1, 'foo'], [2, 'bar']], 'right structure';
@@ -28,35 +28,21 @@ note 'Iterate';
 my $results = $db->query('select * from results_test');
 is_deeply $results->array, [1, 'foo'], 'right structure';
 is_deeply $results->array, [2, 'bar'], 'right structure';
-is $results->array, undef, 'no more results';
+is $results->array,        undef, 'no more results';
 
 note 'Non-blocking query where not all results have been fetched';
 my ($fail, $result);
-Mojo::IOLoop->delay(
-  sub {
-    my $delay = shift;
-    $db->query('select name from results_test' => $delay->begin);
-  },
-  sub {
-    my ($delay, $err, $results) = @_;
-    $fail = $err;
-    push @$result, $results->array;
-    $results->finish;
-    $db->query('select name from results_test' => $delay->begin);
-  },
-  sub {
-    my ($delay, $err, $results) = @_;
-    $fail ||= $err;
-    push @$result, $results->array;
-    $results->finish;
-    $db->query('select name from results_test' => $delay->begin);
-  },
-  sub {
-    my ($delay, $err, $results) = @_;
-    $fail ||= $err;
-    push @$result, $results->array;
-  }
-)->wait;
+$db->query_p('select name from results_test')->then(sub {
+  push @$result, shift->array;
+  $results->finish;
+  return $db->query_p('select name from results_test');
+})->then(sub {
+  push @$result, shift->array;
+  $results->finish;
+  return $db->query_p('select name from results_test');
+})->then(sub {
+  push @$result, shift->array;
+})->catch(sub { $fail = shift })->wait;
 ok !$fail, 'no error';
 is_deeply $result, [['foo'], ['foo'], ['foo']], 'right structure';
 
@@ -86,23 +72,18 @@ like $@, qr/does_not_exist/, 'right error';
 is_deeply $db->query('select * from results_test where name = ?', 'tx3')->hashes->to_array, [], 'no results';
 
 {
-  my ($err, $n_rows, $tx) = ('nope');
-  Mojo::IOLoop->delay(
-    sub {
-      $tx = $db->begin;
-      $db->query("insert into results_test (name) values ('txc')", shift->begin);
-    },
-    sub {
-      undef $tx;
-      $db->query("select name from results_test where name = 'txc'", shift->begin);
-    },
-    sub {
-      my ($delay, $err, $res) = @_;
-      $n_rows = $res->arrays->size;
-    },
-  )->catch(sub { $err = pop })->wait;
-  is $n_rows, 0,      'async rollback works - nothing inserted';
-  is $err,    'nope', 'async rollback works - no error';
+  my $n_rows = -1;
+  my $tx     = $db->begin;
+  $fail = 'no error';
+  $db->query_p("insert into results_test (name) values ('txc')")->then(sub {
+    undef $tx;
+    return $db->query_p("select name from results_test where name = 'txc'");
+  })->then(sub {
+    $n_rows = shift->arrays->size;
+  })->catch(sub { $fail = shift })->wait;
+
+  is $n_rows, 0,          'async rollback works - nothing inserted';
+  is $fail,   'no error', 'async rollback works - no error';
 }
 
 $db->query('drop table results_test');

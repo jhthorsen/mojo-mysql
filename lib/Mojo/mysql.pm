@@ -211,16 +211,10 @@ Mojo::mysql - Mojolicious and Async MySQL/MariaDB
     ->hashes->map(sub { $_->{name} })->join("\n")->say;
 
   # Select all rows non-blocking
-  Mojo::IOLoop->delay(
-    sub {
-      my $delay = shift;
-      $db->query('select * from names' => $delay->begin);
-    },
-    sub {
-      my ($delay, $err, $results) = @_;
-      $results->hashes->map(sub { $_->{name} })->join("\n")->say;
-    }
-  )->wait;
+  $db->query('select * from names' => sub {
+    my ($db, $err, $results) = @_;
+    $results->hashes->map(sub { $_->{name} })->join("\n")->say;
+  });
 
   # Concurrent non-blocking queries (synchronized with promises)
   my $now   = $db->query_p('select now() as now');
