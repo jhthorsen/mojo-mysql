@@ -108,14 +108,6 @@ sub strict_mode {
   return $self;
 }
 
-sub _dbi_attr {
-  my ($self, $handle) = (shift, shift);
-  my $key = $self->dsn =~ m!^dbi:(\w+):! ? lc "$1_$_[0]" : "mysql_$_[0]";
-  return $handle->{$key} if @_ == 1;
-  $handle->{$key} = $_[1];
-  $handle;
-}
-
 sub _dequeue {
   my $self = shift;
   my $dbh;
@@ -127,7 +119,7 @@ sub _dequeue {
   # especially once he discovers that DBD::mysql randomly reconnects under
   # you, silently, but only if certain env vars are set
   # hint: force-set mysql_auto_reconnect or whatever it's called to 0
-  $self->_dbi_attr($dbh, auto_reconnect => 0);
+  Mojo::mysql::Database->_dbh_attr($dbh, mysql_auto_reconnect => 0);
 
   # Maintain Commits with Mojo::mysql::Transaction
   $dbh->{AutoCommit} = 1;

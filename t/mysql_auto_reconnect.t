@@ -10,6 +10,6 @@ $ENV{MOD_PERL} = 1;
 
 my $mysql = Mojo::mysql->new($ENV{TEST_ONLINE});
 ok $mysql->db->ping, 'connected';
-ok !$mysql->_dbi_attr($mysql->db->dbh, 'auto_reconnect'), 'auto_reconnect';
+ok !$mysql->db->_dbh_attr('mysql_auto_reconnect'), 'auto_reconnect';
 
 done_testing;
