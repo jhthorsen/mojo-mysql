@@ -1,5 +1,9 @@
 Revision history for perl distribution Mojo-mysql
 
+1.23 Not Released
+ - Fix version number issues #84
+ - Internal changes regarding MariaDB/mysql attributes
+
 1.21 2021-04-28T12:15:39+0900
  - Fix uninitialized warning with expand(1) #83
  - Removed delay() from tests and documentation

@@ -29,15 +29,15 @@ sub more_results { shift->sth->more_results }
 
 sub affected_rows { shift->{affected_rows} }
 
-sub warnings_count { $_[0]->db->mysql->_dbi_attr($_[0]->sth, 'warning_count') }
-
-sub last_insert_id { $_[0]->db->mysql->_dbi_attr($_[0]->sth, 'insertid') }
-
 sub err { shift->sth->err }
 
 sub errstr { shift->sth->errstr }
 
+sub last_insert_id { shift->_sth_attr('mysql_insertid') }
+
 sub state { shift->sth->state }
+
+sub warnings_count { shift->_sth_attr('mysql_warning_count') }
 
 sub _c { Mojo::Collection->new(@_) }
 
@@ -85,11 +85,18 @@ sub _from_json_mode_2_hash {
   $_ = from_json $_ for grep defined && /^[\[{].*[}\]]$/, values %$r;
 }
 
+sub _sth_attr {
+  my ($self, $name) = @_;
+  $name =~ s!^mysql!{lc $self->db->dbh->{Driver}{Name}}!e;
+  return $self->sth->{$name} = shift if @_;
+  return $self->sth->{$name};
+}
+
 sub _types {
   my $self = shift;
   return @$self{qw(idx names)} if $self->{idx};
 
-  my $types = $self->db->mysql->_dbi_attr($self->sth, 'type');
+  my $types = $self->_sth_attr('mysql_type');
   my @idx   = grep { $types->[$_] == 245 or $types->[$_] == 252 } 0 .. $#$types;    # 245 = MySQL, 252 = MariaDB
 
   return ($self->{idx} = \@idx, $self->{names} = [@{$self->columns}[@idx]]);

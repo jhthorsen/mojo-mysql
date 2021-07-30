@@ -48,7 +48,7 @@ sub disconnect {
   $self->dbh->disconnect;
 }
 
-sub pid { $_[0]->mysql->_dbi_attr($_[0]->dbh, 'thread_id') }
+sub pid { shift->_dbh_attr('mysql_thread_id') }
 
 sub ping { shift->dbh->ping }
 
@@ -114,6 +114,15 @@ sub _cleanup_sth {
   $_->{cb}($self, 'Premature connection close', undef) for @{delete $self->{waiting} || []};
 }
 
+sub _dbh_attr {
+  my $self = shift;
+  my $dbh  = ref $self ? $self->dbh : shift;
+  my $name = shift;
+  $name =~ s!^mysql!{lc $dbh->{Driver}{Name}}!e;
+  return $dbh->{$name} = shift if @_;
+  return $dbh->{$name};
+}
+
 sub _next {
   my $self = shift;
 
@@ -151,7 +160,7 @@ sub _watch {
       my $rv  = do { local $sth->{RaiseError} = 0; $sth->$result_method };
       my $res = $self->results_class->new(db => $self, sth => $sth);
 
-      $err = undef if defined $rv;
+      $err = undef                           if defined $rv;
       $err =~ s!\b__MSG__\b!{$dbh->errstr}!e if defined $err;
       $res->{affected_rows} = defined $rv && $rv >= 0 ? 0 + $rv : undef;
 
