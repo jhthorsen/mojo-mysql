@@ -9,9 +9,14 @@ jobs:
       - name: Install and start mysql
         run: |
           sudo apt-get update
-          sudo apt-get install -y cpanminus mysql-client
+          sudo apt-get install -y mysql-client
           sudo systemctl start mysql.service
           mysql -e 'create database test' -uroot -proot
+
+      - name: Install some basic dependencies
+        run: |
+          sudo apt-get install -y cpanminus
+          sudo cpanm -n DBI Mojolicious Test::Pod Test::Pod::Coverage
 
       - name: Version information
         run: |
@@ -24,9 +29,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install dependencies
-        run: |
-          sudo cpanm -n --installdeps .
-          sudo cpanm -n Test::Pod Test::Pod::Coverage
+        run: sudo cpanm -n --installdeps .
 
       - name: Run tests
         run: prove -l t/*.t
