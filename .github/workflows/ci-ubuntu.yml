@@ -1,40 +1,41 @@
 name: ci-ubuntu
-on: [push, pull_request]
+on: [ push, pull_request ]
 jobs:
   perl:
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:5.7
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-        ports:
-          - 3306
-        env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: yes
-          MYSQL_DATABASE: mojo_test
-    strategy:
-      matrix:
-        perl-version:
-          - '5.16'
-          - '5.24'
-          - '5.30'
-    container:
-      image: perl:${{matrix.perl-version}}
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+
     steps:
-      - uses: actions/checkout@v2
-      - name: perl -V
-        run: perl -V
-      - name: Fix ExtUtils::MakeMaker (for Perl 5.16 and 5.18)
-        run: cpanm -n App::cpanminus ExtUtils::MakeMaker
-      - name: Install dependencies
+      - name: Install and start mysql
         run: |
-          cpanm -n --installdeps .
-          cpanm -n Test::Pod Test::Pod::Coverage
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+          sudo systemctl start mysql.service
+          mysql -e 'create database test' -uroot -proot
+
+      - name: Install some basic dependencies
+        run: |
+          sudo apt-get install -y cpanminus
+          sudo cpanm -n DBI Mojolicious Test::Pod Test::Pod::Coverage
+
+      - name: Version information
+        run: |
+          echo '--- mysql'
+          mysql -V
+          echo '--- perl'
+          perl -V
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: sudo cpanm -n --installdeps .
+
       - name: Run tests
         run: prove -l t/*.t
         env:
           HARNESS_OPTIONS: j3
           TEST_FOR: 500
-          TEST_ONLINE: mysql://root@127.0.0.1:${{job.services.mysql.ports[3306]}}/mojo_test
+          TEST_ONLINE: mysql://root:root@localhost:3306/test
           TEST_POD: 1
           TEST_PUBSUB: 1
