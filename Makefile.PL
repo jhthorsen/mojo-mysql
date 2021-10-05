@@ -3,7 +3,7 @@ use utf8;
 use ExtUtils::MakeMaker;
 my %WriteMakefileArgs = (
   NAME           => 'Mojo::mysql',
-  AUTHOR         => 'Jan Henning Thorsen <jhthorsen@cpan.org>',
+  AUTHOR         => 'Dan Book <grinnz@grinnz.com>',
   LICENSE        => 'artistic_2',
   ABSTRACT_FROM  => 'lib/Mojo/mysql.pm',
   VERSION_FROM   => 'lib/Mojo/mysql.pm',
