@@ -88,7 +88,6 @@ sub _from_json_mode_2_hash {
 sub _sth_attr {
   my ($self, $name) = @_;
   $name =~ s!^mysql!{lc $self->db->dbh->{Driver}{Name}}!e;
-  return $self->sth->{$name} = shift if @_;
   return $self->sth->{$name};
 }
 
