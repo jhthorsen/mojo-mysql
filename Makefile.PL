@@ -2,8 +2,8 @@
 use utf8;
 use ExtUtils::MakeMaker;
 
-my %DRIVER;
-eval 'use DBD::MariaDB 1.21;1' && ($DRIVER{'DBD::MariaDB'} = 1.21) || ($DRIVER{'DBD::mysql'} = 4.050);
+my @PREREQ_DRIVER = $ENV{MOJO_MYSQL_PREFER_MARIADB}
+  || eval 'use DBD::MariaDB 1.21;1' ? ('DBD::MariaDB' => '1.21') : ('DBD::mysql' => '4.050');
 
 my %WriteMakefileArgs = (
   NAME           => 'Mojo::mysql',
@@ -14,8 +14,8 @@ my %WriteMakefileArgs = (
   EXE_FILES      => [qw()],
   OBJECT         => '',
   BUILD_REQUIRES => {},
-  TEST_REQUIRES  => {'Test::More'   => '0.90'},
-  PREREQ_PM      => {%DRIVER, 'DBI' => '1.643', 'Mojolicious' => '8.03', 'SQL::Abstract' => '1.86'},
+  TEST_REQUIRES  => {'Test::More'          => '0.90'},
+  PREREQ_PM      => {@PREREQ_DRIVER, 'DBI' => '1.643', 'Mojolicious' => '8.03', 'SQL::Abstract' => '1.86'},
   META_MERGE     => {
     'dynamic_config' => 0,
     'meta-spec'      => {version => 2},
