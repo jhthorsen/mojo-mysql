@@ -1,6 +1,6 @@
 Revision history for perl distribution Mojo-mysql
 
-1.25 Not Released
+1.25 2021-11-22T18:13:22+0900
  - Changed DBD::mysql is not a dependency if DBD::MariaDB 1.21 is already installed #88
 
 1.24 2021-10-06T07:57:45+0900
