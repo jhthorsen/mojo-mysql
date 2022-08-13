@@ -232,7 +232,7 @@ Number of waiting non-blocking queries.
 
 Begin transaction and return L<Mojo::mysql::Transaction> object, which will
 automatically roll back the transaction unless
-L<Mojo::mysql::Transaction/"commit"> bas been called before it is destroyed.
+L<Mojo::mysql::Transaction/"commit"> has been called before it is destroyed.
 
   # Add names in a transaction
   eval {
