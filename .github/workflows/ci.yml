@@ -1,0 +1,41 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches:
+      - "**"
+jobs:
+  perl:
+    name: "Perl ${{matrix.perl}} on ${{matrix.os}}"
+    strategy:
+      matrix:
+        os: ["ubuntu-latest"]
+        perl: ["5.32", "5.26", "5.16"]
+    runs-on: "${{matrix.os}}"
+    steps:
+      - name: Install and start mysql
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+          sudo systemctl start mysql.service
+          mysql -e 'create database test' -uroot -proot
+      - run: mysql -V
+      - uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: "${{matrix.perl}}"
+      - run: perl -V
+      - uses: actions/checkout@v2
+      - name: Fix ExtUtils::MakeMaker for Perl 5.16
+        run: cpanm -n App::cpanminus ExtUtils::MakeMaker
+      - name: Install dependencies
+        run: |
+          cpanm -n Test::CPAN::Changes Test::Pod::Coverage Test::Pod Test::Spelling
+          cpanm -n --installdeps .
+      - name: Run tests
+        run: prove -l t/*.t
+        env:
+          HARNESS_OPTIONS: j4
+          TEST_FOR: 500
+          TEST_ONLINE: mysql://root:root@localhost:3306/test
+          TEST_POD: 1
+          TEST_PUBSUB: 1

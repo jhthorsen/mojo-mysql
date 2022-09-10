@@ -190,6 +190,12 @@ SQL::Abstract::mysql - Generate SQL from Perl data structures for MySQL and Mari
 L<SQL::Abstract::mysql> extends L<SQL::Abstract> with a few MySQL / MariaDB
 features used by L<Mojo::mysql>. It was inspired by L<SQL::Abstract::Pg>.
 
+=head1 FUNCTIONS
+
+=head2 puke
+
+See L<SQL::Abstract/puke>.
+
 =head1 METHODS
 
 L<SQL::Abstract::mysql> inherits all methods from L<SQL::Abstract>.

@@ -281,19 +281,19 @@ Number of warnings raised by the executed query.
 
   my $err = $results->err;
 
-Error code receieved.
+Error code received.
 
 =head2 state
 
   my $state = $results->state;
 
-Error state receieved.
+Error state received.
 
 =head2 errstr
 
   my $errstr = $results->errstr;
 
-Error message receieved.
+Error message received.
 
 =head1 SEE ALSO
 

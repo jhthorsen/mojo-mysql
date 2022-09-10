@@ -1,5 +1,11 @@
 Revision history for perl distribution Mojo-mysql
 
+1.26 Not Released
+ - Fix spelling mistakes
+ - Specified Perl version
+ - Updated basic repository files
+ - Updated contributors list
+
 1.25 2021-11-22T18:13:22+0900
  - Changed DBD::mysql is not a dependency if DBD::MariaDB 1.21 is already installed #88
 

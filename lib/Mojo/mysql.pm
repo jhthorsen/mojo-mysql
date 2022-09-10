@@ -393,7 +393,7 @@ Database password, defaults to an empty string.
   my $pubsub = $mysql->pubsub;
   $mysql     = $mysql->pubsub(Mojo::mysql::PubSub->new);
 
-L<Mojo::mysql::PubSub> should be considered an EXPIREMENT! See
+L<Mojo::mysql::PubSub> should be considered an EXPERIMENT! See
 L<Mojo::mysql::PubSub/DESCRIPTION> for more information.
 
 =head2 username
@@ -515,19 +515,56 @@ This is the class hierarchy of the L<Mojo::mysql> distribution.
 
 =back
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Curt Hochwender - C<hochwender@centurytel.net>
+This project is highly inspired by Sebastian Riedel's L<Mojo::Pg>.
 
-Dan Book - C<dbook@cpan.org>
+=head2 Project Founder
 
 Jan Henning Thorsen - C<jhthorsen@cpan.org>
 
-Mike Magowan
+=head2 Contributors
 
-Rolf Stöckli - C<tekki@cpan.org>
+=over 2
 
-This code started as a rip-off from Sebastian Riedel's L<Mojo::Pg>.
+
+=item * Adam Hopkins <violapiratejunky@gmail.com>
+
+=item * Alexander Karelas <alex.karelas@gmail.com>
+
+=item * Curt Hochwender <hochwender@centurytel.net>
+
+=item * Dan Book <grinnz@grinnz.com>
+
+=item * Doug Bell <doug@preaction.me>
+
+=item * Florian Heyer <info@heyer-it.de>
+
+=item * Hernan Lopes <hernanlopes@gmail.com>
+
+=item * Karl Rune Nilsen <krunen@gmail.com>
+
+=item * Larry Leszczynski <larryl@emailplus.org>
+
+=item * Lucas Tiago de Moraes <lucastiagodemoraes@gmail.com>
+
+=item * Matt S Trout <mst@shadowcat.co.uk>
+
+=item * Mike Magowan <mike@magowan.co.uk>
+
+=item * Mohammad S Anwar <mohammad.anwar@yahoo.com>
+
+=item * Rolf Stöckli <tekki@cpan.org>
+
+=item * Sebastian Riedel <sri@cpan.org>
+
+=item * Svetoslav Naydenov <harry@bix.bg>
+
+=item * Svetoslav Naydenov <harryl@cpan.org>
+
+=item * Tekki <tekki@tekki.ch>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 
