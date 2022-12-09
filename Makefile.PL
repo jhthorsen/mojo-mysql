@@ -4,6 +4,9 @@ use warnings;
 use utf8;
 use ExtUtils::MakeMaker;
 
+my @DRIVER = $ENV{MOJO_MYSQL_PREFER_DRIVER} ? (split /=/, $ENV{MOJO_MYSQL_PREFER_DRIVER}) : ('DBD::mysql');
+$DRIVER[1] ||= $DRIVER[0] eq 'DBD::mysql' ? '4.050' : $DRIVER[0] eq 'DBD::MariaDB' ? '1.21' : '0';
+
 my $GITHUB_URL        = 'https://github.com/jhthorsen/mojo-mysql';
 my %WriteMakefileArgs = (
   NAME          => 'Mojo::mysql',
@@ -11,8 +14,8 @@ my %WriteMakefileArgs = (
   LICENSE       => 'artistic_2',
   ABSTRACT_FROM => 'lib/Mojo/mysql.pm',
   VERSION_FROM  => 'lib/Mojo/mysql.pm',
-  TEST_REQUIRES => {'Test::More' => '0.90'},
-  PREREQ_PM     => {'DBD::mysql' => '4.050', 'DBI' => '1.643', 'Mojolicious' => '8.03', 'SQL::Abstract' => '1.86'},
+  TEST_REQUIRES => {'Test::More'   => '0.90'},
+  PREREQ_PM     => {@DRIVER, 'DBI' => '1.643', 'Mojolicious' => '8.03', 'SQL::Abstract' => '1.86'},
   META_MERGE    => {
     'dynamic_config' => 0,
     'meta-spec'      => {version   => 2},

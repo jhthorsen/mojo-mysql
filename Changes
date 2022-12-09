@@ -1,7 +1,9 @@
 Revision history for perl distribution Mojo-mysql
 
 1.26 Not Released
- - Fix spelling mistakes
+ - Add support for "MOJO_MYSQL_PREFER_DRIVER" in Makefile.PL
+ - Fix spelling mistakes #88
+   Contributor: Lucas Tiago de Moraes
  - Specified Perl version
  - Updated basic repository files
  - Updated contributors list
