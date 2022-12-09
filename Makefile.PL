@@ -4,7 +4,8 @@ use warnings;
 use utf8;
 use ExtUtils::MakeMaker;
 
-my @DRIVER = $ENV{MOJO_MYSQL_PREFER_DRIVER} ? (split /=/, $ENV{MOJO_MYSQL_PREFER_DRIVER}) : ('DBD::mysql');
+my @DRIVER = $ENV{MOJO_MYSQL_PREFER_DRIVER} ? (split /=/, $ENV{MOJO_MYSQL_PREFER_DRIVER}) : ();
+$DRIVER[0] ||= eval('use DBD::MariaDB 1.21;1') ? 'DBD::MariaDB' : 'DBD::mysql';
 $DRIVER[1] ||= $DRIVER[0] eq 'DBD::mysql' ? '4.050' : $DRIVER[0] eq 'DBD::MariaDB' ? '1.21' : '0';
 
 my $GITHUB_URL        = 'https://github.com/jhthorsen/mojo-mysql';
