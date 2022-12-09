@@ -1,6 +1,6 @@
 Revision history for perl distribution Mojo-mysql
 
-1.26 Not Released
+1.26 2022-12-09T10:41:01
  - Add support for "MOJO_MYSQL_PREFER_DRIVER" in Makefile.PL
  - Add support for autodetecting DBD::MariaDB
  - Fix spelling mistakes #88

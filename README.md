@@ -246,7 +246,7 @@ Database password, defaults to an empty string.
     my $pubsub = $mysql->pubsub;
     $mysql     = $mysql->pubsub(Mojo::mysql::PubSub->new);
 
-[Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3APubSub) should be considered an EXPIREMENT! See
+[Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3APubSub) should be considered an EXPERIMENT! See
 ["DESCRIPTION" in Mojo::mysql::PubSub](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3APubSub#DESCRIPTION) for more information.
 
 ## username
@@ -359,19 +359,34 @@ This is the class hierarchy of the [Mojo::mysql](https://metacpan.org/pod/Mojo%3
 - [Mojo::mysql::Results](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3AResults)
 - [Mojo::mysql::Transaction](https://metacpan.org/pod/Mojo%3A%3Amysql%3A%3ATransaction)
 
-# AUTHOR
+# AUTHORS
 
-Curt Hochwender - `hochwender@centurytel.net`
+This project is highly inspired by Sebastian Riedel's [Mojo::Pg](https://metacpan.org/pod/Mojo%3A%3APg).
 
-Dan Book - `dbook@cpan.org`
+## Project Founder
 
 Jan Henning Thorsen - `jhthorsen@cpan.org`
 
-Mike Magowan
+## Contributors
 
-Rolf Stöckli - `tekki@cpan.org`
-
-This code started as a rip-off from Sebastian Riedel's [Mojo::Pg](https://metacpan.org/pod/Mojo%3A%3APg).
+- Adam Hopkins <violapiratejunky@gmail.com>
+- Alexander Karelas <alex.karelas@gmail.com>
+- Curt Hochwender <hochwender@centurytel.net>
+- Dan Book <grinnz@grinnz.com>
+- Doug Bell <doug@preaction.me>
+- Florian Heyer <info@heyer-it.de>
+- Hernan Lopes <hernanlopes@gmail.com>
+- Karl Rune Nilsen <krunen@gmail.com>
+- Larry Leszczynski <larryl@emailplus.org>
+- Lucas Tiago de Moraes <lucastiagodemoraes@gmail.com>
+- Matt S Trout <mst@shadowcat.co.uk>
+- Mike Magowan <mike@magowan.co.uk>
+- Mohammad S Anwar <mohammad.anwar@yahoo.com>
+- Rolf Stöckli <tekki@cpan.org>
+- Sebastian Riedel <sri@cpan.org>
+- Svetoslav Naydenov <harry@bix.bg>
+- Svetoslav Naydenov <harryl@cpan.org>
+- Tekki <tekki@tekki.ch>
 
 # COPYRIGHT AND LICENSE
 
