@@ -137,10 +137,13 @@ sub _query_with_retry {
     # first line to avoid potential spurious matches if the error
     # e.g. contains a stack trace.
     my $err = $@;                                        # avoid stringifying $@ ...
-    croak $@ unless $err =~ /^\V*(?:retry|timeout)/i;    # ... and maybe rethrow it
-
-    # If we got here, we are retrying the query:
-    warn qq|[PubSub] (@{[$db->pid]}) retry ($sql) !!! $err\n| if DEBUG;
+    if ($err =~ /^\V*(?:retry|timeout|try restart)/i) {  # ... and maybe rethrow it
+      # If we got here, we are retrying the query:
+      warn qq|[PubSub] (@{[$db->pid]}) retry ($sql) !!! $err\n| if DEBUG;
+    } else {
+      warn qq|[PubSub] (@{[$db->pid]}) noretry ($sql) !!! $err\n| if DEBUG;
+      croak $@;
+    }
   }
 
   return $result;
