@@ -1,5 +1,9 @@
 Revision history for perl distribution Mojo-mysql
 
+1.27 Not Released
+ - Fix not cleaning up during GLOBAL_PHASE is DESTRUCT
+   Contributor: Lasse Løvik
+
 1.26 2022-12-09T10:41:01
  - Add support for "MOJO_MYSQL_PREFER_DRIVER" in Makefile.PL
  - Add support for autodetecting DBD::MariaDB

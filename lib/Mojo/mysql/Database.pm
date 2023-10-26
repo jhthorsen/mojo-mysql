@@ -27,6 +27,7 @@ for my $name (qw(delete insert select update)) {
 
 sub DESTROY {
   my $self = shift;
+  return if ${^GLOBAL_PHASE} eq 'DESTRUCT';
   $self->_cleanup_sth;
   return unless (my $mysql = $self->mysql) and (my $dbh = $self->dbh);
   $mysql->_enqueue($dbh, $self->{handle});
