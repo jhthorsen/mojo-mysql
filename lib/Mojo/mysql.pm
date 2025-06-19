@@ -10,6 +10,9 @@ use Mojo::URL;
 use Scalar::Util 'weaken';
 use SQL::Abstract::mysql;
 
+use constant MARIADB => !!eval { require DBD::MariaDB; DBD::MariaDB->VERSION(1.21) };
+use constant URI     => !!eval { require URI::db;      URI::db->VERSION(0.10) };
+
 our $VERSION = '1.27';
 
 has abstract        => sub { SQL::Abstract::mysql->new(quote_char => chr(96), name_sep => '.') };
@@ -65,16 +68,19 @@ sub from_string {
 
   # Protocol
   return $self unless $str;
-  my $url = UNIVERSAL::isa($str, 'Mojo::URL') ? $str : Mojo::URL->new($str);
-  croak qq{Invalid MySQL/MariaDB connection string "$str"} unless $url->protocol =~ m!^(mariadb|mysql)$!;
-  my $dsn = $url->protocol eq 'mariadb' ? 'dbi:MariaDB' : 'dbi:mysql';
+  my $url
+    = UNIVERSAL::isa($str, 'URI::db')   ? $str
+    : UNIVERSAL::isa($str, 'Mojo::URL') ? $str
+    : URI                               ? URI::db->new($str)
+    :                                     Mojo::URL->new($str);
 
-  # https://github.com/jhthorsen/mojo-mysql/pull/47
-  die "DBD::MariaDB 1.21 is required for Mojo::mysql to work properly"
-    if $dsn eq 'dbi:MariaDB' and !eval 'use DBD::MariaDB 1.21;1';
+  my $protocol = $url->can('engine') ? $url->engine : $url->protocol;
+  croak qq{"$str" must have the "mariadb" or "mysql" schemes} unless $protocol =~ m!^(mariadb|mysql)$!;
+  my $dsn = $protocol eq 'mariadb' ? 'dbi:MariaDB' : 'dbi:mysql';
 
   # Database
-  $dsn .= ':dbname=' . $url->path->parts->[0] if defined $url->path->parts->[0];
+  my $dbname = $url->can('dbname') ? $url->dbname : $url->path->parts->[0];
+  $dsn .= ":dbname=$dbname" if length $dbname;
 
   # Host and port
   if (my $host = $url->host) { $dsn .= file_name_is_absolute($host) ? ";mysql_socket=$host" : ";host=$host" }
@@ -90,7 +96,7 @@ sub from_string {
   }
 
   # Options
-  my $hash = $url->query->to_hash;
+  my $hash = $url->can('query_form_hash') ? $url->query_form_hash : $url->query->to_hash;
   @{$self->options}{keys %$hash} = values %$hash;
 
   return $self;
@@ -110,7 +116,10 @@ sub strict_mode {
 
 sub _dequeue {
   my $self = shift;
-  my $dbh;
+  my ($dsn, $dbh) = ($self->dsn);
+
+  # https://github.com/jhthorsen/mojo-mysql/pull/47
+  die "DBD::MariaDB 1.21 is required for Mojo::mysql to work properly" if !MARIADB && index($dsn, 'dbi:MariaDB') == 0;
 
   while (my $c = shift @{$self->{queue}}) { return $c if $c->[0]->ping }
   $dbh = DBI->connect(map { $self->$_ } qw(dsn username password options));
@@ -427,8 +436,10 @@ holding on to it only for short amounts of time.
 =head2 from_string
 
   $mysql = $mysql->from_string('mysql://user@/test');
+  $mysql = $mysql->from_string(Mojo::URL->new);
+  $mysql = $mysql->from_string(URI::db->new);
 
-Parse configuration from connection string.
+Parse configuration from connection string or a connection string object.
 
   # Just a database
   $mysql->from_string('mysql:///db1');
