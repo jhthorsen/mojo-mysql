@@ -1,13 +1,13 @@
 package Mojo::mysql;
 use Mojo::Base 'Mojo::EventEmitter';
 
-use Carp 'croak';
+use Carp qw(croak);
 use DBI;
-use File::Spec::Functions 'file_name_is_absolute';
+use File::Spec::Functions qw(file_name_is_absolute);
 use Mojo::mysql::Database;
 use Mojo::mysql::Migrations;
 use Mojo::URL;
-use Scalar::Util 'weaken';
+use Scalar::Util qw(blessed weaken);
 use SQL::Abstract::mysql;
 
 use constant MARIADB => !!eval { require DBD::MariaDB; DBD::MariaDB->VERSION(1.21) };
@@ -68,14 +68,10 @@ sub from_string {
 
   # Protocol
   return $self unless $str;
-  my $url
-    = UNIVERSAL::isa($str, 'URI::db')   ? $str
-    : UNIVERSAL::isa($str, 'Mojo::URL') ? $str
-    : URI                               ? URI::db->new($str)
-    :                                     Mojo::URL->new($str);
+  my $url = blessed $str ? $str : Mojo::URL->new($str);
 
   my $protocol = $url->can('engine') ? $url->engine : $url->protocol;
-  croak qq{"$str" must have the "mariadb" or "mysql" schemes} unless $protocol =~ m!^(mariadb|mysql)$!;
+  croak qq{Invalid MySQL/MariaDB connection string "$str"} unless $protocol =~ m!^(mariadb|mysql)$!;
   my $dsn = $protocol eq 'mariadb' ? 'dbi:MariaDB' : 'dbi:mysql';
 
   # Database
