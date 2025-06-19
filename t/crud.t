@@ -70,12 +70,13 @@ Mojo::Promise->all($first, $second, $third)->then(sub {
   my ($first, $second, $third) = @_;
   $result = [$first->[0]->hash, $second->[0]->affected_rows, $third->[0]->hash];
 })->wait;
-is $result->[0]{name}, 'promise', 'right result';
-is $result->[1], 1, 'right result';
+is $result->[0]{name}, 'promise',         'right result';
+is $result->[1],       1,                 'right result';
 is $result->[2]{name}, 'another_promise', 'right result';
 $result = undef;
 $db->update_p('crud_test', {name => 'promise_two'}, {name => 'another_promise'},)
-  ->then(sub { $result = shift->affected_rows })->wait;
+  ->then(sub { $result = shift->affected_rows })
+  ->wait;
 is $result, 1, 'right result';
 $db->delete_p('crud_test', {name => 'promise_two'})->then(sub { $result = shift->affected_rows })->wait;
 is $result, 1, 'right result';

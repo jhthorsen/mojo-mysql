@@ -15,9 +15,9 @@ $db->query(
 $db->query('insert into results_test (name) values (?)', $_) for qw(foo bar);
 
 note 'Result methods';
-is_deeply $db->query('select * from results_test')->rows,    2, 'two rows';
-is_deeply $db->query('select * from results_test')->columns, ['id', 'name'], 'right structure';
-is_deeply $db->query('select * from results_test')->array,   [1,    'foo'],  'right structure';
+is_deeply $db->query('select * from results_test')->rows,             2, 'two rows';
+is_deeply $db->query('select * from results_test')->columns,          ['id', 'name'], 'right structure';
+is_deeply $db->query('select * from results_test')->array,            [1,    'foo'],  'right structure';
 is_deeply $db->query('select * from results_test')->arrays->to_array, [[1, 'foo'], [2, 'bar']], 'right structure';
 is_deeply $db->query('select * from results_test')->hash, {id => 1, name => 'foo'}, 'right structure';
 is_deeply $db->query('select * from results_test')->hashes->to_array,
@@ -28,7 +28,7 @@ note 'Iterate';
 my $results = $db->query('select * from results_test');
 is_deeply $results->array, [1, 'foo'], 'right structure';
 is_deeply $results->array, [2, 'bar'], 'right structure';
-is $results->array,        undef, 'no more results';
+is $results->array, undef, 'no more results';
 
 note 'Non-blocking query where not all results have been fetched';
 my ($fail, $result);

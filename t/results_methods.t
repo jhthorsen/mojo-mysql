@@ -12,14 +12,14 @@ my $driver = $ENV{TEST_ONLINE} =~ m!^(\w+):! ? $1 : 'mysql';
 $mysql->options->{"${driver}_client_found_rows"} = 0;
 my $db = $mysql->db;
 $db->query(
-  'create table if not exists results_test (
+  'create table if not exists results_methods_test (
      id   integer auto_increment primary key,
      name text
    )'
 );
-$db->query('truncate table results_test');
+$db->query('truncate table results_methods_test');
 
-my $res = $db->query('insert into results_test (name) values (?)', 'foo');
+my $res = $db->query('insert into results_methods_test (name) values (?)', 'foo');
 is $res->affected_rows,  1,     'right affected_rows';
 is $res->last_insert_id, 1,     'right last_insert_id';
 is $res->warnings_count, 0,     'no warnings';
@@ -28,15 +28,17 @@ is $res->errstr,         undef, 'no error';
 is $res->state,          '',    'no state';
 
 
-$res = $db->query('insert into results_test (name) values (?)', 'bar');
+$res = $db->query('insert into results_methods_test (name) values (?)', 'bar');
 is $res->affected_rows,  1, 'right affected_rows';
 is $res->last_insert_id, 2, 'right last_insert_id';
 is $res->warnings_count, 0, 'no warnings';
 
 
-is $db->query('update results_test set name=? where name=?', 'foo', 'foo1')->affected_rows, 0, 'right affected rows';
-is $db->query('update results_test set name=? where name=?', 'foo', 'foo')->affected_rows,  0, 'right affected rows';
-is $db->query('update results_test set id=1 where id=1')->affected_rows, 0, 'right affected rows';
+is $db->query('update results_methods_test set name=? where name=?', 'foo', 'foo1')->affected_rows, 0,
+  'right affected rows';
+is $db->query('update results_methods_test set name=? where name=?', 'foo', 'foo')->affected_rows, 0,
+  'right affected rows';
+is $db->query('update results_methods_test set id=1 where id=1')->affected_rows, 0, 'right affected rows';
 
 $res = $db->query("select 1 + '4a'");
 is_deeply $res->array, [5];
@@ -50,16 +52,18 @@ $db->disconnect;
 $mysql->options->{"${driver}_client_found_rows"} = 1;
 $db = $mysql->db;
 
-is $db->query('update results_test set name=? where name=?', 'foo', 'foo1')->affected_rows, 0, 'right affected rows';
-is $db->query('update results_test set name=? where name=?', 'foo', 'foo')->affected_rows,  1, 'right affected rows';
-is $db->query('update results_test set id=1 where id=1')->affected_rows, 1, 'right affected rows';
+is $db->query('update results_methods_test set name=? where name=?', 'foo', 'foo1')->affected_rows, 0,
+  'right affected rows';
+is $db->query('update results_methods_test set name=? where name=?', 'foo', 'foo')->affected_rows, 1,
+  'right affected rows';
+is $db->query('update results_methods_test set id=1 where id=1')->affected_rows, 1, 'right affected rows';
 
-$db->query('drop table results_test');
+$db->query('drop table results_methods_test');
 
 my $err;
-$db->query('select name from results_test', sub { shift; ($err, $res) = @_; Mojo::IOLoop->stop });
+$db->query('select name from results_methods_test', sub { shift; ($err, $res) = @_; Mojo::IOLoop->stop });
 Mojo::IOLoop->start;
-like $err, qr/results_test/, 'has error';
+like $err, qr/results_methods_test/, 'has error';
 ok index($err, $res->errstr) == 0, 'same error';
 is length($res->state), 5, 'has state';
 
