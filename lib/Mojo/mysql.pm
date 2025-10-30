@@ -86,9 +86,10 @@ sub from_string {
   $self->dsn($dsn);
 
   # Username and password
-  if (($url->userinfo // '') =~ /^([^:]+)(?::([^:]+))?$/) {
-    $self->username($1);
-    $self->password($2) if defined $2;
+  if ($url->userinfo) {
+    my @info = split /:/, $url->userinfo, 2;
+    $self->username($info[0]);
+    $self->password($info[1] // '') if defined $info[1];
   }
 
   # Options

@@ -48,4 +48,26 @@ subtest 'MariaDB 1.21 is required' => sub {
   like $@, qr/DBD::MariaDB.*is required/, 'error';
 };
 
+subtest 'username and password' => sub {
+  my $mysql = Mojo::mysql->new('mysql://@localhost');
+  is $mysql->username, '', 'empty username';
+  is $mysql->password, '', 'empty password';
+
+  $mysql = Mojo::mysql->new('mysql://simple:case@localhost');
+  is $mysql->username, 'simple', 'simple username';
+  is $mysql->password, 'case',   'case password';
+
+  $mysql = Mojo::mysql->new('mysql://only@localhost');
+  is $mysql->username, 'only', 'only username';
+  is $mysql->password, '',     'empty password';
+
+  $mysql = Mojo::mysql->new('mysql://colon:@localhost');
+  is $mysql->username, 'colon', 'colon username';
+  is $mysql->password, '',      'empty password';
+
+  $mysql = Mojo::mysql->new('mysql://user:and:password@localhost');
+  is $mysql->username, 'user',         'user username';
+  is $mysql->password, 'and:password', 'and:password password';
+};
+
 done_testing;
