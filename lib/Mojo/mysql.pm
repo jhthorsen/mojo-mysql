@@ -13,7 +13,7 @@ use SQL::Abstract::mysql;
 use constant MARIADB => !!eval { require DBD::MariaDB; DBD::MariaDB->VERSION(1.21) };
 use constant URI     => !!eval { require URI::db;      URI::db->VERSION(0.10) };
 
-our $VERSION = '1.27';
+our $VERSION = '1.28';
 
 has abstract        => sub { SQL::Abstract::mysql->new(quote_char => chr(96), name_sep => '.') };
 has auto_migrate    => 0;

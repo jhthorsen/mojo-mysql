@@ -1,6 +1,6 @@
 Revision history for perl distribution Mojo-mysql
 
-1.28 Not Released
+1.28 2025-10-30T15:07:00
  - Fix only specifying username in userinfo url part
 
 1.27 2023-10-26T20:59:16
