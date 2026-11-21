@@ -21,6 +21,10 @@ ok !(grep {/mojo_migrations/} @{$mysql->db->tables}), 'migrations table does not
 
 is $mysql->migrations->migrate->active, 0, 'active version is 0';
 ok !!(grep {/mojo_migrations/} @{$mysql->db->tables}), 'migrations table exists';
+is $mysql->db->query(
+  q{select count(*) from information_schema.table_constraints
+    where table_schema = database() and table_name = 'mojo_migrations' and constraint_type = 'PRIMARY KEY'}
+)->array->[0], 1, 'migrations table has a primary key';
 
 note 'Migrations from DATA section';
 is $mysql->migrations->from_data->latest, 0, 'latest version is 0';
